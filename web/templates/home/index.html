@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="row">
+    <h3>Qualipy</h3>
+    <div class="btn-group">
+        <form method="post" role="form">
+            {% for project in projects %}
+                <button name="{{ project }}" type="submit">{{ project }}</button>
+            {% endfor %}
+        </form>
+    </div>
+</div>
+
+{% endblock %}
