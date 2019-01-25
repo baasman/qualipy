@@ -6,6 +6,7 @@ from dash import Dash
 import dash_html_components as html
 import dash_core_components as dcc
 from dash.dependencies import Input, Output
+import numpy as np
 
 import os
 import json
@@ -45,19 +46,84 @@ dash_app1.layout = html.Div([
 @dash_app1.callback(Output('index', 'children'),
                     [Input('tabs', 'value')])
 def render_content(tab):
-    print(session['project'])
+    cat_data = pd.read_csv(os.path.join(HOME, '.qualipy/data', '{}-cat.csv'.format(session['project'])))
+    cat_data = cat_data.sort_values(['_name', '_metric', '_date'])
+    num_data = pd.read_csv(os.path.join(HOME, '.qualipy/data', '{}-num.csv'.format(session['project'])))
+    num_data = num_data.sort_values(['_name', '_metric', '_date'])
     if tab == 'tab-1':
         return html.Div([
             html.H3('History'),
+            html.H5('Numerical Data'),
+            dash_table.DataTable(
+                id='num-table',
+                columns=[{'name': i, 'id': i} for i in num_data.columns],
+                data=num_data.to_dict('rows'),
+                sorting=True,
+                style_cell={
+                    'textAlign': 'left',
+                    'minWidth': '0px', 'maxWidth': '180px',
+                    'whiteSpace': 'normal'
+                }
+            ),
+            html.H5('Categorical Data'),
+            dash_table.DataTable(
+                id='cat-table',
+                columns=[{'name': i, 'id': i} for i in cat_data.columns],
+                data=cat_data.to_dict('rows'),
+                sorting=True,
+                style_cell={
+                    'textAlign': 'left',
+                    'minWidth': '0px', 'maxWidth': '180px',
+                    'whiteSpace': 'normal'
+                }
+            )
         ])
     elif tab == 'tab-2':
-        return html.Div([
-            html.H3('Numerical Metrics'),
-        ])
+        final_html = []
+        final_html.append(html.H3('Numerical Metrics'))
+        for var in num_data['_name'].unique():
+            for metric in num_data[num_data['_name'] == var]['_metric'].unique():
+                final_html.append(
+                    dcc.Graph(
+                        id='num-data-graph-{}'.format(var),
+                        figure={
+                            'data': [
+                                {'y': num_data[(num_data['_name'] == var) &
+                                               (num_data['_metric'] == metric)]['value'],
+                                 'x': np.arange(num_data[(num_data['_name'] == var) &
+                                                         (num_data['_metric'] == metric)].shape[0])}
+                            ],
+                            'layout': {
+                                'title': '{} - {}'.format(var, metric)
+                            }
+
+                        }
+                    )
+                )
+        return final_html
     elif tab == 'tab-3':
-        return html.Div([
-            html.H3('Categorical Metrics'),
-        ])
+        final_html = []
+        final_html.append(html.H3('Categorical Metrics'))
+        for var in cat_data['_name'].unique():
+            for metric in cat_data[cat_data['_name'] == var]['_metric'].unique():
+                final_html.append(
+                    dcc.Graph(
+                        id='num-data-graph-{}'.format(var),
+                        figure={
+                            'data': [
+                                {'y': cat_data[(cat_data['_name'] == var) &
+                                               (cat_data['_metric'] == metric)]['value'],
+                                 'x': np.arange(cat_data[(cat_data['_name'] == var) &
+                                                         (cat_data['_metric'] == metric)].shape[0])}
+                            ],
+                            'layout': {
+                                'title': '{} - {}'.format(var, metric)
+                            }
+
+                        }
+                    )
+                )
+        return final_html
 
 
 @server.route('/', methods=['GET', 'POST'])
@@ -75,7 +141,6 @@ def index():
 
 @server.route('/metrics')
 def render_dashboard():
-    print('hello')
     return flask.redirect('/dash1')
 
 

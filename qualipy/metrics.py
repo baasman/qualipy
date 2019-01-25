@@ -12,15 +12,9 @@ MEASURE_MAP = {
 }
 
 
-def _generate_num_descriptions(column, measures):
-    results = {}
-    for measure in measures:
-        results[measure] = MEASURE_MAP[measure](column)
-    return results
+def _generate_descriptions(column, measure):
+    return {
+        'value': MEASURE_MAP[measure](column),
+        '_metric': measure
+    }
 
-
-def _generate_cat_descriptions(column, measures):
-    results = {}
-    for measure in measures:
-        results[measure] = MEASURE_MAP[measure](column)
-    return results
