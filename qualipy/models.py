@@ -6,26 +6,8 @@ import datetime
 import threading
 import json
 
-from qualipy.metrics import _generate_descriptions
+from qualipy.metrics import MEASURE_MAP
 
-
-iris = {
-    'data_name': 'iris',
-    'columns': {
-        'petal.length': {
-            'type': 'float',
-            'metrics': ['mean', 'std']
-        },
-        'petal.width': {
-            'type': 'float',
-            'metrics': ['mean']
-        },
-        'variety': {
-            'type': 'string',
-            'metrics': ['nunique']
-        }
-    }
-}
 
 dtypes = {
     'float': float,
@@ -34,6 +16,7 @@ dtypes = {
 }
 
 HOME = os.path.expanduser('~')
+
 
 
 class DataSet(object):
@@ -45,6 +28,7 @@ class DataSet(object):
         self.current_data = None
         self.reset = reset
 
+        self._set_custom_funcs(config)
         self._set_file_name()
         self._add_to_project_list()
 
@@ -57,6 +41,29 @@ class DataSet(object):
 
     def read_csv(self, file_path, **kwargs):
         self.current_data = pd.read_csv(file_path, **kwargs)
+
+    def generate_descriptions(self, column, measure, kwargs):
+        if kwargs:
+            metric_name = '{}_{}'.format(measure, str(kwargs))
+        else:
+            metric_name = measure
+        if measure in self.all_custom_funcs:
+            fun = self.custom_funcs[measure]
+        else:
+            fun = MEASURE_MAP[measure]
+        return {
+            'value': fun(column, **kwargs),
+            '_metric': metric_name
+        }
+
+    def _set_custom_funcs(self, config):
+        custom_funcs = config.get('custom_functions')
+        if custom_funcs is not None:
+            self.all_custom_funcs = list(custom_funcs.keys())
+            self.custom_funcs = custom_funcs
+        else:
+            self.all_custom_funcs = []
+            self.custom_funcs = {}
 
     def _get_history_metrics(self):
         self.hist_num_data = pd.read_csv(self.num_name)
@@ -88,18 +95,20 @@ class DataSet(object):
         cat_measures = []
         for col, metrics in self.columns.items():
             self.current_data[col] = self.current_data[col].astype(dtypes[metrics['type']])
-            if metrics['type'] in ['float', 'int']:
-                for metric in metrics['metrics']:
-                    num_measure = _generate_descriptions(self.current_data[col], metric)
-                    num_measure['_name'] = col
-                    num_measure['_date'] = datetime.datetime.now()
-                    num_measures.append(num_measure)
-            elif metrics['type'] in ['string']:
-                for metric in metrics['metrics']:
-                    cat_measure = _generate_descriptions(self.current_data[col], metric)
-                    cat_measure['_name'] = col
-                    cat_measure['_date'] = datetime.datetime.now()
-                    cat_measures.append(cat_measure)
+            for metric in metrics['metrics']:
+                if isinstance(metric, dict):
+                    metric_name = metric['function']
+                    kwargs = metric['parameters']
+                else:
+                    metric_name = metric
+                    kwargs = {}
+                measure = self.generate_descriptions(self.current_data[col], metric_name, kwargs)
+                measure['_name'] = col
+                measure['_date'] = datetime.datetime.now()
+                if metrics['type'] in ['float', 'int']:
+                    num_measures.append(measure)
+                elif metrics['type'] in ['string']:
+                    cat_measures.append(measure)
         self._write(num_measures, cat_measures)
 
     def _write(self, num_measures, cat_measures):
@@ -112,6 +121,39 @@ class DataSet(object):
 
 
 if __name__ == '__main__':
+    def mean_plus_n(column, n):
+        return column.mean() + n
+
+
+    iris = {
+        'data_name': 'iris',
+        'columns': {
+            'petal.length': {
+                'type': 'float',
+                'metrics': [
+                    'mean',
+                    'std',
+                    {'function': 'mean_plus_n', 'parameters': {'n': 1}}
+                ]
+            },
+            'petal.width': {
+                'type': 'float',
+                'metrics': [
+                    'mean',
+                    {'function': 'quantile', 'parameters': {'quantile': .5}},
+                    {'function': 'quantile', 'parameters': {'quantile': .25}},
+                ]
+            },
+            'variety': {
+                'type': 'string',
+                'metrics': ['nunique']
+            }
+        },
+        'custom_functions': {
+            'mean_plus_n': mean_plus_n
+        }
+    }
+
     for _ in range(20):
         data = pd.read_csv('https://gist.githubusercontent.com/netj/8836201/raw/6f9306ad21398ea43cba4f7d537619d0e07d5ae3/iris.csv')
         data['petal.length'] += random.randint(0, 5)

@@ -7,20 +7,23 @@ import dash_html_components as html
 import dash_core_components as dcc
 from dash.dependencies import Input, Output
 import numpy as np
+import dash_table
+import pandas as pd
 
 import os
 import json
 
-import dash_table
-import pandas as pd
+from web.config import Config
+from web.plots.trends import create_trend_line
+
 
 
 server = flask.Flask(__name__)
 
-# server.config.from_object(app_config['development'])
+server.config.from_object(Config)
 server.config.update(
     DEBUG=True,
-    SECRET_KEY='secret_xxx'
+    SECRET_KEY='supersecrit'
 )
 
 
@@ -84,21 +87,7 @@ def render_content(tab):
         for var in num_data['_name'].unique():
             for metric in num_data[num_data['_name'] == var]['_metric'].unique():
                 final_html.append(
-                    dcc.Graph(
-                        id='num-data-graph-{}'.format(var),
-                        figure={
-                            'data': [
-                                {'y': num_data[(num_data['_name'] == var) &
-                                               (num_data['_metric'] == metric)]['value'],
-                                 'x': np.arange(num_data[(num_data['_name'] == var) &
-                                                         (num_data['_metric'] == metric)].shape[0])}
-                            ],
-                            'layout': {
-                                'title': '{} - {}'.format(var, metric)
-                            }
-
-                        }
-                    )
+                    create_trend_line(num_data, var, metric)
                 )
         return final_html
     elif tab == 'tab-3':
@@ -107,21 +96,7 @@ def render_content(tab):
         for var in cat_data['_name'].unique():
             for metric in cat_data[cat_data['_name'] == var]['_metric'].unique():
                 final_html.append(
-                    dcc.Graph(
-                        id='num-data-graph-{}'.format(var),
-                        figure={
-                            'data': [
-                                {'y': cat_data[(cat_data['_name'] == var) &
-                                               (cat_data['_metric'] == metric)]['value'],
-                                 'x': np.arange(cat_data[(cat_data['_name'] == var) &
-                                                         (cat_data['_metric'] == metric)].shape[0])}
-                            ],
-                            'layout': {
-                                'title': '{} - {}'.format(var, metric)
-                            }
-
-                        }
-                    )
+                    create_trend_line(cat_data, var, metric)
                 )
         return final_html
 

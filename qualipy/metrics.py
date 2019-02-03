@@ -1,6 +1,8 @@
 from qualipy.measure_util import (
     _get_mean,
     _get_std,
+    _get_quantile,
+    _get_min,
     _get_nunique
 )
 
@@ -8,13 +10,7 @@ from qualipy.measure_util import (
 MEASURE_MAP = {
     'mean': _get_mean,
     'std': _get_std,
-    'nunique': _get_nunique
+    'quantile': _get_quantile,
+    'min': _get_min,
+    'nunique': _get_nunique,
 }
-
-
-def _generate_descriptions(column, measure):
-    return {
-        'value': MEASURE_MAP[measure](column),
-        '_metric': measure
-    }
-
