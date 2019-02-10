@@ -1,7 +1,6 @@
 import pandas as pd
 
 import os
-import random
 import datetime
 import threading
 import json
@@ -42,7 +41,7 @@ class DataSet(object):
     def read_csv(self, file_path, **kwargs):
         self.current_data = pd.read_csv(file_path, **kwargs)
 
-    def generate_descriptions(self, column, measure, kwargs):
+    def _generate_descriptions(self, column, measure, kwargs):
         if kwargs:
             metric_name = '{}_{}'.format(measure, str(kwargs))
         else:
@@ -102,7 +101,7 @@ class DataSet(object):
                 else:
                     metric_name = metric
                     kwargs = {}
-                measure = self.generate_descriptions(self.current_data[col], metric_name, kwargs)
+                measure = self._generate_descriptions(self.current_data[col], metric_name, kwargs)
                 measure['_name'] = col
                 measure['_date'] = datetime.datetime.now()
                 if metrics['type'] in ['float', 'int']:
@@ -118,49 +117,3 @@ class DataSet(object):
         self.metrics = self._get_history_metrics()
         pd.concat([self.hist_num_data, num_data], sort=True).to_csv(self.num_name, index=False)
         pd.concat([self.hist_cat_data, cat_data], sort=True).to_csv(self.cat_name, index=False)
-
-
-if __name__ == '__main__':
-    def mean_plus_n(column, n):
-        return column.mean() + n
-
-
-    iris = {
-        'data_name': 'iris',
-        'columns': {
-            'petal.length': {
-                'type': 'float',
-                'metrics': [
-                    'mean',
-                    'std',
-                    {'function': 'mean_plus_n', 'parameters': {'n': 1}}
-                ]
-            },
-            'petal.width': {
-                'type': 'float',
-                'metrics': [
-                    'mean',
-                    {'function': 'quantile', 'parameters': {'quantile': .5}},
-                    {'function': 'quantile', 'parameters': {'quantile': .25}},
-                ]
-            },
-            'variety': {
-                'type': 'string',
-                'metrics': ['nunique']
-            }
-        },
-        'custom_functions': {
-            'mean_plus_n': mean_plus_n
-        }
-    }
-
-    for _ in range(20):
-        data = pd.read_csv('https://gist.githubusercontent.com/netj/8836201/raw/6f9306ad21398ea43cba4f7d537619d0e07d5ae3/iris.csv')
-        data['petal.length'] += random.randint(0, 5)
-        data['petal.width'] += random.randint(0, 5)
-        if _ == 0:
-            ds = DataSet(iris, reset=True)
-        else:
-            ds = DataSet(iris, reset=False)
-        ds.read_pandas(data)
-        ds.run()

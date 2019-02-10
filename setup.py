@@ -10,7 +10,11 @@ with open(os.path.join(HERE, 'README.md'), encoding='utf-8') as f:
 with open('requirements.txt') as f:
     required = f.read().splitlines()
 
-os.mkdir(os.path.join(HOME, '.qualipy'))
+try:
+    os.mkdir(os.path.join(HOME, '.qualipy'))
+    os.mkdir(os.path.join(HOME, '.qualipy', 'data'))
+except FileExistsError:
+    pass
 
 setup(
     name='qualipy',

@@ -5,7 +5,7 @@ from flask import Response, request, abort, url_for, render_template, redirect, 
 from dash import Dash
 import dash_html_components as html
 import dash_core_components as dcc
-from dash.dependencies import Input, Output
+from dash.dependencies import Input, Output, State
 import numpy as np
 import dash_table
 import pandas as pd
@@ -37,21 +37,19 @@ def page_not_found(e):
 
 
 dash_app1 = Dash(__name__, server=server, url_base_pathname='/metrics/')
-dash_app1.layout = html.Div([
-    html.H1('Qualipy'),
-    dcc.Tabs(id="tabs", value='tab-1', children=[
-        dcc.Tab(label='History', value='tab-1'),
-        dcc.Tab(label='Numeric', value='tab-2'),
-        dcc.Tab(label='Categorical', value='tab-3'),
-    ]),
-    html.Div(id='index')
-])
+dash_app1.config['suppress_callback_exceptions']=True
+dash_app1.layout = html.Div([])
+
+
 @dash_app1.callback(Output('index', 'children'),
-                    [Input('tabs', 'value')])
-def render_content(tab):
+                    [Input('tabs', 'value'), Input('column-choice', 'value')])
+def render_content(tab, value):
+    print(tab, value)
     cat_data = pd.read_csv(os.path.join(HOME, '.qualipy/data', '{}-cat.csv'.format(session['project'])))
+    cat_data = cat_data[cat_data['_name'] == value]
     cat_data = cat_data.sort_values(['_name', '_metric', '_date'])
     num_data = pd.read_csv(os.path.join(HOME, '.qualipy/data', '{}-num.csv'.format(session['project'])))
+    num_data = num_data[num_data['_name'] == value]
     num_data = num_data.sort_values(['_name', '_metric', '_date'])
     if tab == 'tab-1':
         return html.Div([
@@ -104,12 +102,34 @@ def render_content(tab):
 @server.route('/', methods=['GET', 'POST'])
 @server.route('/index', methods=['GET', 'POST'])
 def index():
+    global dash_app1
     with open(os.path.join(HOME, '.qualipy', 'projects.json'), 'r') as f:
         projects = json.loads(f.read())
+
+    dash_app1.layout = html.Div([
+        html.H1('Qualipy'),
+        dcc.Tabs(id="tabs", value='tab-1', children=[
+            dcc.Tab(label='History', value='tab-1'),
+            dcc.Tab(label='Numeric', value='tab-2'),
+            dcc.Tab(label='Categorical', value='tab-3'),
+        ]),
+        dcc.Dropdown(
+            id='column-choice',
+            options=[
+                {'label': 'petal.length', 'value': 'petal.length'},
+                {'label': 'petal.width', 'value': 'petal.width'},
+            ],
+            value='petal.width'
+        ),
+        html.Div(
+            id='index',
+        )
+    ])
 
     if request.method == 'POST':
         button_pressed = list(request.form.to_dict(flat=False).keys())[0]
         session['project'] = button_pressed
+        session['v'] = 'petal.width'
         return redirect(url_for('render_dashboard'))
     return render_template('home/index.html', projects=list(projects.keys()))
 
