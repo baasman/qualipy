@@ -3,14 +3,14 @@ from qualipy import DataSet
 import random
 
 
-def mean_plus_n(column, n):
-    return column.mean() + n
+def mean_plus_n(data, column, n):
+    return data[column].mean() + n
 
 
 iris = {
     'data_name': 'iris',
     'columns': {
-        'petal.length': {
+        'petal_length': {
             'type': 'float',
             'metrics': [
                 'mean',
@@ -18,7 +18,7 @@ iris = {
                 {'function': 'mean_plus_n', 'parameters': {'n': 1}}
             ]
         },
-        'petal.width': {
+        'petal_width': {
             'type': 'float',
             'metrics': [
                 'mean',
@@ -36,14 +36,17 @@ iris = {
     }
 }
 
-for _ in range(20):
+ts = pd.date_range(start='1/1/2018', end='1/30/2018')
+for idx, time in enumerate(ts):
     data = pd.read_csv('https://gist.githubusercontent.com/netj/8836201/raw/6f9306ad21398ea43cba4f7d537619d0e07d5ae3/iris.csv')
-    data['petal.length'] += random.randint(0, 5)
-    data['petal.width'] += random.randint(0, 5)
-    if _ == 0:
-        ds = DataSet(iris, reset=True)
+    cols = [i.replace('.', '_') for i in data.columns]
+    data.columns = cols
+    data['petal_length'] += random.randint(0, 5)
+    data['petal_width'] += random.randint(0, 5)
+    if idx == 0:
+        ds = DataSet(iris, reset=True, time_of_run=time)
     else:
-        ds = DataSet(iris, reset=False)
-    ds.read_pandas(data)
+        ds = DataSet(iris, reset=False, time_of_run=time)
+    ds.set_dataset(data)
     ds.run()
 

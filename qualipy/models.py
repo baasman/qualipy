@@ -5,55 +5,53 @@ import datetime
 import threading
 import json
 
-from qualipy.metrics import MEASURE_MAP
+from qualipy.metrics import PANDAS_METRIC_MAP, SPARK_METRIC_MAP
+from qualipy.backends._pandas.generate import GeneratorPandas
+from qualipy.backends._spark.generate import GeneratorSpark
 
 
-dtypes = {
-    'float': float,
-    'int': int,
-    'string': str
-}
+
 
 HOME = os.path.expanduser('~')
 
 
+METRICS = {
+    'pandas': PANDAS_METRIC_MAP,
+    'spark': SPARK_METRIC_MAP
+}
+
+GENERATORS = {
+    'pandas': GeneratorPandas,
+    'spark': GeneratorSpark
+}
+
 
 class DataSet(object):
 
-    def __init__(self, config, reset=False):
+    def __init__(self, config, backend='pandas', reset=False, time_of_run=None):
         self.table_name = config['data_name']
         self.columns = config['columns']
+        self.backend = backend
+        self.metrics = METRICS[backend]
+        self.generator = GENERATORS[backend]()
 
         self.current_data = None
         self.reset = reset
+        self.time_of_run = time_of_run
 
         self._set_custom_funcs(config)
         self._set_file_name()
         self._add_to_project_list()
 
     def run(self):
-        self.thread = threading.Thread(target=self._generate_metrics)
-        self.thread.start()
+        if self.backend == 'pandas':
+            self.thread = threading.Thread(target=self._generate_metrics)
+            self.thread.start()
+        elif self.backend == 'spark':
+            self._generate_metrics()
 
-    def read_pandas(self, df):
+    def set_dataset(self, df):
         self.current_data = df
-
-    def read_csv(self, file_path, **kwargs):
-        self.current_data = pd.read_csv(file_path, **kwargs)
-
-    def _generate_descriptions(self, column, measure, kwargs):
-        if kwargs:
-            metric_name = '{}_{}'.format(measure, str(kwargs))
-        else:
-            metric_name = measure
-        if measure in self.all_custom_funcs:
-            fun = self.custom_funcs[measure]
-        else:
-            fun = MEASURE_MAP[measure]
-        return {
-            'value': fun(column, **kwargs),
-            '_metric': metric_name
-        }
 
     def _set_custom_funcs(self, config):
         custom_funcs = config.get('custom_functions')
@@ -77,7 +75,9 @@ class DataSet(object):
             projects = {}
 
         if self.table_name not in projects:
-            projects[self.table_name] = {}
+            projects[self.table_name] = {
+                'columns': list(self.columns.keys())
+            }
             with open(project_file_path, 'w') as f:
                 json.dump(projects, f)
 
@@ -93,7 +93,9 @@ class DataSet(object):
         num_measures = []
         cat_measures = []
         for col, metrics in self.columns.items():
-            self.current_data[col] = self.current_data[col].astype(dtypes[metrics['type']])
+            type = metrics.get('type', None)
+            if type:
+                self.current_data = self.generator.set_type(self.current_data, col, type)
             for metric in metrics['metrics']:
                 if isinstance(metric, dict):
                     metric_name = metric['function']
@@ -101,9 +103,10 @@ class DataSet(object):
                 else:
                     metric_name = metric
                     kwargs = {}
-                measure = self._generate_descriptions(self.current_data[col], metric_name, kwargs)
+                measure = self.generator.generate_description(self.current_data, col, metric_name,
+                                                              self.custom_funcs, kwargs)
                 measure['_name'] = col
-                measure['_date'] = datetime.datetime.now()
+                measure['_date'] = datetime.datetime.now() if self.time_of_run is None else self.time_of_run
                 if metrics['type'] in ['float', 'int']:
                     num_measures.append(measure)
                 elif metrics['type'] in ['string']:

@@ -9,14 +9,35 @@ def create_trend_line(data, var, metric):
             'data': [
                 {'y': data[(data['_name'] == var) &
                                (data['_metric'] == metric)]['value'],
-                 'x': np.arange(data[(data['_name'] == var) &
-                                         (data['_metric'] == metric)].shape[0])}
+                 'x': data[(data['_name'] == var) &
+                                     (data['_metric'] == metric)]['_date']
+                 }
             ],
             'layout': {
                 'title': '{} - {}'.format(var, metric),
-                'xaxis': {'title': 'Date'},
+                # 'xaxis': {'title': 'Date'},
                 'yaxis': {'title': 'value'},
                 'margin': {'l': 400, 'b':100, 't': 50, 'r': 400},
+                'xaxis': dict(
+                rangeselector=dict(
+                    buttons=list([
+                        dict(count=1,
+                             label='1m',
+                             step='month',
+                             stepmode='backward'),
+                        dict(count=6,
+                             label='6m',
+                             step='month',
+                             stepmode='backward'),
+                        dict(step='all')
+                    ])
+                ),
+                rangeslider=dict(
+                    visible=True
+                ),
+                type='date'
+    )
+
             }
 
         }
