@@ -5,8 +5,7 @@ from flask import Response, request, abort, url_for, render_template, redirect, 
 from dash import Dash
 import dash_html_components as html
 import dash_core_components as dcc
-from dash.dependencies import Input, Output, State
-import numpy as np
+from dash.dependencies import Input, Output
 import dash_table
 import pandas as pd
 
@@ -15,6 +14,7 @@ import json
 
 from web.config import Config
 from web.plots.trends import create_trend_line
+from web.plots.batch import compare_batch_with_rest
 
 
 
@@ -41,17 +41,26 @@ dash_app1.config['suppress_callback_exceptions']=True
 dash_app1.layout = html.Div([])
 
 
+def select_data(project, column, batch):
+    data = pd.read_csv(os.path.join(HOME, '.qualipy/data', '{}.csv'.format(session['project'])))
+    data = data[data['_name'] == column]
+    data = data.sort_values(['_name', '_metric', '_date'])
+    if not isinstance(batch, list):
+        batch = [batch]
+    if 'all' not in batch:
+        data = data[data['_date'].isin(batch)]
+    return data
+
+
+
 @dash_app1.callback(Output('index', 'children'),
-                    [Input('tabs', 'value'), Input('column-choice', 'value')])
-def render_content(tab, value):
-    cat_data = pd.read_csv(os.path.join(HOME, '.qualipy/data', '{}-cat.csv'.format(session['project'])))
-    cat_data = cat_data[cat_data['_name'] == value]
-    cat_data = cat_data.sort_values(['_name', '_metric', '_date'])
-    num_data = pd.read_csv(os.path.join(HOME, '.qualipy/data', '{}-num.csv'.format(session['project'])))
-    num_data = num_data[num_data['_name'] == value]
-    num_data = num_data.sort_values(['_name', '_metric', '_date'])
-    data = pd.concat([num_data, cat_data])
+                    [Input('tabs', 'value'),
+                     Input('column-choice', 'value'),
+                     Input('batch-choice', 'value')])
+def render_content(tab, column, batch):
+    print(batch)
     if tab == 'tab-1':
+        data = select_data(session['project'], column, batch)
         return html.Div([
             html.H3('History'),
             html.H5('Data'),
@@ -68,6 +77,7 @@ def render_content(tab, value):
             ),
         ])
     elif tab == 'tab-2':
+        data = select_data(session['project'], column, batch)
         final_html = []
         final_html.append(html.H3('Trends'))
         for var in data['_name'].unique():
@@ -77,8 +87,11 @@ def render_content(tab, value):
                 )
         return final_html
     elif tab == 'tab-3':
+        data = pd.read_csv(os.path.join(HOME, '.qualipy/data', '{}.csv'.format(session['project'])))
+        data = data[data['_name'] == column]
         final_html = []
         final_html.append(html.H3('Analyze a batch'))
+        final_html.append(compare_batch_with_rest(data, batch, 'mean'))
         return final_html
 
 
@@ -94,17 +107,30 @@ def index():
         button_pressed = list(request.form.to_dict(flat=False).keys())[0]
         session['project'] = button_pressed
         column_options = projects[button_pressed]['columns']
+        data = pd.read_csv(os.path.join(HOME, '.qualipy/data', '{}.csv'.format(session['project'])))
         dash_app1.layout = html.Div([
             html.Img(src='/assets/logo.png', style={'width': '300px', 'height': 'auto'}),
             dcc.Tabs(id="tabs", value='tab-1', children=[
-                dcc.Tab(label='History', value='tab-1'),
+                dcc.Tab(label='Data', value='tab-1'),
                 dcc.Tab(label='Trends', value='tab-2'),
                 dcc.Tab(label='Batch', value='tab-3'),
             ]),
+            html.H5('Column'),
             dcc.Dropdown(
                 id='column-choice',
                 options=[{'label': i, 'value': i} for i in column_options],
                 value=column_options[0],
+                style={
+                    'width': '300px',
+                    'marginTop': '30px'
+                }
+            ),
+            html.H5('Batch'),
+            dcc.Dropdown(
+                id='batch-choice',
+                options=[{'label': i, 'value': i} for i in data['_date'].unique()] + [{'label': 'all', 'value': 'all'}],
+                value='all',
+                multi=True,
                 style={
                     'width': '300px',
                     'marginTop': '30px'

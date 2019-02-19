@@ -4,7 +4,6 @@ findspark.init()
 from pyspark.sql import SparkSession
 from pyspark.sql.types import StructType, StructField
 from pyspark.sql.types import DoubleType, StringType
-import pyspark.sql.functions as F
 
 from qualipy import DataSet
 import random

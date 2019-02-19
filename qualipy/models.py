@@ -5,20 +5,13 @@ import datetime
 import threading
 import json
 
-from qualipy.metrics import PANDAS_METRIC_MAP, SPARK_METRIC_MAP
 from qualipy.backends._pandas.generate import GeneratorPandas
 from qualipy.backends._spark.generate import GeneratorSpark
 
 
 
-
 HOME = os.path.expanduser('~')
 
-
-METRICS = {
-    'pandas': PANDAS_METRIC_MAP,
-    'spark': SPARK_METRIC_MAP
-}
 
 GENERATORS = {
     'pandas': GeneratorPandas,
@@ -32,7 +25,6 @@ class DataSet(object):
         self.table_name = config['data_name']
         self.columns = config['columns']
         self.backend = backend
-        self.metrics = METRICS[backend]
         self.generator = GENERATORS[backend]()
 
         self.current_data = None
@@ -63,8 +55,7 @@ class DataSet(object):
             self.custom_funcs = {}
 
     def _get_history_metrics(self):
-        self.hist_num_data = pd.read_csv(self.num_name)
-        self.hist_cat_data = pd.read_csv(self.cat_name)
+        self.hist_data = pd.read_csv(self.history_name)
 
     def _add_to_project_list(self):
         project_file_path = os.path.join(HOME, '.qualipy', 'projects.json')
@@ -82,16 +73,12 @@ class DataSet(object):
                 json.dump(projects, f)
 
     def _set_file_name(self):
-        self.num_name = os.path.join(HOME, '.qualipy/data', '{}-num.csv'.format(self.table_name))
-        if not os.path.isfile(self.num_name) or self.reset:
-            pd.DataFrame(columns=['_name', '_date', '_metric', 'value']).to_csv(self.num_name, index=False)
-        self.cat_name = os.path.join(HOME, '.qualipy/data', '{}-cat.csv'.format(self.table_name))
-        if not os.path.isfile(self.cat_name) or self.reset:
-            pd.DataFrame(columns=['_name', '_date', '_metric', 'value']).to_csv(self.cat_name, index=False)
+        self.history_name = os.path.join(HOME, '.qualipy/data', '{}.csv'.format(self.table_name))
+        if not os.path.isfile(self.history_name) or self.reset:
+            pd.DataFrame(columns=['_name', '_date', '_metric', 'value']).to_csv(self.history_name, index=False)
 
     def _generate_metrics(self):
-        num_measures = []
-        cat_measures = []
+        measures = []
         for col, metrics in self.columns.items():
             type = metrics.get('type', None)
             if type:
@@ -107,16 +94,10 @@ class DataSet(object):
                                                               self.custom_funcs, kwargs)
                 measure['_name'] = col
                 measure['_date'] = datetime.datetime.now() if self.time_of_run is None else self.time_of_run
-                if metrics['type'] in ['float', 'int']:
-                    num_measures.append(measure)
-                elif metrics['type'] in ['string']:
-                    cat_measures.append(measure)
-        self._write(num_measures, cat_measures)
+                measures.append(measure)
+        self._write(measures)
 
-    def _write(self, num_measures, cat_measures):
-        num_data = pd.DataFrame(num_measures)
-        cat_data = pd.DataFrame(cat_measures)
-
+    def _write(self, measures):
+        data = pd.DataFrame(measures)
         self.metrics = self._get_history_metrics()
-        pd.concat([self.hist_num_data, num_data], sort=True).to_csv(self.num_name, index=False)
-        pd.concat([self.hist_cat_data, cat_data], sort=True).to_csv(self.cat_name, index=False)
+        pd.concat([self.hist_data, data], sort=True).to_csv(self.history_name, index=False)
