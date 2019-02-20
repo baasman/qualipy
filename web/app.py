@@ -1,12 +1,10 @@
 from werkzeug.wsgi import DispatcherMiddleware
 from werkzeug.serving import run_simple
 import flask
-from flask import Response, request, abort, url_for, render_template, redirect, session
+from flask import request, url_for, render_template, redirect, session
 from dash import Dash
 import dash_html_components as html
-import dash_core_components as dcc
 from dash.dependencies import Input, Output
-import dash_table
 import pandas as pd
 
 import os
@@ -14,7 +12,9 @@ import json
 
 from web.config import Config
 from web.plots.trends import create_trend_line
+from web.dash_components import data_table
 from web.plots.batch import compare_batch_with_rest
+from web._layout import generate_layout
 
 
 
@@ -30,69 +30,62 @@ server.config.update(
 HOME = os.path.expanduser('~')
 
 
-@server.errorhandler(401)
-def page_not_found(e):
-    print(e)
-    return Response('<p>Page not found</p>')
-
-
 dash_app1 = Dash(__name__, server=server, url_base_pathname='/metrics/')
 dash_app1.config['suppress_callback_exceptions']=True
 dash_app1.layout = html.Div([])
 
 
-def select_data(project, column, batch):
-    data = pd.read_csv(os.path.join(HOME, '.qualipy/data', '{}.csv'.format(session['project'])))
-    data = data[data['_name'] == column]
+def select_data(project, column=None, batch=None):
+    data = pd.read_csv(os.path.join(HOME, '.qualipy/data', '{}.csv'.format(project)))
+    if column is not None:
+        if not isinstance(column, str):
+            data = data[data['_name'].isin(column)]
+        else:
+            data = data[data['_name'] == column]
     data = data.sort_values(['_name', '_metric', '_date'])
-    if not isinstance(batch, list):
-        batch = [batch]
-    if 'all' not in batch:
-        data = data[data['_date'].isin(batch)]
-    return data
+    if batch is None:
+        return data
+    else:
+        if not isinstance(batch, list):
+            batch = [batch]
+        if 'all' not in batch:
+            data = data[data['_date'].isin(batch)]
+        return data
 
 
+@dash_app1.callback(
+    Output(component_id='tab-1-results', component_property='children'),
+    [Input(component_id='column-choice', component_property='value')]
+)
+def update_tab_1(column):
+    data = select_data(session['project'], column)
+    return data_table(data)
 
-@dash_app1.callback(Output('index', 'children'),
-                    [Input('tabs', 'value'),
-                     Input('column-choice', 'value'),
-                     Input('batch-choice', 'value')])
-def render_content(tab, column, batch):
-    print(batch)
-    if tab == 'tab-1':
-        data = select_data(session['project'], column, batch)
-        return html.Div([
-            html.H3('History'),
-            html.H5('Data'),
-            dash_table.DataTable(
-                id='num-table',
-                columns=[{'name': i, 'id': i} for i in data.columns],
-                data=data.to_dict('rows'),
-                sorting=True,
-                style_cell={
-                    'textAlign': 'left',
-                    'minWidth': '0px', 'maxWidth': '180px',
-                    'whiteSpace': 'normal'
-                }
-            ),
-        ])
-    elif tab == 'tab-2':
-        data = select_data(session['project'], column, batch)
-        final_html = []
-        final_html.append(html.H3('Trends'))
-        for var in data['_name'].unique():
-            for metric in data[data['_name'] == var]['_metric'].unique():
-                final_html.append(
-                    create_trend_line(data, var, metric)
-                )
-        return final_html
-    elif tab == 'tab-3':
-        data = pd.read_csv(os.path.join(HOME, '.qualipy/data', '{}.csv'.format(session['project'])))
-        data = data[data['_name'] == column]
-        final_html = []
-        final_html.append(html.H3('Analyze a batch'))
-        final_html.append(compare_batch_with_rest(data, batch, 'mean'))
-        return final_html
+
+@dash_app1.callback(
+    Output(component_id='tab-2-results', component_property='children'),
+    [Input(component_id='column-choice', component_property='value')]
+)
+def update_tab_2(column):
+    plots = []
+    data = select_data(session['project'], column)
+    for var in data['_name'].unique():
+        for metric in data[data['_name'] == var]['_metric'].unique():
+            plots.append(
+                create_trend_line(data, var, metric)
+            )
+    return plots
+
+
+@dash_app1.callback(
+    Output(component_id='tab-3-results', component_property='children'),
+    [Input(component_id='column-choice', component_property='value'),
+     Input(component_id='batch-choice', component_property='value')
+     ]
+)
+def update_tab_3(column, batch):
+    data = select_data(session['project'], column=column)
+    return compare_batch_with_rest(data, batch, 'mean')
 
 
 @server.route('/', methods=['GET', 'POST'])
@@ -107,39 +100,11 @@ def index():
         button_pressed = list(request.form.to_dict(flat=False).keys())[0]
         session['project'] = button_pressed
         column_options = projects[button_pressed]['columns']
-        data = pd.read_csv(os.path.join(HOME, '.qualipy/data', '{}.csv'.format(session['project'])))
-        dash_app1.layout = html.Div([
-            html.Img(src='/assets/logo.png', style={'width': '300px', 'height': 'auto'}),
-            dcc.Tabs(id="tabs", value='tab-1', children=[
-                dcc.Tab(label='Data', value='tab-1'),
-                dcc.Tab(label='Trends', value='tab-2'),
-                dcc.Tab(label='Batch', value='tab-3'),
-            ]),
-            html.H5('Column'),
-            dcc.Dropdown(
-                id='column-choice',
-                options=[{'label': i, 'value': i} for i in column_options],
-                value=column_options[0],
-                style={
-                    'width': '300px',
-                    'marginTop': '30px'
-                }
-            ),
-            html.H5('Batch'),
-            dcc.Dropdown(
-                id='batch-choice',
-                options=[{'label': i, 'value': i} for i in data['_date'].unique()] + [{'label': 'all', 'value': 'all'}],
-                value='all',
-                multi=True,
-                style={
-                    'width': '300px',
-                    'marginTop': '30px'
-                }
-            ),
-            html.Div(
-                id='index',
-            )
-        ])
+        session['column_options'] = column_options
+
+        data = select_data(session['project'])
+
+        dash_app1.layout = html.Div(id='total-div', children=generate_layout(data, column_options))
         return redirect(url_for('render_dashboard'))
     return render_template('home/index.html', projects=list(projects.keys()))
 
