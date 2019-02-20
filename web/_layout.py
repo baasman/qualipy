@@ -1,6 +1,6 @@
 import dash_html_components as html
 import dash_core_components as dcc
-from web.dash_components import column_choice, batch_choice, data_table
+from web.dash_components import column_choice, batch_choice
 
 
 def generate_layout(data, column_options):
