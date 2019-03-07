@@ -16,6 +16,10 @@ def _get_quantile(data, column, quantile=.5):
     return data[column].quantile(quantile)
 
 
+def _get_number_of_duplicates(data, column):
+    return data.shape[0] - data.drop_duplicates().shape[0]
+
+
 # categorical
 
 def _get_nunique(data, column):

@@ -8,26 +8,38 @@ def generate_layout(data, column_options):
     batch_choices = batch_choice(data['_date'].unique())
 
     tab1_html = []
-    tab1_html.append(html.H3('History'))
+    tab1_html.append(html.H3('Overview'))
+    tab1_html.append(html.H5('Column Choice'))
     tab1_html.append(col_choices)
+    tab1_html.append(html.H5('Batch Choice'))
+    tab1_html.append(batch_choices)
     tab1_html.append(html.Div(id='tab-1-results'))
 
     tab2_html = []
     tab2_html.append(html.H3('Trends'))
+    tab2_html.append(html.H5('Column Choice'))
     tab2_html.append(col_choices)
     tab2_html.append(html.Div(id='tab-2-results'))
 
     tab3_html = []
     tab3_html.append(html.H3('Analyze a batch'))
+    tab3_html.append(html.H5('Column Choice'))
+    tab3_html.append(col_choices)
+    tab3_html.append(html.H5('Batch Choice'))
     tab3_html.append(batch_choices)
-    tab2_html.append(col_choices)
     tab3_html.append(html.Div(id='tab-3-results'))
+
+    tab4_html = []
+    tab4_html.append(html.H3('History'))
+    tab4_html.append(html.H5('Column Choice'))
+    tab4_html.append(col_choices)
+    tab4_html.append(html.Div(id='tab-4-results'))
 
     return [
         html.Img(src='/assets/logo.png', style={'width': '300px', 'height': 'auto'}),
         dcc.Tabs(id="tabs", value='tab-1', children=[
             dcc.Tab(
-                label='Data',
+                label='Batch Explorer',
                 value='tab-1',
                 children=tab1_html
             ),
@@ -37,7 +49,7 @@ def generate_layout(data, column_options):
                 children=tab2_html
             ),
             dcc.Tab(
-                label='Batch',
+                label='Misc',
                 value='tab-3',
                 children=tab3_html
             ),

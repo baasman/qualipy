@@ -12,3 +12,4 @@ class Config(object):
             _config = json.load(f)
         for k, v in _config.items():
             setattr(self, k.upper(), v)
+        self.REDIS_PORT = 6379

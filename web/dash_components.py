@@ -15,8 +15,8 @@ def column_choice(column_options):
 def batch_choice(batches):
     return dcc.Dropdown(
         id='batch-choice',
-        options=[{'label': i, 'value': i} for i in batches] + [{'label': 'all', 'value': 'all'}],
-        value='all',
+        options=[{'label': i, 'value': i} for i in batches] + [{'label': 'last', 'value': 'last'}],
+        value='last',
         multi=True,
         style={
             'width': '300px',

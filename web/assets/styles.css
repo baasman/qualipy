@@ -1,0 +1,4 @@
+#trend-plots {
+    display: flex;
+}
+#trend-plots > div:nth-child(2) { flex: 1; }

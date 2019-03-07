@@ -15,9 +15,8 @@ def create_trend_line(data, var, metric):
             ],
             'layout': {
                 'title': '{} - {}'.format(var, metric),
-                # 'xaxis': {'title': 'Date'},
                 'yaxis': {'title': 'value'},
-                'margin': {'l': 400, 'b':100, 't': 50, 'r': 400},
+                # 'margin': {'l': 400, 'b':100, 't': 50, 'r': 400
                 'xaxis': dict(
                 rangeselector=dict(
                     buttons=list([
