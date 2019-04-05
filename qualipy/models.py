@@ -7,6 +7,7 @@ import json
 
 from qualipy.backends._pandas.generate import GeneratorPandas
 from qualipy.backends._spark.generate import GeneratorSpark
+from qualipy.database import create_table, get_table
 
 
 
@@ -19,31 +20,49 @@ GENERATORS = {
 }
 
 
+def _create_value(value, metric, name, date):
+    return {
+        'value': value,
+        '_date': date,
+        '_name': name,
+        '_metric': metric
+    }
+
+
 class DataSet(object):
 
-    def __init__(self, config, backend='pandas', reset=False, time_of_run=None):
+    def __init__(self, config, backend='pandas', engine=None, reset=False, time_of_run=None):
         self.table_name = config['data_name']
         self.columns = config['columns']
+        self.nullables = {col: info.get('null', False) for col, info in config['columns'].items()}
         self.backend = backend
         self.generator = GENERATORS[backend]()
+
+        output = config.get('output')
+        if output is not None:
+            self.out_type = output['type']
+        else:
+            self.out_type = 'file'
 
         self.current_data = None
         self.reset = reset
         self.time_of_run = time_of_run
 
+        self.engine = engine
+
         self._set_custom_funcs(config)
-        self._set_file_name()
-        self._add_to_project_list()
+        self._locate_history_data()
+
 
     def run(self):
-        if self.backend == 'pandas':
-            self.thread = threading.Thread(target=self._generate_metrics)
-            self.thread.start()
-        elif self.backend == 'spark':
-            self._generate_metrics()
+        # self.thread = threading.Thread(target=self._generate_metrics)
+        # self.thread.start()
+        self._generate_metrics()
 
     def set_dataset(self, df):
         self.current_data = df
+        self.schema = {col: [str(self.current_data[col].dtype), self.nullables[col]]
+                       for col in self.columns}
 
     def _set_custom_funcs(self, config):
         custom_funcs = config.get('custom_functions')
@@ -54,9 +73,6 @@ class DataSet(object):
             self.all_custom_funcs = []
             self.custom_funcs = {}
 
-    def _get_history_metrics(self):
-        self.hist_data = pd.read_csv(self.history_name)
-
     def _add_to_project_list(self):
         project_file_path = os.path.join(HOME, '.qualipy', 'projects.json')
         try:
@@ -66,16 +82,45 @@ class DataSet(object):
             projects = {}
 
         if self.table_name not in projects:
+            if self.engine is not None:
+                db = str(self.engine.url)
+            else:
+                db = None
             projects[self.table_name] = {
-                'columns': list(self.columns.keys())
+                'columns': list(self.columns.keys()),
+                'executions': [datetime.datetime.now().strftime('%m/%d/%Y %H:%M')],
+                'db': None if db is None else db,
+                'schema': self.schema
             }
-            with open(project_file_path, 'w') as f:
-                json.dump(projects, f)
+        else:
+            projects[self.table_name]['executions'].append(str(datetime.datetime.now()))
+        with open(project_file_path, 'w') as f:
+            json.dump(projects, f)
 
-    def _set_file_name(self):
-        self.history_name = os.path.join(HOME, '.qualipy/data', '{}.csv'.format(self.table_name))
-        if not os.path.isfile(self.history_name) or self.reset:
-            pd.DataFrame(columns=['_name', '_date', '_metric', 'value']).to_csv(self.history_name, index=False)
+
+    def _locate_history_data(self):
+        if self.out_type == 'file':
+            self.history_name = os.path.join(HOME, '.qualipy/data', '{}.csv'.format(self.table_name))
+            if not os.path.isfile(self.history_name) or self.reset:
+                pd.DataFrame(columns=['_name', '_date', '_metric', 'value']).to_csv(self.history_name, index=False)
+            self.hist_data = pd.read_csv(self.history_name)
+
+        elif self.out_type == 'db':
+            with self.engine.connect() as conn:
+                exists = conn.execute('select name from sqlite_master '
+                                      'where type="table" '
+                                      'and name="{}"'.format(self.table_name)).fetchone()
+                if not exists:
+                    create_table(self.engine, self.table_name)
+                if self.reset:
+                    try:
+                        conn.execute('drop table {}'.format(self.table_name))
+                    except:
+                        pass
+                    create_table(self.engine, self.table_name)
+                    conn.execute('delete from {}'.format(self.table_name))
+
+                self.hist_data = get_table(engine=self.engine, table_name=self.table_name)
 
     def _generate_metrics(self):
         measures = []
@@ -95,9 +140,23 @@ class DataSet(object):
                 measure['_name'] = col
                 measure['_date'] = datetime.datetime.now() if self.time_of_run is None else self.time_of_run
                 measures.append(measure)
+
+        measures = self._get_general_info(measures)
         self._write(measures)
+
+    def _get_general_info(self, measures):
+        rows, cols = self.current_data.shape
+        measures.append(_create_value(rows, 'count', 'rows', self.time_of_run))
+        measures.append(_create_value(cols, 'count', 'columns', self.time_of_run))
+        return measures
 
     def _write(self, measures):
         data = pd.DataFrame(measures)
-        self.metrics = self._get_history_metrics()
-        pd.concat([self.hist_data, data], sort=True).to_csv(self.history_name, index=False)
+        if self.out_type == 'file':
+            data.to_csv(self.history_name, index=False, mode='a')
+        elif self.out_type == 'db':
+            data.to_sql(self.table_name, self.engine, if_exists='append', index=False)
+        else:
+            raise ValueError
+        self._add_to_project_list()
+

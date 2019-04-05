@@ -1,12 +1,12 @@
 import dash_core_components as dcc
-import plotly.figure_factory as ff
 
 
 def compare_batch_with_rest(data, batch):
-    if batch == 'last':
-        batch = data['_date'].values[-1]
-        data_cur = data[data['_date'] == batch]
-        data_old = data[data['_date'] != batch]
+    if batch == 'all':
+        # batch = data['_date'].values[-1]
+        # data_cur = data[data['_date'] == batch]
+        # data_old = data[data['_date'] != batch]
+        pass
     else:
         data_cur = data[data['_date'].isin(batch)]
         data_old = data[~data['_date'].isin(batch)]
@@ -24,7 +24,6 @@ def compare_batch_with_rest(data, batch):
                 'title': 'Difference from mean - batch(es) {} versus the rest'.format(batch),
                 'yaxis': {'title': 'value'},
                 'xaxis': {'title': 'metric'},
-                # 'margin': {'l': 400, 'b':100, 't': 50, 'r': 400},
             }
 
         }
@@ -32,18 +31,18 @@ def compare_batch_with_rest(data, batch):
     return plot
 
 
-def histogram(data, column):
+def histogram(data, var, metric):
+    x = data[(data['_name'] == var) &
+              (data['_metric'] == metric)]['value']
     plot = dcc.Graph(
-        id='histogram-{}'.format(column),
+        id='histogram-{}-{}'.format(var, metric),
         figure={
             'data': [
-                {'x': data.value.values, 'type':'histogram', 'name': column, 'bins': 20},
+                {'x': x, 'type':'histogram', 'name': var, 'bins': 20},
             ],
             'layout': {
-                'title': 'histogram - {}'.format(column),
-                'yaxis': {'title': column},
+                'yaxis': {'title': var},
                 'xaxis': {'title': 'metric'},
-                # 'margin': {'l': 400, 'b':100, 't': 50, 'r': 400},
             }
 
         }

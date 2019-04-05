@@ -1,4 +1,93 @@
-#trend-plots {
-    display: flex;
+/*#histograms {*/
+    /*display: flex;*/
+/*}*/
+/*#histograms > div:nth-child(2) { flex: 1; }*/
+
+#overview-table {
+    table-layout: fixed;
+    width: 25%;
+    text-align: left;
 }
-#trend-plots > div:nth-child(2) { flex: 1; }
+
+#schema-table {
+    table-layout: fixed;
+    width: 25%;
+    text-align: left;
+}
+
+
+/*Yes I know this is laughably terrible. someone show me how to do this*/
+
+#trend-plots-0 {
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+    height: 50%;
+    width: 60%;
+    border-style: solid;
+    margin-bottom: 20px;
+    margin-top: 20px;
+}
+
+#plot-header {
+    text-align: center;
+}
+
+#trend-plots-1 {
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+    height: 50%;
+    width: 60%;
+    border-style: solid;
+    margin-bottom: 20px;
+    margin-top: 20px;
+}
+
+
+#trend-plots-2 {
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+    height: 50%;
+    width: 60%;
+    border-style: solid;
+    margin-bottom: 20px;
+    margin-top: 20px;
+}
+
+
+#trend-plots-3 {
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+    height: 50%;
+    width: 60%;
+    border-style: solid;
+    margin-bottom: 20px;
+    margin-top: 20px;
+}
+
+
+#trend-plots-4 {
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+    height: 50%;
+    width: 60%;
+    border-style: solid;
+    margin-bottom: 20px;
+    margin-top: 20px;
+}
+
+
+#trend-plots-5 {
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+    height: 50%;
+    width: 60%;
+    border-style: solid;
+    margin-bottom: 20px;
+    margin-top: 20px;
+}

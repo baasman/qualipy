@@ -6,8 +6,10 @@
     <h3>Qualipy</h3>
     <div class="btn-group">
         <form method="post" role="form">
-            {% for project in projects %}
+            {% for project, values in projects.items() %}
                 <button name="{{ project }}" type="submit">{{ project }}</button>
+                <p>{{ "Last executed on {}".format(values['executions'][-1]) }}</p>
+                <p>There are {{ values['executions'] | length }} total runs</p>
             {% endfor %}
         </form>
     </div>

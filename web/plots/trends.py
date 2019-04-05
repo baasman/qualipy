@@ -1,5 +1,4 @@
 import dash_core_components as dcc
-import numpy as np
 
 
 def create_trend_line(data, var, metric):
@@ -14,9 +13,7 @@ def create_trend_line(data, var, metric):
                  }
             ],
             'layout': {
-                'title': '{} - {}'.format(var, metric),
                 'yaxis': {'title': 'value'},
-                # 'margin': {'l': 400, 'b':100, 't': 50, 'r': 400
                 'xaxis': dict(
                 rangeselector=dict(
                     buttons=list([
