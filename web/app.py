@@ -12,9 +12,14 @@ import dash_core_components as dcc
 
 import os
 import json
+import pickle
 
 from web.config import Config
-from web.plots.trends import create_trend_line
+from web.plots.trends import (
+    create_trend_line,
+    create_value_count_area_chart,
+    create_simple_line_plot
+)
 from web.dash_components import overview_table, schema_table
 from web.plots.batch import compare_batch_with_rest, histogram, dot_plot
 from web._layout import generate_layout
@@ -50,6 +55,7 @@ def select_data(project, column=None, batch=None, url=None, general=False):
         if url is not None:
             engine = create_engine(url)
             data = get_table(engine, project)
+            data.value = data.value.apply(lambda r: pickle.loads(r))
         else:
             data = pd.read_csv(os.path.join(HOME, '.qualipy/data', '{}.csv'.format(project)))
     else:
@@ -77,13 +83,16 @@ def select_data(project, column=None, batch=None, url=None, general=False):
         return data
 
 
+
+#### Overview Tab ####
+
 @dash_app1.callback(
     Output(component_id='tab-1-results', component_property='children'),
-    [Input(component_id='batch-choice', component_property='value')]
+    [Input(component_id='placeholder', component_property='n_clicks')]
 )
-def update_tab_1(batch):
+def update_tab_1(n_clicks):
     data = select_data(session['project'],
-                       batch=batch,
+                       batch='all',
                        column=None,
                        url=session['db_url'],
                        general=True)
@@ -98,9 +107,11 @@ def update_tab_1(batch):
                               columns=['project', 'number_of_rows',
                                        'number_of_columns', 'last_run_time',
                                        'number_of_batches'])
-    schema = pd.DataFrame([{'column': col, 'type': info[0], 'null': info[1]} for
+    schema = pd.DataFrame([{'column': col, 'type': info[0], 'null': info[1],
+                            'unique': info[2]} for
                            col, info in session['schema'].items()])
     schema['null'] = schema['null'].astype(str)
+    schema['unique'] = schema['unique'].astype(str)
     components = []
     components.append(html.H4('Data characteristics'))
     components.append(overview_table(over_table))
@@ -109,13 +120,17 @@ def update_tab_1(batch):
     return components
 
 
+#### Numerical Trends ####
+
 @dash_app1.callback(
     Output(component_id='tab-2-results', component_property='children'),
     [Input(component_id='tab-2-col-choice', component_property='value')]
 )
 def update_tab_2(column):
     plots = []
-    data = select_data(session['project'], column)
+    data = select_data(session['project'], column=column,
+                       url=session['db_url'])
+    data = data[data['_type'] == 'custom']
     for var in data['_name'].unique():
         for i, metric in enumerate(data[data['_name'] == var]['_metric'].unique()):
             plots.append(
@@ -127,8 +142,54 @@ def update_tab_2(column):
                          ]
                 )
             )
-
     return plots
+
+
+#### Categorical Trends ####
+
+@dash_app1.callback(
+    Output(component_id='tab-3-results', component_property='children'),
+    [Input(component_id='tab-3-col-choice', component_property='value')]
+)
+def update_tab_3(column):
+    data = select_data(session['project'], column=column,
+                       url=session['db_url'])
+    data = data[data['_type'] == 'value_count']
+    value_count_plots = []
+    for col in data['_name'].unique():
+        value_count_plots.append(create_value_count_area_chart(data, col, 'value_counts'))
+    value_count_plots = html.Div(id='value-count-plots',
+                               children=value_count_plots)
+    value_count_div = html.Div(
+        id='value-count-section',
+        children=[
+            html.H3('Value Frequencies'),
+            value_count_plots
+        ]
+    )
+    return value_count_div
+
+
+#### Data Characteristics tab ####
+
+@dash_app1.callback(
+    Output(component_id='tab-4-results', component_property='children'),
+    [Input(component_id='placeholder-2', component_property='n_clicks')]
+)
+def update_tab_4(column):
+    data = select_data(session['project'], column=column,
+                       url=session['db_url'], general=True)
+    plots = []
+    row_plot = create_simple_line_plot(data, 'rows', 'count')
+    column_plot = create_simple_line_plot(data, 'columns', 'count')
+
+    line_plots = html.Div(id='data-line-plots',
+                          children=[
+                              row_plot,
+                              column_plot
+                          ])
+
+    return line_plots
 
 
 @server.route('/', methods=['GET', 'POST'])
@@ -149,9 +210,11 @@ def index():
         session['schema'] = projects[button_pressed]['schema']
 
         full_data = select_data(session['project'], url=url)
+        value_count_column_options = full_data[full_data['_type'] == 'value_count']['_name'].unique()
 
         dash_app1.layout = html.Div(id='total-div',
-                                    children=generate_layout(full_data, column_options))
+                                    children=generate_layout(full_data, column_options,
+                                                             value_count_column_options))
         return redirect(url_for('render_dashboard'))
     return render_template('home/index.html', projects=projects)
 

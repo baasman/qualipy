@@ -3,13 +3,11 @@ import dash_core_components as dcc
 from web.dash_components import column_choice, batch_choice
 
 
-def generate_layout(data, column_options):
+def generate_layout(data, column_options, value_count_column_options):
     batch_choices = batch_choice(data['_date'].unique())
 
     tab1_html = []
-    tab1_html.append(html.H5('Batch Choice'))
-    tab1_html.append(batch_choices)
-    tab1_html.append(html.Br())
+    tab1_html.append(html.Br(id='placeholder'))
     tab1_html.append(html.Div(id='tab-1-results'))
     tab1_html.append(html.Br())
     tab1_html.append(html.A('Home', href='/index', target='_blank'))
@@ -22,6 +20,21 @@ def generate_layout(data, column_options):
     tab2_html.append(html.Br())
     tab2_html.append(html.A('Home', href='/index', target='_blank'))
 
+    tab3_html = []
+    tab3_html.append(html.H5('Column Choice'))
+    tab3_html.append(column_choice(value_count_column_options, 'tab-3-col-choice', multi=True))
+    tab3_html.append(html.Br())
+    tab3_html.append(html.Div(id='tab-3-results'))
+    tab3_html.append(html.Br())
+    tab3_html.append(html.A('Home', href='/index', target='_blank'))
+
+
+    tab4_html = []
+    tab4_html.append(html.Br(id='placeholder-2'))
+    tab4_html.append(html.Div(id='tab-4-results'))
+    tab4_html.append(html.Br())
+    tab4_html.append(html.A('Home', href='/index', target='_blank'))
+
     return [
         html.Img(src='/assets/logo.png', style={'width': '300px', 'height': 'auto'}),
         dcc.Tabs(id="tabs", value='tab-1', children=[
@@ -31,9 +44,19 @@ def generate_layout(data, column_options):
                 children=tab1_html
             ),
             dcc.Tab(
-                label='Trends',
+                label='Numerical',
                 value='tab-2',
                 children=tab2_html
+            ),
+            dcc.Tab(
+                label='Categorical',
+                value='tab-3',
+                children=tab3_html
+            ),
+            dcc.Tab(
+                label='Data Characteristics',
+                value='tab-4',
+                children=tab4_html
             )
         ]),
     ]

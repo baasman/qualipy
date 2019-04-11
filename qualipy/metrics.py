@@ -5,7 +5,9 @@ from backends._pandas.metrics import (
     _get_min,
     _get_nunique,
     _get_top,
-    _get_freq
+    _get_freq,
+    _get_value_count,
+    _get_perc_missing
 )
 from backends._spark.metrics import (
     _get_mean as _spark_get_mean,
@@ -22,6 +24,8 @@ PANDAS_METRIC_MAP = {
     'nunique': _get_nunique,
     'top': _get_top,
     'freq': _get_freq,
+    'value_counts': _get_value_count,
+    'perc_missing': _get_perc_missing
 }
 
 

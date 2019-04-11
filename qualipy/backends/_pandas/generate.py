@@ -23,7 +23,10 @@ class GeneratorPandas():
         if measure in custom_funcs:
             fun = custom_funcs[measure]
         else:
-            fun = PANDAS_METRIC_MAP[measure]
+            try:
+                fun = PANDAS_METRIC_MAP[measure]
+            except:
+                print(measure)
         return {
             'value': fun(data, column, **kwargs),
             '_metric': metric_name

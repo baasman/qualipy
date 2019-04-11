@@ -15,6 +15,25 @@
     text-align: left;
 }
 
+#value-count-plots {
+    position: relative;
+    right: 30px;
+    height: 25%;
+    width: 50%;
+}
+
+
+#data-line-plots {
+    overflow: hidden;
+}
+
+#simple-line-plot-rows {
+    float: left;
+}
+
+#simple-line-plot-columns {
+    overflow: hidden;
+}
 
 /*Yes I know this is laughably terrible. someone show me how to do this*/
 

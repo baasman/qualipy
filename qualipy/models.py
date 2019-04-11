@@ -4,6 +4,7 @@ import os
 import datetime
 import threading
 import json
+import pickle
 
 from qualipy.backends._pandas.generate import GeneratorPandas
 from qualipy.backends._spark.generate import GeneratorSpark
@@ -20,6 +21,10 @@ GENERATORS = {
 }
 
 
+BUILTIN_VIZ = ['value_counts']
+OVERVIEW = ['rows', 'columns', 'perc_missing']
+
+
 def _create_value(value, metric, name, date):
     return {
         'value': value,
@@ -34,7 +39,6 @@ class DataSet(object):
     def __init__(self, config, backend='pandas', engine=None, reset=False, time_of_run=None):
         self.table_name = config['data_name']
         self.columns = config['columns']
-        self.nullables = {col: info.get('null', False) for col, info in config['columns'].items()}
         self.backend = backend
         self.generator = GENERATORS[backend]()
 
@@ -61,7 +65,12 @@ class DataSet(object):
 
     def set_dataset(self, df):
         self.current_data = df
-        self.schema = {col: [str(self.current_data[col].dtype), self.nullables[col]]
+        self.nullables = {col: info.get('null', False) for col, info in self.columns.items()}
+        self.unique = {col: info.get('unique', False) for col, info in self.columns.items()}
+        self.dtypes = df.dtypes
+        self.schema = {col: [str(self.current_data[col].dtype),
+                             self.nullables[col],
+                             self.unique[col]]
                        for col in self.columns}
 
     def _set_custom_funcs(self, config):
@@ -81,7 +90,7 @@ class DataSet(object):
         except:
             projects = {}
 
-        if self.table_name not in projects:
+        if self.table_name not in projects or self.reset:
             if self.engine is not None:
                 db = str(self.engine.url)
             else:
@@ -122,6 +131,20 @@ class DataSet(object):
 
                 self.hist_data = get_table(engine=self.engine, table_name=self.table_name)
 
+    def _generate_measure(self, metric, column):
+        if isinstance(metric, dict):
+            metric_name = metric['function']
+            kwargs = metric['parameters']
+        else:
+            metric_name = metric
+            kwargs = {}
+        measure = self.generator.generate_description(self.current_data, column, metric_name,
+                                                      self.custom_funcs, kwargs)
+        measure['_name'] = column
+        measure['_date'] = datetime.datetime.now() if self.time_of_run is None else self.time_of_run
+        return measure
+
+
     def _generate_metrics(self):
         measures = []
         for col, metrics in self.columns.items():
@@ -129,32 +152,36 @@ class DataSet(object):
             if type:
                 self.current_data = self.generator.set_type(self.current_data, col, type)
             for metric in metrics['metrics']:
-                if isinstance(metric, dict):
-                    metric_name = metric['function']
-                    kwargs = metric['parameters']
-                else:
-                    metric_name = metric
-                    kwargs = {}
-                measure = self.generator.generate_description(self.current_data, col, metric_name,
-                                                              self.custom_funcs, kwargs)
-                measure['_name'] = col
-                measure['_date'] = datetime.datetime.now() if self.time_of_run is None else self.time_of_run
+                measure = self._generate_measure(metric, col)
                 measures.append(measure)
 
         measures = self._get_general_info(measures)
         self._write(measures)
 
     def _get_general_info(self, measures):
+
+        # number of missing for non null variables
+        # mismatching types
+        # enforce uniqueness
+
         rows, cols = self.current_data.shape
         measures.append(_create_value(rows, 'count', 'rows', self.time_of_run))
         measures.append(_create_value(cols, 'count', 'columns', self.time_of_run))
+        for col in self.columns:
+            measures.append(self._generate_measure('perc_missing', col))
+            measures.append(_create_value(str(self.dtypes[self.dtypes.index == col][0]),
+                                          'dtype', col, self.time_of_run))
         return measures
 
     def _write(self, measures):
         data = pd.DataFrame(measures)
+        data['_type'] = 'custom'
+        data.loc[data['_metric'].isin(BUILTIN_VIZ), '_type'] = 'value_count'
+        data.loc[data['_metric'].isin(OVERVIEW), '_type'] = 'overview'
         if self.out_type == 'file':
             data.to_csv(self.history_name, index=False, mode='a')
         elif self.out_type == 'db':
+            data.value = data.value.apply(lambda v: pickle.dumps(v))
             data.to_sql(self.table_name, self.engine, if_exists='append', index=False)
         else:
             raise ValueError

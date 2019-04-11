@@ -7,7 +7,8 @@ def create_table(engine, table_name):
             "_name" CHARACTER(20) not null,
             "_date" DATETIME not null,
             "_metric" CHARACTER(30) not null,
-            "value" NUMERIC
+            "value" BLOB,
+            "_type" CHARACTER not null DEFAULT 'custom'
         );
     '''.format(table_name)
     with engine.connect() as conn:
