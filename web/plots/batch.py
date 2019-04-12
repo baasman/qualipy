@@ -1,4 +1,57 @@
 import dash_core_components as dcc
+import pandas as pd
+
+
+def bar_plot_missing(data, metric):
+    df = data[data['_metric'] == metric].copy()
+    df.value = df.value.astype(float)
+    y = df.groupby('_name').value.mean()
+    x = y.index
+
+    plot = dcc.Graph(
+        id='percentage_missing',
+        figure={
+            'data': [
+                {
+                    'x': x,
+                    'y': y,
+                    'type':'bar',
+                    'width': .5
+                },
+            ],
+            'layout': {
+                'yaxis': {
+                    'title': 'Percentage Missing',
+                    'range': [0, 1]
+                },
+                'xaxis': {
+                    'title': 'Column',
+                    'tickangle': -90
+                },
+            }
+
+        }
+    )
+    return plot
+
+
+def histogram(data, var, metric):
+    x = data[(data['_name'] == var) &
+              (data['_metric'] == metric)]['value']
+    plot = dcc.Graph(
+        id='histogram-{}-{}'.format(var, metric),
+        figure={
+            'data': [
+                {'x': x, 'type':'histogram', 'name': var, 'bins': 20},
+            ],
+            'layout': {
+                'yaxis': {'title': var},
+                'xaxis': {'title': 'metric'},
+            }
+
+        }
+    )
+    return plot
 
 
 def compare_batch_with_rest(data, batch):
@@ -29,27 +82,6 @@ def compare_batch_with_rest(data, batch):
         }
     )
     return plot
-
-
-def histogram(data, var, metric):
-    x = data[(data['_name'] == var) &
-              (data['_metric'] == metric)]['value']
-    plot = dcc.Graph(
-        id='histogram-{}-{}'.format(var, metric),
-        figure={
-            'data': [
-                {'x': x, 'type':'histogram', 'name': var, 'bins': 20},
-            ],
-            'layout': {
-                'yaxis': {'title': var},
-                'xaxis': {'title': 'metric'},
-            }
-
-        }
-    )
-    return plot
-
-
 def dot_plot(data, batch):
     if batch == 'last':
         batch = data['_date'].values[-1]

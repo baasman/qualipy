@@ -21,7 +21,7 @@ def _get_number_of_duplicates(data, column):
 
 
 def _get_perc_missing(data, column):
-    return data[column].isnull().sum()
+    return data[column].isnull().sum() / data.shape[0]
 
 def _get_nunique(data, column):
     return data[column].nunique()

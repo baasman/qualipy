@@ -19,3 +19,4 @@ class Config(object):
             setattr(self, k.upper(), v)
         self.REDIS_PORT = 6379
         self.GENERAL_COLUMNS = ['rows', 'columns']
+        self.OVERVIEW_TYPES = ['count', 'perc_missing', 'dtype']

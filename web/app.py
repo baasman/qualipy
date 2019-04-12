@@ -21,7 +21,10 @@ from web.plots.trends import (
     create_simple_line_plot
 )
 from web.dash_components import overview_table, schema_table
-from web.plots.batch import compare_batch_with_rest, histogram, dot_plot
+from web.plots.batch import (
+    histogram,
+    bar_plot_missing
+)
 from web._layout import generate_layout
 from qualipy.database import get_table
 
@@ -69,9 +72,9 @@ def select_data(project, column=None, batch=None, url=None, general=False):
     data = data.sort_values(['_name', '_metric', '_date'])
 
     if general:
-        data = data[data['_name'].isin(config.GENERAL_COLUMNS)]
+        data = data[data['_type'] == 'overview']
     else:
-        data = data[~data['_name'].isin(config.GENERAL_COLUMNS)]
+        data = data[data['_type'] != 'overview']
 
     if batch is None or batch == 'all':
         return data
@@ -174,22 +177,31 @@ def update_tab_3(column):
 
 @dash_app1.callback(
     Output(component_id='tab-4-results', component_property='children'),
-    [Input(component_id='placeholder-2', component_property='n_clicks')]
+    [Input(component_id='batch-choice-4', component_property='value')]
 )
-def update_tab_4(column):
-    data = select_data(session['project'], column=column,
+def update_tab_4(batch):
+    ### USE BATCH
+    data = select_data(session['project'], column=None, batch=batch,
                        url=session['db_url'], general=True)
-    plots = []
     row_plot = create_simple_line_plot(data, 'rows', 'count')
     column_plot = create_simple_line_plot(data, 'columns', 'count')
+    missing_plot = bar_plot_missing(data, 'perc_missing')
 
     line_plots = html.Div(id='data-line-plots',
                           children=[
                               row_plot,
-                              column_plot
+                              column_plot,
                           ])
-
-    return line_plots
+    other = html.Div(id='general-overview-plots',
+                          children=[
+                              missing_plot
+                          ])
+    page = html.Div(id='overview-page',
+                    children=[
+                        line_plots,
+                        other
+                    ])
+    return page
 
 
 @server.route('/', methods=['GET', 'POST'])

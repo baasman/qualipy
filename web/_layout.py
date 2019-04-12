@@ -4,7 +4,6 @@ from web.dash_components import column_choice, batch_choice
 
 
 def generate_layout(data, column_options, value_count_column_options):
-    batch_choices = batch_choice(data['_date'].unique())
 
     tab1_html = []
     tab1_html.append(html.Br(id='placeholder'))
@@ -30,6 +29,7 @@ def generate_layout(data, column_options, value_count_column_options):
 
 
     tab4_html = []
+    tab4_html.append(batch_choice(data['_date'].unique(), id='batch-choice-4'))
     tab4_html.append(html.Br(id='placeholder-2'))
     tab4_html.append(html.Div(id='tab-4-results'))
     tab4_html.append(html.Br())
