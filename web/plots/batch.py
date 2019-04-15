@@ -2,31 +2,43 @@ import dash_core_components as dcc
 import pandas as pd
 
 
-def bar_plot_missing(data, metric):
+def bar_plot_missing(data, metric, schema):
     df = data[data['_metric'] == metric].copy()
     df.value = df.value.astype(float)
+    df = df.sort_values('value')
     y = df.groupby('_name').value.mean()
     x = y.index
+    nullable = ['value: {}, null: {}'.format(round(value, 2), str(schema[i]['nullable']))
+                for value, i in zip(y, x)]
+    colors = ['rgb(11, 57, 142)' if null else 'rgb(191, 11, 38)' for null in nullable]
 
     plot = dcc.Graph(
         id='percentage_missing',
         figure={
             'data': [
                 {
-                    'x': x,
-                    'y': y,
+                    'y': x,
+                    'x': y,
                     'type':'bar',
-                    'width': .5
+                    'width': .5,
+                    'orientation': 'h',
+                    'hoverinfo': 'text',
+                    'text': nullable,
+                    'marker': {
+                        'color': colors
+                    }
                 },
             ],
             'layout': {
-                'yaxis': {
+                'title': {'text': 'Percentage Missing'},
+                'height': 800,
+                'width': 800,
+                'xaxis': {
                     'title': 'Percentage Missing',
                     'range': [0, 1]
                 },
-                'xaxis': {
+                'yaxis': {
                     'title': 'Column',
-                    'tickangle': -90
                 },
             }
 

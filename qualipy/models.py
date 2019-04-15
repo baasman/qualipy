@@ -69,9 +69,9 @@ class DataSet(object):
         self.nullables = {col: info.get('null', False) for col, info in self.columns.items()}
         self.unique = {col: info.get('unique', False) for col, info in self.columns.items()}
         self.dtypes = df.dtypes
-        self.schema = {col: [str(self.current_data[col].dtype),
-                             self.nullables[col],
-                             self.unique[col]]
+        self.schema = {col: {'dtype': str(self.current_data[col].dtype),
+                             'nullable': self.nullables[col],
+                             'unique': self.unique[col]}
                        for col in self.columns}
 
     def _set_custom_funcs(self, config):

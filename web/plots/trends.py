@@ -1,5 +1,6 @@
 import dash_core_components as dcc
 import plotly.graph_objs as go
+from plotly import tools
 import numpy as np
 
 from functools import reduce
@@ -140,6 +141,40 @@ def create_value_count_area_chart(data, var, metric):
     )
     return plot
 
+
+def create_simple_line_plot_subplots(data):
+    data1 = data[(data['_name'] == 'rows') &
+                (data['_metric'] == 'count')]
+    data2 = data[(data['_name'] == 'columns') &
+                 (data['_metric'] == 'count')]
+    data_values1 = data1['value'].values
+    data_values2 = data2['value'].values
+    x = data1['_date']
+
+    fig = tools.make_subplots(rows=2, cols=1,
+                              shared_xaxes=True, shared_yaxes=False,
+                              vertical_spacing=.01)
+
+    trace1 = go.Scatter(
+        x=x,
+        y=data_values1,
+        name='rows'
+    )
+    trace2 = go.Scatter(
+        x=x,
+        y=data_values2,
+        name='columns'
+    )
+    fig.append_trace(trace1, row=1, col=1)
+    fig.append_trace(trace2, row=2, col=1)
+    fig['layout'].update(height=600, width=800,
+                         title='Rows and Columns over time')
+
+    plot = dcc.Graph(
+        id='simple-line-plot-{}'.format('rows-columns'),
+        figure=fig
+    )
+    return plot
 
 def create_simple_line_plot(data, var, metric):
     data = data[(data['_name'] == var) &

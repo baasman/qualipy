@@ -18,7 +18,8 @@ from web.config import Config
 from web.plots.trends import (
     create_trend_line,
     create_value_count_area_chart,
-    create_simple_line_plot
+    create_simple_line_plot,
+    create_simple_line_plot_subplots
 )
 from web.dash_components import overview_table, schema_table
 from web.plots.batch import (
@@ -54,15 +55,19 @@ full_data = pd.DataFrame()
 
 def select_data(project, column=None, batch=None, url=None, general=False):
     data = full_data.copy()
-    if data.shape[0] == 0 or general:
-        if url is not None:
-            engine = create_engine(url)
-            data = get_table(engine, project)
-            data.value = data.value.apply(lambda r: pickle.loads(r))
+
+    try:
+        if data.shape[0] == 0 or general:
+            if url is not None:
+                engine = create_engine(url)
+                data = get_table(engine, project)
+                data.value = data.value.apply(lambda r: pickle.loads(r))
+            else:
+                data = pd.read_csv(os.path.join(HOME, '.qualipy/data', '{}.csv'.format(project)))
         else:
-            data = pd.read_csv(os.path.join(HOME, '.qualipy/data', '{}.csv'.format(project)))
-    else:
-        data = full_data.copy()
+            data = full_data.copy()
+    except:
+        raise Exception("Can't find any data at {}".format(url))
 
     if column is not None and not general:
         if not isinstance(column, str):
@@ -110,8 +115,8 @@ def update_tab_1(n_clicks):
                               columns=['project', 'number_of_rows',
                                        'number_of_columns', 'last_run_time',
                                        'number_of_batches'])
-    schema = pd.DataFrame([{'column': col, 'type': info[0], 'null': info[1],
-                            'unique': info[2]} for
+    schema = pd.DataFrame([{'column': col, 'type': info['dtype'], 'null': info['nullable'],
+                            'unique': info['unique']} for
                            col, info in session['schema'].items()])
     schema['null'] = schema['null'].astype(str)
     schema['unique'] = schema['unique'].astype(str)
@@ -180,26 +185,26 @@ def update_tab_3(column):
     [Input(component_id='batch-choice-4', component_property='value')]
 )
 def update_tab_4(batch):
-    ### USE BATCH
     data = select_data(session['project'], column=None, batch=batch,
                        url=session['db_url'], general=True)
-    row_plot = create_simple_line_plot(data, 'rows', 'count')
-    column_plot = create_simple_line_plot(data, 'columns', 'count')
-    missing_plot = bar_plot_missing(data, 'perc_missing')
-
+    missing_plot = bar_plot_missing(data, 'perc_missing', session['schema'])
+    rows_columns = create_simple_line_plot_subplots(data)
     line_plots = html.Div(id='data-line-plots',
                           children=[
-                              row_plot,
-                              column_plot,
+                              rows_columns
                           ])
-    other = html.Div(id='general-overview-plots',
+    missing = html.Div(id='missing',
                           children=[
                               missing_plot
                           ])
+    missing_and_rows_column = html.Div(id='missing-and-rows-column',
+                     children=[
+                         line_plots,
+                         missing
+                     ])
     page = html.Div(id='overview-page',
                     children=[
-                        line_plots,
-                        other
+                        missing_and_rows_column
                     ])
     return page
 
@@ -220,6 +225,7 @@ def index():
         url = projects[button_pressed].get('db')
         session['db_url'] = url
         session['schema'] = projects[button_pressed]['schema']
+        print(session['schema'])
 
         full_data = select_data(session['project'], url=url)
         value_count_column_options = full_data[full_data['_type'] == 'value_count']['_name'].unique()

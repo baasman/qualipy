@@ -23,15 +23,15 @@
 }
 
 
-#data-line-plots {
+#missing-and-rows-column {
     overflow: hidden;
 }
 
-#simple-line-plot-rows {
+#data-line-plots {
     float: left;
 }
 
-#simple-line-plot-columns {
+#missing {
     overflow: hidden;
 }
 

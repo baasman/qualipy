@@ -35,6 +35,14 @@ def generate_layout(data, column_options, value_count_column_options):
     tab4_html.append(html.Br())
     tab4_html.append(html.A('Home', href='/index', target='_blank'))
 
+
+    tab5_html = []
+    tab5_html.append(batch_choice(data['_date'].unique(), id='batch-choice-5'))
+    tab5_html.append(html.Br())
+    tab5_html.append(html.Div(id='tab-5-results'))
+    tab5_html.append(html.Br())
+    tab5_html.append(html.A('Home', href='/index', target='_blank'))
+
     return [
         html.Img(src='/assets/logo.png', style={'width': '300px', 'height': 'auto'}),
         dcc.Tabs(id="tabs", value='tab-1', children=[
