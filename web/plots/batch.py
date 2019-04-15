@@ -35,10 +35,10 @@ def bar_plot_missing(data, metric, schema):
                 'width': 800,
                 'xaxis': {
                     'title': 'Percentage Missing',
-                    'range': [0, 1]
+                    'range': [0, 1],
                 },
                 'yaxis': {
-                    'title': 'Column',
+                    'automargin': True
                 },
             }
 

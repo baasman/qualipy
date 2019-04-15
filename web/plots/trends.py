@@ -176,6 +176,79 @@ def create_simple_line_plot_subplots(data):
     )
     return plot
 
+def create_type_plots(data, schema):
+    dtype_data = data[(data['_metric'] == 'dtype')]
+    x_index = dtype_data['_date']
+    vars = dtype_data['_name'].unique()[:3]
+
+    fig = tools.make_subplots(rows=len(vars), cols=1,
+                              shared_xaxes=True, shared_yaxes=False,
+                              vertical_spacing=.10, subplot_titles=vars)
+
+
+    for idx, var in enumerate(vars, 1):
+        values = dtype_data[dtype_data['_name'] == var]['value'].values
+        if np.unique(values).shape[0] > 1:
+            print(var)
+        values[10:20] = 'float'
+        n = values.shape[0]
+        unique_vals = np.unique(values)
+        lines = []
+        convert_dict = {k: i + 1 for i, k in zip(range(unique_vals.shape[0]), unique_vals)}
+        for line in unique_vals:
+            l = [line if line == values[idx] else np.NaN
+                 for idx, dtype in enumerate(range(n))]
+            l = [convert_dict.get(i, np.NaN) for i in l]
+            lines.append({
+                'name': line,
+                'data': l
+            })
+
+        for line in lines:
+            data = line['data']
+            name = line['name']
+            fig.append_trace(go.Scatter(
+                x=x_index,
+                y=data,
+                mode='lines',
+                name=name
+            ), row=idx, col=1)
+    fig['layout'].update(height=600, width=800,
+                         title='Data types of variables over time')
+    fig['layout']['xaxis'].update(showticklabels=True, showgrid=True, zeroline=False)
+    fig['layout']['yaxis'].update(showticklabels=False, showgrid=True, zeroline=False)
+    fig['layout']['yaxis2'].update(showticklabels=False, showgrid=True, zeroline=False)
+    fig['layout']['yaxis3'].update(showticklabels=False, showgrid=True, zeroline=False)
+
+    plot = dcc.Graph(
+        id='type-line-plot',
+        figure=fig
+    )
+
+    # plot = dcc.Graph(
+    #     id='type-line-plot-{}',
+    #     figure={
+    #         'data': scatter_lines,
+    #         'layout': {
+    #             'width': 500,
+    #             'height': 300,
+    #             'title': {'text': var},
+    #             'xaxis': {
+    #                 'showticklabels': True,
+    #                 'showgrid': False,
+    #                 'zeroline': False
+    #             },
+    #             'yaxis': {
+    #                 'showticklabels': False,
+    #                 'showgrid': True,
+    #                 'zeroline': False
+    #             }
+    #         }
+    #
+    #     }
+    # )
+    return plot
+
 def create_simple_line_plot(data, var, metric):
     data = data[(data['_name'] == var) &
                 (data['_metric'] == metric)]

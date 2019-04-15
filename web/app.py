@@ -19,7 +19,8 @@ from web.plots.trends import (
     create_trend_line,
     create_value_count_area_chart,
     create_simple_line_plot,
-    create_simple_line_plot_subplots
+    create_simple_line_plot_subplots,
+    create_type_plots
 )
 from web.dash_components import overview_table, schema_table
 from web.plots.batch import (
@@ -187,6 +188,7 @@ def update_tab_3(column):
 def update_tab_4(batch):
     data = select_data(session['project'], column=None, batch=batch,
                        url=session['db_url'], general=True)
+    type_plot = create_type_plots(data, session['schema'])
     missing_plot = bar_plot_missing(data, 'perc_missing', session['schema'])
     rows_columns = create_simple_line_plot_subplots(data)
     line_plots = html.Div(id='data-line-plots',
@@ -204,7 +206,8 @@ def update_tab_4(batch):
                      ])
     page = html.Div(id='overview-page',
                     children=[
-                        missing_and_rows_column
+                        missing_and_rows_column,
+                        type_plot
                     ])
     return page
 
@@ -214,6 +217,8 @@ def update_tab_4(batch):
 def index():
     global dash_app1
     global full_data
+
+    session.clear()
     with open(os.path.join(HOME, '.qualipy', 'projects.json'), 'r') as f:
         projects = json.loads(f.read())
 
@@ -225,7 +230,6 @@ def index():
         url = projects[button_pressed].get('db')
         session['db_url'] = url
         session['schema'] = projects[button_pressed]['schema']
-        print(session['schema'])
 
         full_data = select_data(session['project'], url=url)
         value_count_column_options = full_data[full_data['_type'] == 'value_count']['_name'].unique()
