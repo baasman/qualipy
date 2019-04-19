@@ -253,7 +253,62 @@ def create_type_plots(data, schema):
 
 def create_unique_columns_plot(data):
     data = data[(data['_metric'] == 'is_unique')]
-    print(data.head())
+    x = data['_date']
+    traces = []
+    unique_vars = data['_name'].unique()
+    for idx, var in enumerate(unique_vars, 1):
+        vals = data[data['_name'] == var].value.values
+        uniques = [idx if i else np.NaN for i in vals]
+        non_uniques = [np.NaN if i else idx for i in vals]
+        traces.append(
+            dict(
+                x=x,
+                y=uniques,
+                mode='lines',
+                name='unique',
+                line=dict(
+                    width=8,
+                    color='rgb(62, 239, 52)'
+                ),
+                showlegend=True if idx == 1 else False
+
+            )
+        )
+        traces.append(
+            dict(
+                x=x,
+                y=non_uniques,
+                mode='lines',
+                name='not-unique',
+                line=dict(
+                    width=8,
+                    color='rgb(234, 11, 11)'
+                ),
+                showlegend=True if idx == 1 else False
+            )
+        )
+    plot = dcc.Graph(
+        id='uniqueness-plot',
+        figure={
+            'data': traces,
+            'layout': {
+                'title': {'text': 'Unique-ness checks'},
+                'height': 400,
+                'width': 800,
+                'yaxis': {
+                    'showticklabels': True,
+                    'showgrid': True,
+                    'zeroline': False,
+                    'tickvals': [1, unique_vars.shape[0]],
+                    'ticktext': unique_vars
+                }
+            }
+
+        }
+    )
+    return plot
+
+
 
 
 

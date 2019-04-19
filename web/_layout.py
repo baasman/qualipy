@@ -44,7 +44,7 @@ def generate_layout(data, column_options, value_count_column_options):
     tab5_html.append(html.A('Home', href='/index', target='_blank'))
 
     return [
-        html.Img(src='/assets/logo.png', style={'width': '300px', 'height': 'auto'}),
+        # html.Img(src='/assets/logo.png', style={'width': '300px', 'height': 'auto'}),
         dcc.Tabs(id="tabs", value='tab-1', children=[
             dcc.Tab(
                 label='Overview',

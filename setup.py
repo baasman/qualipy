@@ -4,8 +4,11 @@ import os
 HERE = os.path.abspath(os.path.dirname(__file__))
 HOME = os.path.expanduser('~')
 
-with open(os.path.join(HERE, 'README.md'), encoding='utf-8') as f:
-    long_description = f.read()
+try:
+    with open(os.path.join(HERE, 'README.md'), encoding='utf-8') as f:
+        long_description = f.read()
+except FileNotFoundError:
+    print('README.md not found')
 
 with open('requirements.txt') as f:
     required = f.read().splitlines()

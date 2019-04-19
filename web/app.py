@@ -190,23 +190,43 @@ def update_tab_4(batch):
     missing_plot = bar_plot_missing(data, 'perc_missing', session['schema'])
     rows_columns = create_simple_line_plot_subplots(data)
     unique_plot = create_unique_columns_plot(data)
+
+    ###### row 1
     line_plots = html.Div(id='data-line-plots',
                           children=[
                               rows_columns
                           ])
+
     missing = html.Div(id='missing',
                           children=[
                               missing_plot
                           ])
-    missing_and_rows_column = html.Div(id='missing-and-rows-column',
+    row1 = html.Div(id='missing-and-rows-column',
                      children=[
                          line_plots,
                          missing
                      ])
+    ###### row 2
+    data_type_plots = html.Div(id='data-type-plots',
+                               children=[
+                                   type_plot
+                               ])
+    unique_plot = html.Div(id='unique-plot',
+                               children=[
+                                   unique_plot
+                               ])
+    row2 = html.Div(id='data-type-and-unique-row',
+                    children=[
+                        data_type_plots,
+                        unique_plot
+                    ])
+
+
+
     page = html.Div(id='overview-page',
                     children=[
-                        missing_and_rows_column,
-                        type_plot
+                        row1,
+                        row2
                     ])
     return page
 
@@ -229,7 +249,10 @@ def index():
         session['project'] = button_pressed
         column_options = projects[button_pressed]['columns']
         session['column_options'] = column_options
-        url = projects[button_pressed].get('db')
+        if hasattr(config, 'DB_URL'):
+            url = config.DB_URL
+        else:
+            url = projects[button_pressed].get('db')
         session['db_url'] = url
         session['schema'] = projects[button_pressed]['schema']
 

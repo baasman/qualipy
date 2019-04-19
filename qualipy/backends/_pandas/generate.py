@@ -13,9 +13,9 @@ class GeneratorPandas():
     @staticmethod
     def set_type(data, column, type):
         if column == 'index':
-            data.index = data.index.astype(dtypes[type])
+            data.index = data.index.astype(type)
         else:
-            data[column] = data[column].astype(dtypes[type])
+            data[column] = data[column].astype(type)
         return data
 
     @staticmethod

@@ -3,6 +3,8 @@
 /*}*/
 /*#histograms > div:nth-child(2) { flex: 1; }*/
 
+/*Overview Page*/
+
 #overview-table {
     table-layout: fixed;
     width: 25%;
@@ -15,6 +17,8 @@
     text-align: left;
 }
 
+
+/*Categorical Page*/
 #value-count-plots {
     position: relative;
     right: 30px;
@@ -23,16 +27,53 @@
 }
 
 
+/*Data characteristic page*/
+
 #missing-and-rows-column {
     overflow: hidden;
+    display: flex;
+    align-items: center;
+    text-align: center;
 }
 
 #data-line-plots {
     float: left;
+    overflow-y: auto;
+    height: 600px;
+    width: 800px;
+    margin-right: 50px;
 }
 
 #missing {
     overflow: hidden;
+    overflow-y: auto;
+    height: 600px;
+    width: 800px;
+    margin-left: 50px;
+}
+
+
+#data-type-and-unique-row {
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    text-align: center;
+}
+
+#data-type-plots {
+    float: left;
+    overflow-y: auto;
+    height: 600px;
+    margin-right: 50px;
+    margin-top: 50px;
+}
+
+#unique-plot {
+    overflow: hidden;
+    overflow-y: auto;
+    height: 600px;
+    margin-left: 50px;
+    margin-top: 50px;
 }
 
 /*Yes I know this is laughably terrible. someone show me how to do this*/

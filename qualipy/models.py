@@ -23,7 +23,7 @@ GENERATORS = {
 
 BUILTIN_VIZ = ['value_counts']
 OVERVIEW = ['rows', 'columns', 'index']
-GENERAL_FUNCTIONS = ['perc_missing', 'dtype']
+GENERAL_FUNCTIONS = ['perc_missing', 'dtype', 'is_unique']
 
 
 def _create_value(value, metric, name, date):

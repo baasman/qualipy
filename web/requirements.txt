@@ -1,0 +1,9 @@
+flask
+dash
+dash_html_components
+dash_core_components
+dash_table
+python-dotenv
+pandas
+numpy
+sqlalchemy
