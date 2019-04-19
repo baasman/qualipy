@@ -1,4 +1,5 @@
 from qualipy.metrics import PANDAS_METRIC_MAP
+from qualipy.util import get_column
 
 
 dtypes = {
@@ -11,7 +12,10 @@ class GeneratorPandas():
 
     @staticmethod
     def set_type(data, column, type):
-        data[column] = data[column].astype(dtypes[type])
+        if column == 'index':
+            data.index = data.index.astype(dtypes[type])
+        else:
+            data[column] = data[column].astype(dtypes[type])
         return data
 
     @staticmethod

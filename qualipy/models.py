@@ -9,7 +9,7 @@ import pickle
 from qualipy.backends._pandas.generate import GeneratorPandas
 from qualipy.backends._spark.generate import GeneratorSpark
 from qualipy.database import create_table, get_table
-
+from qualipy.util import get_column
 
 
 HOME = os.path.expanduser('~')
@@ -22,7 +22,7 @@ GENERATORS = {
 
 
 BUILTIN_VIZ = ['value_counts']
-OVERVIEW = ['rows', 'columns']
+OVERVIEW = ['rows', 'columns', 'index']
 GENERAL_FUNCTIONS = ['perc_missing', 'dtype']
 
 
@@ -68,8 +68,10 @@ class DataSet(object):
         self.current_data = df
         self.nullables = {col: info.get('null', False) for col, info in self.columns.items()}
         self.unique = {col: info.get('unique', False) for col, info in self.columns.items()}
+        self.only_unique = {k: v for k, v in self.unique.items() if v}
         self.dtypes = df.dtypes
-        self.schema = {col: {'dtype': str(self.current_data[col].dtype),
+        self.dtypes = self.dtypes.append(pd.Series(df.index.dtype, index=['index']))
+        self.schema = {col: {'dtype': str(get_column(self.current_data, col).dtype),
                              'nullable': self.nullables[col],
                              'unique': self.unique[col]}
                        for col in self.columns}
@@ -161,13 +163,13 @@ class DataSet(object):
 
     def _get_general_info(self, measures):
 
-        # number of missing for non null variables
-        # mismatching types
-        # enforce uniqueness
+        # should probably generate unique for everything
 
         rows, cols = self.current_data.shape
         measures.append(_create_value(rows, 'count', 'rows', self.time_of_run))
         measures.append(_create_value(cols, 'count', 'columns', self.time_of_run))
+        for col in self.only_unique:
+            measures.append(self._generate_measure('is_unique', col))
         for col in self.columns:
             measures.append(self._generate_measure('perc_missing', col))
             measures.append(_create_value(str(self.dtypes[self.dtypes.index == col][0]),

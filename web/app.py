@@ -1,14 +1,13 @@
 from werkzeug.wsgi import DispatcherMiddleware
 from werkzeug.serving import run_simple
 import flask
+from flask.cli import load_dotenv
 from flask import request, url_for, render_template, redirect, session
 from dash import Dash
 import dash_html_components as html
 from dash.dependencies import Input, Output
 import pandas as pd
-import redis
 from sqlalchemy import create_engine
-import dash_core_components as dcc
 
 import os
 import json
@@ -18,9 +17,9 @@ from web.config import Config
 from web.plots.trends import (
     create_trend_line,
     create_value_count_area_chart,
-    create_simple_line_plot,
     create_simple_line_plot_subplots,
-    create_type_plots
+    create_type_plots,
+    create_unique_columns_plot
 )
 from web.dash_components import overview_table, schema_table
 from web.plots.batch import (
@@ -33,6 +32,7 @@ from qualipy.database import get_table
 
 
 server = flask.Flask(__name__)
+load_dotenv()
 
 server.config.from_object(Config)
 server.config.update(
@@ -40,8 +40,6 @@ server.config.update(
     SECRET_KEY='supersecrit'
 )
 config = Config()
-
-red = redis.Redis(host='localhost', port=6379, db=0)
 
 
 HOME = os.path.expanduser('~')
@@ -191,6 +189,7 @@ def update_tab_4(batch):
     type_plot = create_type_plots(data, session['schema'])
     missing_plot = bar_plot_missing(data, 'perc_missing', session['schema'])
     rows_columns = create_simple_line_plot_subplots(data)
+    unique_plot = create_unique_columns_plot(data)
     line_plots = html.Div(id='data-line-plots',
                           children=[
                               rows_columns
@@ -219,7 +218,10 @@ def index():
     global full_data
 
     session.clear()
-    with open(os.path.join(HOME, '.qualipy', 'projects.json'), 'r') as f:
+
+    project_file = os.getenv('PROJECT_FILE', os.path.join(HOME, '.qualipy', 'projects.json'))
+
+    with open(project_file, 'r') as f:
         projects = json.loads(f.read())
 
     if request.method == 'POST':

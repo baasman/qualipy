@@ -1,3 +1,8 @@
+import numpy as np
+
+from qualipy.util import get_column
+
+
 #numeric
 
 def _get_mean(data, column):
@@ -21,10 +26,10 @@ def _get_number_of_duplicates(data, column):
 
 
 def _get_perc_missing(data, column):
-    return data[column].isnull().sum() / data.shape[0]
+    return get_column(data, column).isnull().sum() / data.shape[0]
 
 def _get_nunique(data, column):
-    return data[column].nunique()
+    return get_column(data, column).nunique()
 
 
 def _get_top(data, column):
@@ -39,3 +44,7 @@ def _get_freq(data, column):
 def _get_value_count(data, column):
     return data[data[column] != 'nan'][column].value_counts().sort_values(ascending=False).head(10).to_dict()
 
+def _get_is_unique(data, column):
+    if column == 'index':
+        return data.index.unique().shape[0] == data.shape[0]
+    return data[column].unique().shape[0] == data.shape[0]
