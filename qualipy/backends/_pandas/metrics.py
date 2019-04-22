@@ -50,11 +50,13 @@ def _get_is_unique(data, column):
 def _get_value_count(data, column):
     return data[data[column] != 'nan'][column].value_counts().sort_values(ascending=False).head(10).to_dict()
 
-def _get_cross_tab(data, column, column_two):
+def _get_cross_tab(data, column, column_two=None, include_nan=True):
+    if include_nan:
+        data = data[(data[column] != 'nan') & (data[column_two] != 'nan')]
     cross = pd.crosstab(data[column], data[column_two])
     cross_data = {
         'z': cross.values.tolist(),
-        'x': cross.index.values.tolist(),
-        'y': cross.columns.tolist()
+        'y': cross.index.values.tolist(),
+        'x': cross.columns.tolist()
     }
     return cross_data

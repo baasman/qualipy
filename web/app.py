@@ -17,16 +17,18 @@ from web.config import Config
 from web.plots.trends import (
     create_trend_line,
     create_value_count_area_chart,
-    create_simple_line_plot_subplots,
-    create_type_plots,
-    create_unique_columns_plot
+    histogram
 )
-from web.dash_components import overview_table, schema_table
+from web.plots.overview import (
+    create_type_plots,
+    create_simple_line_plot_subplots,
+    create_unique_columns_plot,
+    bar_plot_missing
+)
 from web.plots.batch import (
-    histogram,
-    bar_plot_missing,
     heatmap
 )
+from web.dash_components import overview_table, schema_table
 from web._layout import generate_layout
 from qualipy.database import get_table
 
@@ -84,10 +86,14 @@ def select_data(project, column=None, batch=None, url=None, general=False):
     if batch is None or batch == 'all':
         return data
     else:
+        print(batch)
         if not isinstance(batch, list):
             batch = [batch]
-        if 'last' not in batch:
-            data = data[data['_date'].isin(batch)]
+        try:
+            batch_values = [i['value'] for i in batch]
+        except TypeError:
+            batch_values = batch
+        data = data[data['_date'].isin(batch_values)]
         return data
 
 
@@ -259,15 +265,14 @@ def update_tab_5(batch):
                        batch=batch, url=session['db_url'])
 
     data = data[data['_type'] == 'built-in-viz']
+    heatmap_plots = []
     if data[data['_metric'] == 'crosstab'].shape[0] > 0:
-        heatmap_plots = []
-        for col in data['_name'].unique():
+        for col in data[data['_metric'] == 'crosstab']['_name'].unique():
+            print(col)
             heatmap_plots.append(heatmap(data, col, 'crosstab'))
 
     page = html.Div(id='tab-5-page',
-                    children=[
-
-                    ])
+                    children=heatmap_plots)
     return page
 
 @server.route('/', methods=['GET', 'POST'])
@@ -301,8 +306,6 @@ def index():
             value_count_column_options = full_data[full_data['_metric'] == 'value_counts']['_name'].unique()
         except:
             value_count_column_options = []
-
-        batch_without_all_columns = full_data[full_data['_metric'] == 'crosstab']['_name'].unique()
 
         dash_app1.layout = html.Div(id='total-div',
                                     children=generate_layout(full_data, column_options,

@@ -36,7 +36,7 @@ def generate_layout(data, column_options, value_count_column_options):
 
     # General built in data quality checks
     tab4_html = []
-    tab4_html.append(batch_choice(data['_date'].unique(), id='batch-choice-5', include_all=False))
+    tab4_html.append(batch_choice(data['_date'].unique(), id='batch-choice-4', include_all=True))
     tab4_html.append(html.Br(id='placeholder-2'))
     tab4_html.append(html.Div(id='tab-4-results'))
     tab4_html.append(html.Br())
@@ -45,7 +45,8 @@ def generate_layout(data, column_options, value_count_column_options):
 
     # Single batch analyzer
     tab5_html = []
-    tab5_html.append(batch_choice(data['_date'].unique(), id='batch-choice-5'))
+    tab5_html.append(batch_choice(data['_date'].unique(), id='batch-choice-5',
+                                  include_all=False, multi=False))
     tab5_html.append(html.Br())
     tab5_html.append(html.Div(id='tab-5-results'))
     tab5_html.append(html.Br())

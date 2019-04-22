@@ -13,7 +13,7 @@ def column_choice(column_options, id='column-choice', multi=True):
         }
     )
 
-def batch_choice(batches, id, include_all=True):
+def batch_choice(batches, id, include_all=True, multi=True):
     if include_all:
         options = [{'label': i, 'value': i} for i in batches] + [{'label': 'all', 'value': 'all'}]
         value = 'all'
@@ -24,7 +24,7 @@ def batch_choice(batches, id, include_all=True):
         id=id,
         options=options,
         value=value,
-        multi=True,
+        multi=multi,
         style={
             'width': '300px',
             'marginTop': '30px'
