@@ -24,7 +24,8 @@ from web.plots.trends import (
 from web.dash_components import overview_table, schema_table
 from web.plots.batch import (
     histogram,
-    bar_plot_missing
+    bar_plot_missing,
+    heatmap
 )
 from web._layout import generate_layout
 from qualipy.database import get_table
@@ -139,11 +140,16 @@ def update_tab_2(column):
                        url=session['db_url'])
     data = data[data['_type'] == 'custom']
     for var in data['_name'].unique():
+
+        # change this - would break when running multiple functions on same var with
+        # different parameters, its also just terrible code
         for i, metric in enumerate(data[data['_name'] == var]['_metric'].unique()):
+            args = data[data['_metric'] == metric]['_arguments'].iloc[0]
             plots.append(
                 html.Div(id='trend-plots-{}'.format(i),
                          children=[
-                             html.H3('{}-{}'.format(var, metric), id='plot-header'),
+                             html.H3('{}-{}'.format(var, '{}_{}'.format(metric, args)),
+                                                    id='plot-header'),
                              create_trend_line(data, var, metric),
                              histogram(data, var, metric)
                          ]
@@ -161,19 +167,30 @@ def update_tab_2(column):
 def update_tab_3(column):
     data = select_data(session['project'], column=column,
                        url=session['db_url'])
-    data = data[data['_type'] == 'value_count']
-    value_count_plots = []
-    for col in data['_name'].unique():
-        value_count_plots.append(create_value_count_area_chart(data, col, 'value_counts'))
-    value_count_plots = html.Div(id='value-count-plots',
-                               children=value_count_plots)
-    value_count_div = html.Div(
-        id='value-count-section',
-        children=[
-            html.H3('Value Frequencies'),
-            value_count_plots
-        ]
-    )
+
+    data = data[data['_type'] == 'built-in-viz']
+
+    if data[data['_metric'] == 'value_counts'].shape[0] > 0:
+        value_count_plots = []
+        for col in data['_name'].unique():
+            value_count_plots.append(create_value_count_area_chart(data, col, 'value_counts'))
+        value_count_plots = html.Div(id='value-count-plots',
+                                   children=value_count_plots)
+        value_count_div = html.Div(
+            id='value-count-section',
+            children=[
+                html.H3('Value Frequencies'),
+                value_count_plots
+            ]
+        )
+    else:
+        value_count_div = html.Div(
+            id='value-count-section',
+            children=[]
+        )
+
+
+
     return value_count_div
 
 
@@ -231,6 +248,28 @@ def update_tab_4(batch):
     return page
 
 
+#### Single Batch analyzer tab ####
+
+@dash_app1.callback(
+    Output(component_id='tab-5-results', component_property='children'),
+    [Input(component_id='batch-choice-5', component_property='value')]
+)
+def update_tab_5(batch):
+    data = select_data(session['project'], column=None,
+                       batch=batch, url=session['db_url'])
+
+    data = data[data['_type'] == 'built-in-viz']
+    if data[data['_metric'] == 'crosstab'].shape[0] > 0:
+        heatmap_plots = []
+        for col in data['_name'].unique():
+            heatmap_plots.append(heatmap(data, col, 'crosstab'))
+
+    page = html.Div(id='tab-5-page',
+                    children=[
+
+                    ])
+    return page
+
 @server.route('/', methods=['GET', 'POST'])
 @server.route('/index', methods=['GET', 'POST'])
 def index():
@@ -257,7 +296,13 @@ def index():
         session['schema'] = projects[button_pressed]['schema']
 
         full_data = select_data(session['project'], url=url)
-        value_count_column_options = full_data[full_data['_type'] == 'value_count']['_name'].unique()
+
+        try:
+            value_count_column_options = full_data[full_data['_metric'] == 'value_counts']['_name'].unique()
+        except:
+            value_count_column_options = []
+
+        batch_without_all_columns = full_data[full_data['_metric'] == 'crosstab']['_name'].unique()
 
         dash_app1.layout = html.Div(id='total-div',
                                     children=generate_layout(full_data, column_options,

@@ -9,7 +9,10 @@ from functools import reduce
 def create_trend_line(data, var, metric):
 
     main_line = data[(data['_name'] == var) &
-                               (data['_metric'] == metric)]['value']
+                               (data['_metric'] == metric)]
+    title = '{}_{}'.format(var, main_line._arguments.iloc[0])
+    print(title)
+    main_line = main_line.value
     mean = main_line.mean()
     median = main_line.median()
     std = main_line.std()
@@ -22,13 +25,13 @@ def create_trend_line(data, var, metric):
          (data['_metric'] == metric)]['_date']
 
     plot = dcc.Graph(
-        id='num-data-graph-{}-{}'.format(var, metric),
+        id='num-data-graph-{}-{}'.format(title, metric),
         figure={
             'data': [
                 {
                     'y': main_line,
                     'x': x_axis,
-                    'name': var,
+                    'name': title,
                     'marker': {
                         'line': 'rgba(244, 66, 66)',
                         'dash': 'dot',
@@ -39,7 +42,7 @@ def create_trend_line(data, var, metric):
                     'y': mean_line,
                     'x': x_axis,
                     'mode': 'lines',
-                    'name': 'mean-{}'.format(var),
+                    'name': 'mean-{}'.format(title),
                     'line': {
                         'color': 'rgba(244, 66, 66, .7)',
                         'width': 1,
@@ -49,7 +52,7 @@ def create_trend_line(data, var, metric):
                 {
                     'y': median_line,
                     'x': x_axis,
-                    'name': 'median-{}'.format(var),
+                    'name': 'median-{}'.format(title),
                     'mode': 'lines',
                     'line': {
                         'color': 'rgba(244, 66, 232, .7)',
@@ -60,7 +63,7 @@ def create_trend_line(data, var, metric):
                 {
                     'y': std_line_lower,
                     'x': x_axis,
-                    'name': '-2 std - {}'.format(var),
+                    'name': '-2 std - {}'.format(title),
                     'mode': 'lines',
                     'line': {
                         'color': 'rgba(161, 244, 66, .7)',
@@ -71,7 +74,7 @@ def create_trend_line(data, var, metric):
                 {
                     'y': std_line_higher,
                     'x': x_axis,
-                    'name': '+2 std - {}'.format(var),
+                    'name': '+2 std - {}'.format(title),
                     'mode': 'lines',
                     'line': {
                         'color': 'rgba(66, 244, 188, .7)',

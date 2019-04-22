@@ -7,6 +7,7 @@ def create_table(engine, table_name):
             "_name" CHARACTER(20) not null,
             "_date" DATETIME not null,
             "_metric" CHARACTER(30) not null,
+            "_arguments" CHARACTER(100) null,
             "value" BLOB,
             "_type" CHARACTER not null DEFAULT 'custom'
         );

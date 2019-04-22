@@ -8,7 +8,8 @@ from qualipy.backends._pandas.metrics import (
     _get_freq,
     _get_value_count,
     _get_perc_missing,
-    _get_is_unique
+    _get_is_unique,
+    _get_cross_tab
 )
 from qualipy.backends._spark.metrics import (
     _get_mean as _spark_get_mean,
@@ -28,6 +29,7 @@ PANDAS_METRIC_MAP = {
     'value_counts': _get_value_count,
     'perc_missing': _get_perc_missing,
     'is_unique': _get_is_unique,
+    'crosstab': _get_cross_tab
 }
 
 

@@ -1,5 +1,13 @@
 import dash_core_components as dcc
+import plotly.graph_objs as go
 import pandas as pd
+
+
+def heatmap(data, col, metric):
+    data = data[(data['_name'] == col) & (data['_metric'] == metric)]
+    print(data.value.iloc[0])
+
+    trace = go.Heatmap(**data.value.iloc[0])
 
 
 def bar_plot_missing(data, metric, schema):

@@ -21,7 +21,7 @@ GENERATORS = {
 }
 
 
-BUILTIN_VIZ = ['value_counts']
+BUILTIN_VIZ = ['value_counts', 'crosstab']
 OVERVIEW = ['rows', 'columns', 'index']
 GENERAL_FUNCTIONS = ['perc_missing', 'dtype', 'is_unique']
 
@@ -179,7 +179,7 @@ class DataSet(object):
     def _write(self, measures):
         data = pd.DataFrame(measures)
         data['_type'] = 'custom'
-        data.loc[data['_metric'].isin(BUILTIN_VIZ), '_type'] = 'value_count'
+        data.loc[data['_metric'].isin(BUILTIN_VIZ), '_type'] = 'built-in-viz'
         data.loc[data['_name'].isin(OVERVIEW), '_type'] = 'overview'
         data.loc[data['_metric'].isin(GENERAL_FUNCTIONS), '_type'] = 'overview'
         if self.out_type == 'file':

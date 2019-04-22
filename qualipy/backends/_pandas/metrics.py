@@ -1,4 +1,4 @@
-import numpy as np
+import pandas as pd
 
 from qualipy.util import get_column
 
@@ -39,12 +39,22 @@ def _get_top(data, column):
 def _get_freq(data, column):
     return data[column].describe()['freq']
 
+def _get_is_unique(data, column):
+    if column == 'index':
+        return data.index.unique().shape[0] == data.shape[0]
+    return data[column].unique().shape[0] == data.shape[0]
+
+
 # non numeric
 
 def _get_value_count(data, column):
     return data[data[column] != 'nan'][column].value_counts().sort_values(ascending=False).head(10).to_dict()
 
-def _get_is_unique(data, column):
-    if column == 'index':
-        return data.index.unique().shape[0] == data.shape[0]
-    return data[column].unique().shape[0] == data.shape[0]
+def _get_cross_tab(data, column, column_two):
+    cross = pd.crosstab(data[column], data[column_two])
+    cross_data = {
+        'z': cross.values.tolist(),
+        'x': cross.index.values.tolist(),
+        'y': cross.columns.tolist()
+    }
+    return cross_data
