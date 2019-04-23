@@ -7,8 +7,8 @@ def heatmap(data, col, metric):
     value = data.value.iloc[0]
     column_two_name = data._arguments.iloc[0]
     trace = go.Heatmap(
-        x=[str(i) for i in value['x']],
-        y=[str(i) for i in value['y']],
+        x=['cat-{}'.format(i) for i in value['x']],
+        y=['cat-{}'.format(i) for i in value['y']],
         z=value['z']
     )
     plot = dcc.Graph(
@@ -16,16 +16,16 @@ def heatmap(data, col, metric):
         figure=go.Figure(
             data=[trace],
             layout=go.Layout(
-                title='Heatmap-{}-{}'.format(col, column_two_name),
+                title='{}-{}-{}'.format(metric, col, column_two_name),
                 height=600,
                 width=800,
                 xaxis={
                     'automargin': True,
-                    # 'tickvals':
+                    'title': column_two_name
                 },
                 yaxis={
                     'automargin': True,
-                    'tickvals': value['y']
+                    'title': col
                 }
             )
         )

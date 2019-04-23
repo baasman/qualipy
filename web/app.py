@@ -86,7 +86,6 @@ def select_data(project, column=None, batch=None, url=None, general=False):
     if batch is None or batch == 'all':
         return data
     else:
-        print(batch)
         if not isinstance(batch, list):
             batch = [batch]
         try:
@@ -258,18 +257,19 @@ def update_tab_4(batch):
 
 @dash_app1.callback(
     Output(component_id='tab-5-results', component_property='children'),
-    [Input(component_id='batch-choice-5', component_property='value')]
+    [Input(component_id='batch-choice-5', component_property='value'),
+     Input(component_id='tab-5-col-choice', component_property='value')]
 )
-def update_tab_5(batch):
-    data = select_data(session['project'], column=None,
+def update_tab_5(batch, column):
+    data = select_data(session['project'], column=column,
                        batch=batch, url=session['db_url'])
 
-    data = data[data['_type'] == 'built-in-viz']
+    # TODO: generalize this!!
+    data = data[data['_metric'].isin(['crosstab', 'correlation_plot'])]
+    unique_metrics = data['_metric'].unique()
     heatmap_plots = []
-    if data[data['_metric'] == 'crosstab'].shape[0] > 0:
-        for col in data[data['_metric'] == 'crosstab']['_name'].unique():
-            print(col)
-            heatmap_plots.append(heatmap(data, col, 'crosstab'))
+    for metric in unique_metrics:
+        heatmap_plots.append(heatmap(data, column, metric))
 
     page = html.Div(id='tab-5-page',
                     children=heatmap_plots)
@@ -307,9 +307,13 @@ def index():
         except:
             value_count_column_options = []
 
+        single_batch_cols = full_data[full_data['_type'] == 'built-in-viz']['_name'].unique()
+        print(single_batch_cols)
+
         dash_app1.layout = html.Div(id='total-div',
-                                    children=generate_layout(full_data, column_options,
-                                                             value_count_column_options))
+                                    children=generate_layout(data=full_data, column_options=column_options,
+                                                             value_count_column_options=value_count_column_options,
+                                                             single_batch_column_options=single_batch_cols))
         return redirect(url_for('render_dashboard'))
     return render_template('home/index.html', projects=projects)
 

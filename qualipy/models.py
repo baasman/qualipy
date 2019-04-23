@@ -8,8 +8,9 @@ import pickle
 
 from qualipy.backends._pandas.generate import GeneratorPandas
 from qualipy.backends._spark.generate import GeneratorSpark
-from qualipy.database import create_table, get_table
+from qualipy.database import create_table, get_table, create_alert_table
 from qualipy.util import get_column
+from qualipy.anomaly_detection import find_anomalies_by_std
 
 
 HOME = os.path.expanduser('~')
@@ -21,7 +22,7 @@ GENERATORS = {
 }
 
 
-BUILTIN_VIZ = ['value_counts', 'crosstab']
+BUILTIN_VIZ = ['value_counts', 'crosstab', 'correlation_plot']
 OVERVIEW = ['rows', 'columns', 'index']
 GENERAL_FUNCTIONS = ['perc_missing', 'dtype', 'is_unique']
 
@@ -39,6 +40,7 @@ class DataSet(object):
 
     def __init__(self, config, backend='pandas', engine=None, reset=False, time_of_run=None):
         self.table_name = config['data_name']
+        self.alert_table_name = '{}_alerts'.format(self.table_name)
         self.columns = config['columns']
         self.backend = backend
         self.generator = GENERATORS[backend]()
@@ -57,6 +59,7 @@ class DataSet(object):
 
         self._set_custom_funcs(config)
         self._locate_history_data()
+        self._get_alerts()
 
 
     def run(self):
@@ -75,6 +78,24 @@ class DataSet(object):
                              'nullable': self.nullables[col],
                              'unique': self.unique[col]}
                        for col in self.columns}
+
+    def get_alerts(self, std_away=3):
+        self.hist_data.value = self.hist_data.value.apply(lambda r: pickle.loads(r))
+        anomaly_data = []
+        for metric in ['mean', 'std']:
+            for col in ['temperature', 'score']:
+
+                if find_anomalies_by_std(self.current_data_measures,
+                                         self.hist_data,
+                                         'score', 'mean', std_away):
+                    anomaly_data.append(
+                        {
+                            'column': col,
+                            'std_away': std_away,
+                            'alert_message': 'This value is more than {} standard deviations away'.format(std_away)
+                        }
+                    )
+        anomaly_data = pd.DataFrame(anomaly_data)
 
     def _set_custom_funcs(self, config):
         custom_funcs = config.get('custom_functions')
@@ -134,6 +155,26 @@ class DataSet(object):
 
                 self.hist_data = get_table(engine=self.engine, table_name=self.table_name)
 
+    def _get_alerts(self):
+        # do the same for csv storage
+        if self.out_type == 'db':
+            with self.engine.connect() as conn:
+                exists = conn.execute('select name from sqlite_master '
+                                      'where type="table" '
+                                      'and name="{}"'.format(self.alert_table_name)).fetchone()
+                if not exists:
+                    create_alert_table(self.engine, self.alert_table_name)
+                if self.reset:
+                    try:
+                        conn.execute('drop table {}'.format(self.alert_table_name))
+                    except:
+                        pass
+                    create_alert_table(self.engine, self.alert_table_name)
+                    conn.execute('delete from {}'.format(self.alert_table_name))
+
+                self.alert_data = get_table(engine=self.engine,
+                                            table_name=self.alert_table_name)
+
     def _generate_measure(self, metric, column):
         if isinstance(metric, dict):
             metric_name = metric['function']
@@ -141,10 +182,9 @@ class DataSet(object):
         else:
             metric_name = metric
             kwargs = {}
-        measure = self.generator.generate_description(self.current_data, column, metric_name,
-                                                      self.custom_funcs, kwargs)
-        measure['_name'] = column
-        measure['_date'] = datetime.datetime.now() if self.time_of_run is None else self.time_of_run
+        date = datetime.datetime.now() if self.time_of_run is None else self.time_of_run
+        measure = self.generator.generate_description(data=self.current_data, column=column, measure=metric_name,
+                                                      date=date, custom_funcs=self.custom_funcs, kwargs=kwargs)
         return measure
 
 
@@ -182,6 +222,7 @@ class DataSet(object):
         data.loc[data['_metric'].isin(BUILTIN_VIZ), '_type'] = 'built-in-viz'
         data.loc[data['_name'].isin(OVERVIEW), '_type'] = 'overview'
         data.loc[data['_metric'].isin(GENERAL_FUNCTIONS), '_type'] = 'overview'
+        self.current_data_measures = data.copy()
         if self.out_type == 'file':
             data.to_csv(self.history_name, index=False, mode='a')
         elif self.out_type == 'db':

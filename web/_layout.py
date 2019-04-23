@@ -3,7 +3,7 @@ import dash_core_components as dcc
 from web.dash_components import column_choice, batch_choice
 
 
-def generate_layout(data, column_options, value_count_column_options):
+def generate_layout(data, column_options, value_count_column_options, single_batch_column_options):
 
 
     # General Overview
@@ -47,6 +47,7 @@ def generate_layout(data, column_options, value_count_column_options):
     tab5_html = []
     tab5_html.append(batch_choice(data['_date'].unique(), id='batch-choice-5',
                                   include_all=False, multi=False))
+    tab5_html.append(column_choice(single_batch_column_options, 'tab-5-col-choice', multi=False))
     tab5_html.append(html.Br())
     tab5_html.append(html.Div(id='tab-5-results'))
     tab5_html.append(html.Br())

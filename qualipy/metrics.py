@@ -9,7 +9,10 @@ from qualipy.backends._pandas.metrics import (
     _get_value_count,
     _get_perc_missing,
     _get_is_unique,
-    _get_cross_tab
+    _get_cross_tab,
+    _get_correlation,
+    _get_number_of_outliers,
+    _get_correlation_data
 )
 from qualipy.backends._spark.metrics import (
     _get_mean as _spark_get_mean,
@@ -29,7 +32,10 @@ PANDAS_METRIC_MAP = {
     'value_counts': _get_value_count,
     'perc_missing': _get_perc_missing,
     'is_unique': _get_is_unique,
-    'crosstab': _get_cross_tab
+    'crosstab': _get_cross_tab,
+    'correlation': _get_correlation,
+    'number_of_outliers': _get_number_of_outliers,
+    'correlation_plot': _get_correlation_data,
 }
 
 

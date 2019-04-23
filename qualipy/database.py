@@ -16,5 +16,16 @@ def create_table(engine, table_name):
         conn.execute(create_table_query)
 
 
+def create_alert_table(engine, table_name):
+    create_table_query = '''
+        create table {} (
+            "column" CHARACTER(20) not null,
+            "std_away" NUMERIC not null,
+            "alert_message" CHARACTER(100) null
+        );
+    '''.format(table_name)
+    with engine.connect() as conn:
+        conn.execute(create_table_query)
+
 def get_table(engine, table_name):
     return pd.read_sql('select * from {}'.format(table_name), engine)

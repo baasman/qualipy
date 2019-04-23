@@ -1,4 +1,6 @@
 import pandas as pd
+import numpy as np
+from scipy import stats
 
 from qualipy.util import get_column
 
@@ -44,6 +46,13 @@ def _get_is_unique(data, column):
         return data.index.unique().shape[0] == data.shape[0]
     return data[column].unique().shape[0] == data.shape[0]
 
+def _get_correlation(data, column, column_two):
+    return data[column].corr(data[column_two])
+
+def _get_number_of_outliers(data, column, std_away):
+    data = data[data[column].notnull()]
+    return data[np.abs(stats.zscore(data[column])) > std_away].shape[0]
+
 
 # non numeric
 
@@ -60,3 +69,14 @@ def _get_cross_tab(data, column, column_two=None, include_nan=True):
         'x': cross.columns.tolist()
     }
     return cross_data
+
+def _get_correlation_data(data, column, other_columns):
+    cols_to_use = [column]
+    cols_to_use.extend(other_columns)
+    corrs = data[cols_to_use]
+    corrs_data = {
+        'z': corrs.values.tolist(),
+        'y': corrs.index.values.tolist(),
+        'x': corrs.columns.tolist()
+    }
+    return corrs_data
