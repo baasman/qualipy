@@ -45,12 +45,6 @@ class DataSet(object):
         self.backend = backend
         self.generator = GENERATORS[backend]()
 
-        output = config.get('output')
-        if output is not None:
-            self.out_type = output['type']
-        else:
-            self.out_type = 'file'
-
         self.current_data = None
         self.reset = reset
         self.time_of_run = time_of_run
@@ -72,6 +66,7 @@ class DataSet(object):
         self.nullables = {col: info.get('null', False) for col, info in self.columns.items()}
         self.unique = {col: info.get('unique', False) for col, info in self.columns.items()}
         self.only_unique = {k: v for k, v in self.unique.items() if v}
+        self.check_anomalies = [i for i in self.columns if self.columns[i].get('check_for_anomalies', False)]
         self.dtypes = df.dtypes
         self.dtypes = self.dtypes.append(pd.Series(df.index.dtype, index=['index']))
         self.schema = {col: {'dtype': str(get_column(self.current_data, col).dtype),
@@ -80,14 +75,19 @@ class DataSet(object):
                        for col in self.columns}
 
     def get_alerts(self, std_away=3):
-        self.hist_data.value = self.hist_data.value.apply(lambda r: pickle.loads(r))
+        hist_data = self._locate_history_data()
+        hist_data.value = hist_data.value.apply(lambda r: pickle.loads(r))
         anomaly_data = []
-        for metric in ['mean', 'std']:
-            for col in ['temperature', 'score']:
+        for col in self.check_anomalies:
+            for metric in ['mean']:
+                nrows = hist_data[(hist_data['_name'] == col) &
+                                  (hist_data['_metric'] == metric)].shape[0]
+                if nrows < 25:
+                    print('Not enough batches to accurately determine outliers')
+                    continue
 
-                if find_anomalies_by_std(self.current_data_measures,
-                                         self.hist_data,
-                                         'score', 'mean', std_away):
+                if find_anomalies_by_std(self.current_data_measures, hist_data,
+                                         col, metric, std_away):
                     anomaly_data.append(
                         {
                             'column': col,
@@ -96,6 +96,7 @@ class DataSet(object):
                         }
                     )
         anomaly_data = pd.DataFrame(anomaly_data)
+        anomaly_data.to_sql(self.alert_table_name, self.engine, if_exists='append', index=False)
 
     def _set_custom_funcs(self, config):
         custom_funcs = config.get('custom_functions')
@@ -132,48 +133,42 @@ class DataSet(object):
 
 
     def _locate_history_data(self):
-        if self.out_type == 'file':
-            self.history_name = os.path.join(HOME, '.qualipy/data', '{}.csv'.format(self.table_name))
-            if not os.path.isfile(self.history_name) or self.reset:
-                pd.DataFrame(columns=['_name', '_date', '_metric', 'value']).to_csv(self.history_name, index=False)
-            self.hist_data = pd.read_csv(self.history_name)
+        with self.engine.connect() as conn:
+            exists = conn.execute('select name from sqlite_master '
+                                  'where type="table" '
+                                  'and name="{}"'.format(self.table_name)).fetchone()
+            if not exists:
+                create_table(self.engine, self.table_name)
+            if self.reset:
+                try:
+                    conn.execute('drop table {}'.format(self.table_name))
+                except:
+                    pass
+                create_table(self.engine, self.table_name)
+                conn.execute('delete from {}'.format(self.table_name))
 
-        elif self.out_type == 'db':
-            with self.engine.connect() as conn:
-                exists = conn.execute('select name from sqlite_master '
-                                      'where type="table" '
-                                      'and name="{}"'.format(self.table_name)).fetchone()
-                if not exists:
-                    create_table(self.engine, self.table_name)
-                if self.reset:
-                    try:
-                        conn.execute('drop table {}'.format(self.table_name))
-                    except:
-                        pass
-                    create_table(self.engine, self.table_name)
-                    conn.execute('delete from {}'.format(self.table_name))
+            hist_data = get_table(engine=self.engine, table_name=self.table_name)
+        return hist_data
 
-                self.hist_data = get_table(engine=self.engine, table_name=self.table_name)
 
     def _get_alerts(self):
         # do the same for csv storage
-        if self.out_type == 'db':
-            with self.engine.connect() as conn:
-                exists = conn.execute('select name from sqlite_master '
-                                      'where type="table" '
-                                      'and name="{}"'.format(self.alert_table_name)).fetchone()
-                if not exists:
-                    create_alert_table(self.engine, self.alert_table_name)
-                if self.reset:
-                    try:
-                        conn.execute('drop table {}'.format(self.alert_table_name))
-                    except:
-                        pass
-                    create_alert_table(self.engine, self.alert_table_name)
-                    conn.execute('delete from {}'.format(self.alert_table_name))
+        with self.engine.connect() as conn:
+            exists = conn.execute('select name from sqlite_master '
+                                  'where type="table" '
+                                  'and name="{}"'.format(self.alert_table_name)).fetchone()
+            if not exists:
+                create_alert_table(self.engine, self.alert_table_name)
+            if self.reset:
+                try:
+                    conn.execute('drop table {}'.format(self.alert_table_name))
+                except:
+                    pass
+                create_alert_table(self.engine, self.alert_table_name)
+                conn.execute('delete from {}'.format(self.alert_table_name))
 
-                self.alert_data = get_table(engine=self.engine,
-                                            table_name=self.alert_table_name)
+            self.alert_data = get_table(engine=self.engine,
+                                        table_name=self.alert_table_name)
 
     def _generate_measure(self, metric, column):
         if isinstance(metric, dict):
@@ -216,19 +211,21 @@ class DataSet(object):
                                           'dtype', col, self.time_of_run))
         return measures
 
-    def _write(self, measures):
-        data = pd.DataFrame(measures)
+    def _set_type(self, data):
         data['_type'] = 'custom'
         data.loc[data['_metric'].isin(BUILTIN_VIZ), '_type'] = 'built-in-viz'
         data.loc[data['_name'].isin(OVERVIEW), '_type'] = 'overview'
         data.loc[data['_metric'].isin(GENERAL_FUNCTIONS), '_type'] = 'overview'
+        return data
+
+    def _write(self, measures):
+        data = pd.DataFrame(measures)
+        data = self._set_type(data)
         self.current_data_measures = data.copy()
-        if self.out_type == 'file':
-            data.to_csv(self.history_name, index=False, mode='a')
-        elif self.out_type == 'db':
-            data.value = data.value.apply(lambda v: pickle.dumps(v))
-            data.to_sql(self.table_name, self.engine, if_exists='append', index=False)
-        else:
-            raise ValueError
+
+        # all values are getting binary data for now, need to think of solution for this
+        data.value = data.value.apply(lambda v: pickle.dumps(v))
+        data.to_sql(self.table_name, self.engine, if_exists='append', index=False)
+
         self._add_to_project_list()
 

@@ -1,14 +1,7 @@
 from qualipy.metrics import PANDAS_METRIC_MAP
-from qualipy.util import get_column
 
-import numpy as np
+from numpy import NaN
 
-
-dtypes = {
-    'float': float,
-    'int': int,
-    'string': str
-}
 
 class GeneratorPandas():
 
@@ -25,7 +18,7 @@ class GeneratorPandas():
 
     @staticmethod
     def generate_description(data, column, measure, date, custom_funcs=None, kwargs=None):
-        arguments = str(kwargs) if kwargs else np.NaN
+        arguments = str(kwargs) if kwargs else NaN
         metric_name = measure
         if measure in custom_funcs:
             fun = custom_funcs[measure]
