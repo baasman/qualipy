@@ -5,6 +5,22 @@
 
 /*Overview Page*/
 
+#home-page {
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    text-align: center;
+}
+
+#overview-home {
+    float: left;
+}
+
+#alerts-home {
+    overflow: hidden;
+    margin-left: 50px;
+}
+
 #overview-table {
     table-layout: fixed;
     width: 25%;

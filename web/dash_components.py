@@ -1,6 +1,7 @@
 import dash_core_components as dcc
 import dash_table
 
+
 def column_choice(column_options, id='column-choice', multi=True):
     return dcc.Dropdown(
         id=id,
@@ -46,3 +47,21 @@ def schema_table(data):
         data=data.to_dict('rows'),
         sorting=True,
     )
+
+def alerts_markdown(data):
+    lines = []
+    for idx, row in data.iterrows():
+        lines.append('Column {} has an anomaly in batch {}'.format(row['column'], row['date']))
+
+    warning_lines = '\n\n'.join(lines)
+    print(warning_lines)
+
+    markdown = dcc.Markdown('''
+        Alerts
+        =======
+        
+        
+        {}
+        
+    '''.format(warning_lines))
+    return markdown

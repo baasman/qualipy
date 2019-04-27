@@ -21,7 +21,9 @@ def create_alert_table(engine, table_name):
         create table {} (
             "column" CHARACTER(20) not null,
             "std_away" NUMERIC not null,
-            "alert_message" CHARACTER(100) null
+            "value" NUMERIC not null,
+            "alert_message" CHARACTER(100) null,
+            "date" DATETIME not null
         );
     '''.format(table_name)
     with engine.connect() as conn:

@@ -28,8 +28,8 @@ from web.plots.overview import (
 from web.plots.batch import (
     heatmap
 )
-from web.dash_components import overview_table, schema_table
-from web._layout import generate_layout
+from web.dash_components import overview_table, schema_table, alerts_markdown
+from web.layout import generate_layout
 from qualipy.database import get_table
 
 
@@ -53,19 +53,18 @@ dash_app1.config['suppress_callback_exceptions']=True
 dash_app1.layout = html.Div([])
 
 full_data = pd.DataFrame()
+alert_data = pd.DataFrame()
 
 
 def select_data(project, column=None, batch=None, url=None, general=False):
+    global full_data
     data = full_data.copy()
 
     try:
         if data.shape[0] == 0 or general:
-            if url is not None:
-                engine = create_engine(url)
-                data = get_table(engine, project)
-                data.value = data.value.apply(lambda r: pickle.loads(r))
-            else:
-                data = pd.read_csv(os.path.join(HOME, '.qualipy/data', '{}.csv'.format(project)))
+            engine = create_engine(url)
+            data = get_table(engine, project)
+            data.value = data.value.apply(lambda r: pickle.loads(r))
         else:
             data = full_data.copy()
     except:
@@ -96,6 +95,18 @@ def select_data(project, column=None, batch=None, url=None, general=False):
         return data
 
 
+def get_alerts_table(project, url):
+    global alert_data
+
+    data = alert_data.copy()
+    engine = create_engine(url)
+    if data.shape[0] == 0:
+        data = get_table(engine, '{}_alerts'.format(project))
+        alert_data = data.copy()
+
+    data = data.sort_values('date', ascending=False)
+    return data
+
 
 #### Overview Tab ####
 
@@ -125,12 +136,28 @@ def update_tab_1(n_clicks):
                            col, info in session['schema'].items()])
     schema['null'] = schema['null'].astype(str)
     schema['unique'] = schema['unique'].astype(str)
-    components = []
-    components.append(html.H4('Data characteristics'))
-    components.append(overview_table(over_table))
-    components.append(html.H4('Schema'))
-    components.append(schema_table(schema))
-    return components
+
+    alerts = get_alerts_table(session['project'], url=session['db_url'])
+    markdown = alerts_markdown(alerts.head(10))
+
+    title_data = html.H4('Data characteristics')
+    data_char = overview_table(over_table)
+    schema_title = html.H4('Schema')
+    schema = schema_table(schema)
+
+    overview_div = html.Div(id='overview-home',
+                        children=[
+                            title_data, data_char, schema_title, schema
+                        ])
+    alerts_div = html.Div(id='alerts-home',
+                        children=[
+                            markdown
+                        ])
+    page = html.Div(id='home-page',
+                    children=[
+                        overview_div, alerts_div
+                    ])
+    return page
 
 
 #### Numerical Trends ####
@@ -150,11 +177,11 @@ def update_tab_2(column):
         # different parameters, its also just terrible code
         for i, metric in enumerate(data[data['_name'] == var]['_metric'].unique()):
             args = data[data['_metric'] == metric]['_arguments'].iloc[0]
+            metric_title = metric if args is None else '{}_{}'.format(metric, args)
             plots.append(
                 html.Div(id='trend-plots-{}'.format(i),
                          children=[
-                             html.H3('{}-{}'.format(var, '{}_{}'.format(metric, args)),
-                                                    id='plot-header'),
+                             html.H3('{}-{}'.format(var, metric_title, id='plot-header')),
                              create_trend_line(data, var, metric),
                              histogram(data, var, metric)
                          ]

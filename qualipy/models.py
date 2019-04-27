@@ -36,6 +36,15 @@ def _create_value(value, metric, name, date):
     }
 
 
+def _check_for_anomaly(function):
+    if isinstance(function, dict):
+        check = function.get('check_for_anomalies', False)
+        # if check:
+        #     return function['function']
+        return check
+    return False
+
+
 class DataSet(object):
 
     def __init__(self, config, backend='pandas', engine=None, reset=False, time_of_run=None):
@@ -44,10 +53,10 @@ class DataSet(object):
         self.columns = config['columns']
         self.backend = backend
         self.generator = GENERATORS[backend]()
+        self.time_of_run = datetime.datetime.now() if time_of_run is None else time_of_run
 
         self.current_data = None
         self.reset = reset
-        self.time_of_run = time_of_run
 
         self.engine = engine
 
@@ -57,8 +66,6 @@ class DataSet(object):
 
 
     def run(self):
-        # self.thread = threading.Thread(target=self._generate_metrics)
-        # self.thread.start()
         self._generate_metrics()
 
     def set_dataset(self, df):
@@ -66,7 +73,18 @@ class DataSet(object):
         self.nullables = {col: info.get('null', False) for col, info in self.columns.items()}
         self.unique = {col: info.get('unique', False) for col, info in self.columns.items()}
         self.only_unique = {k: v for k, v in self.unique.items() if v}
-        self.check_anomalies = [i for i in self.columns if self.columns[i].get('check_for_anomalies', False)]
+
+        # props if you can read the next three horribly convoluted lines
+        # no way this can ever go wrong
+        self.check_anomalies = [{'col': i, 'to_check': [_check_for_anomaly(f) for f
+                                                        in self.columns[i]['metrics']]} for i
+                                in self.columns]
+        self.check_anomalies = [{'col': i['col'], 'to_check':
+            [fun['function'] for check, fun in zip(i['to_check'],
+                                                 self.columns[i['col']]['metrics']) if check]} for i
+                                in self.check_anomalies if any(i['to_check'])]
+        self.check_anomalies = {i['col']: i['to_check'] for i in self.check_anomalies}
+
         self.dtypes = df.dtypes
         self.dtypes = self.dtypes.append(pd.Series(df.index.dtype, index=['index']))
         self.schema = {col: {'dtype': str(get_column(self.current_data, col).dtype),
@@ -78,20 +96,22 @@ class DataSet(object):
         hist_data = self._locate_history_data()
         hist_data.value = hist_data.value.apply(lambda r: pickle.loads(r))
         anomaly_data = []
-        for col in self.check_anomalies:
-            for metric in ['mean']:
+        for col, metrics in self.check_anomalies.items():
+            for metric in metrics:
                 nrows = hist_data[(hist_data['_name'] == col) &
                                   (hist_data['_metric'] == metric)].shape[0]
-                if nrows < 25:
+                if nrows < 10:
                     print('Not enough batches to accurately determine outliers')
                     continue
 
-                if find_anomalies_by_std(self.current_data_measures, hist_data,
-                                         col, metric, std_away):
+                is_anomaly, value = find_anomalies_by_std(self.current_data_measures, hist_data, col, metric, std_away)
+                if is_anomaly:
                     anomaly_data.append(
                         {
                             'column': col,
                             'std_away': std_away,
+                            'value': value,
+                            'date': self.time_of_run,
                             'alert_message': 'This value is more than {} standard deviations away'.format(std_away)
                         }
                     )
@@ -173,13 +193,12 @@ class DataSet(object):
     def _generate_measure(self, metric, column):
         if isinstance(metric, dict):
             metric_name = metric['function']
-            kwargs = metric['parameters']
+            kwargs = metric.get('parameters', {})
         else:
             metric_name = metric
             kwargs = {}
-        date = datetime.datetime.now() if self.time_of_run is None else self.time_of_run
         measure = self.generator.generate_description(data=self.current_data, column=column, measure=metric_name,
-                                                      date=date, custom_funcs=self.custom_funcs, kwargs=kwargs)
+                                                      date=self.time_of_run, custom_funcs=self.custom_funcs, kwargs=kwargs)
         return measure
 
 
