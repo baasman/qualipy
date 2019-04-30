@@ -3,7 +3,6 @@ import plotly.graph_objs as go
 
 
 def heatmap(data, col, metric):
-    data = data[(data['_name'] == col) & (data['_metric'] == metric)]
     value = data.value.iloc[0]
     column_two_name = data._arguments.iloc[0]
     trace = go.Heatmap(

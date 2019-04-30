@@ -5,11 +5,8 @@ from functools import reduce
 
 
 def create_trend_line(data, var, metric):
-
-    main_line = data[(data['_name'] == var) &
-                               (data['_metric'] == metric)]
-    title = '{}_{}'.format(var, main_line._arguments.iloc[0])
-    main_line = main_line.value
+    title = '{}_{}'.format(var, data._arguments.iloc[0])
+    main_line = data.value
     mean = main_line.mean()
     median = main_line.median()
     std = main_line.std()
@@ -18,8 +15,7 @@ def create_trend_line(data, var, metric):
     std_line_lower = np.repeat(mean - (2 * std), main_line.shape[0])
     std_line_higher = np.repeat(mean + (2 * std), main_line.shape[0])
 
-    x_axis = data[(data['_name'] == var) &
-         (data['_metric'] == metric)]['_date']
+    x_axis = data['_date']
 
     plot = dcc.Graph(
         id='num-data-graph-{}-{}'.format(title, metric),
@@ -110,9 +106,8 @@ def create_trend_line(data, var, metric):
 
 
 def create_value_count_area_chart(data, var, metric):
-    data = data[(data['_name'] == var) &
-               (data['_metric'] == metric)]
     data_values = data['value'].tolist()
+    print(data_values)
     traces = []
     unique_vals = reduce(lambda x, y: x.union(y), [set(i.keys()) for i in data_values])
     x = data['_date']
@@ -166,8 +161,7 @@ def create_simple_line_plot(data, var, metric):
 
 
 def histogram(data, var, metric):
-    x = data[(data['_name'] == var) &
-             (data['_metric'] == metric)]['value']
+    x = data.value
     plot = dcc.Graph(
         id='histogram-{}-{}'.format(var, metric),
         figure={

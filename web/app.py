@@ -31,6 +31,7 @@ from web.plots.batch import (
 from web.dash_components import overview_table, schema_table, alerts_markdown
 from web.layout import generate_layout
 from qualipy.database import get_table
+from qualipy.models import STANDARD_VIZ
 
 
 
@@ -171,22 +172,21 @@ def update_tab_2(column):
     data = select_data(session['project'], column=column,
                        url=session['db_url'])
     data = data[data['_type'] == 'custom']
-    for var in data['_name'].unique():
 
-        # change this - would break when running multiple functions on same var with
-        # different parameters, its also just terrible code
-        for i, metric in enumerate(data[data['_name'] == var]['_metric'].unique()):
-            args = data[data['_metric'] == metric]['_arguments'].iloc[0]
-            metric_title = metric if args is None else '{}_{}'.format(metric, args)
-            plots.append(
-                html.Div(id='trend-plots-{}'.format(i),
-                         children=[
-                             html.H3('{}-{}'.format(var, metric_title, id='plot-header')),
-                             create_trend_line(data, var, metric),
-                             histogram(data, var, metric)
-                         ]
-                )
+    for idx, metric in enumerate(data[data['_name'] == column]['_metric'].unique()):
+        args = data[data['_metric'] == metric]['_arguments'].iloc[0]
+        metric_title = metric if args is None else '{}_{}'.format(metric, args)
+        plot_data = data[(data['_name'] == column) &
+                         (data['_metric'] == metric)]
+        plots.append(
+            html.Div(id='trend-plots-{}'.format(idx),
+                     children=[
+                         html.H3('{}-{}'.format(column, metric_title, id='plot-header')),
+                         create_trend_line(plot_data, column, metric),
+                         histogram(plot_data, column, metric)
+                     ]
             )
+        )
     return plots
 
 
@@ -194,18 +194,20 @@ def update_tab_2(column):
 
 @dash_app1.callback(
     Output(component_id='tab-3-results', component_property='children'),
-    [Input(component_id='tab-3-col-choice', component_property='value')]
+    [Input(component_id='tab-3-col-choice-multi', component_property='value')]
 )
 def update_tab_3(column):
     data = select_data(session['project'], column=column,
                        url=session['db_url'])
 
-    data = data[data['_type'] == 'built-in-viz']
+    data = data[(data['_type'] == 'standard_viz') & (data['_over_time'] == True)]
 
-    if data[data['_metric'] == 'value_counts'].shape[0] > 0:
+    if data[data['_standard_viz'] == 'value_counts'].shape[0] > 0:
         value_count_plots = []
         for col in data['_name'].unique():
-            value_count_plots.append(create_value_count_area_chart(data, col, 'value_counts'))
+            plot_data = data[(data['_name'] == column) &
+                             (data['_standard_viz'] == 'value_counts')]
+            value_count_plots.append(create_value_count_area_chart(plot_data, col, 'value_counts'))
         value_count_plots = html.Div(id='value-count-plots',
                                    children=value_count_plots)
         value_count_div = html.Div(
@@ -220,9 +222,6 @@ def update_tab_3(column):
             id='value-count-section',
             children=[]
         )
-
-
-
     return value_count_div
 
 
@@ -235,10 +234,10 @@ def update_tab_3(column):
 def update_tab_4(batch):
     data = select_data(session['project'], column=None, batch=batch,
                        url=session['db_url'], general=True)
-    type_plot = create_type_plots(data, session['schema'])
-    missing_plot = bar_plot_missing(data, 'perc_missing', session['schema'])
-    rows_columns = create_simple_line_plot_subplots(data)
-    unique_plot = create_unique_columns_plot(data)
+    type_plot = create_type_plots(data[(data['_metric'] == 'dtype')].copy(), session['schema'])
+    missing_plot = bar_plot_missing(data[(data['_metric'] == 'perc_missing')].copy(), session['schema'])
+    rows_columns = create_simple_line_plot_subplots(data.copy())
+    unique_plot = create_unique_columns_plot(data[(data['_metric'] == 'is_unique')].copy())
 
     ###### row 1
     line_plots = html.Div(id='data-line-plots',
@@ -291,12 +290,12 @@ def update_tab_5(batch, column):
     data = select_data(session['project'], column=column,
                        batch=batch, url=session['db_url'])
 
-    # TODO: generalize this!!
-    data = data[data['_metric'].isin(['crosstab', 'correlation_plot'])]
-    unique_metrics = data['_metric'].unique()
+    data = data[(data['_type'] == 'standard_viz') & (data['_over_time'] == False)]
+
     heatmap_plots = []
-    for metric in unique_metrics:
-        heatmap_plots.append(heatmap(data, column, metric))
+    for metric in data['_metric'].unique():
+        plot_data = data[(data['_name'] == column) & (data['_metric'] == metric)]
+        heatmap_plots.append(heatmap(plot_data, column, metric))
 
     page = html.Div(id='tab-5-page',
                     children=heatmap_plots)
@@ -330,17 +329,21 @@ def index():
         full_data = select_data(session['project'], url=url)
 
         try:
-            value_count_column_options = full_data[full_data['_metric'] == 'value_counts']['_name'].unique()
+            standard_over_time = full_data[(full_data['_over_time'] == True) &
+                                           (full_data['_type'] == 'standard_viz')]['_name'].unique()
+            standard_not_over_time = full_data[(full_data['_over_time'] == False) &
+                                               (full_data['_type'] == 'standard_viz')]['_name'].unique()
+            print(standard_not_over_time)
+            print(standard_over_time)
         except:
-            value_count_column_options = []
+            standard_over_time = []
+            standard_not_over_time = []
 
-        single_batch_cols = full_data[full_data['_type'] == 'built-in-viz']['_name'].unique()
-        print(single_batch_cols)
 
         dash_app1.layout = html.Div(id='total-div',
                                     children=generate_layout(data=full_data, column_options=column_options,
-                                                             value_count_column_options=value_count_column_options,
-                                                             single_batch_column_options=single_batch_cols))
+                                                             standard_over_time=standard_over_time,
+                                                             standard_not_over_time=standard_not_over_time))
         return redirect(url_for('render_dashboard'))
     return render_template('home/index.html', projects=projects)
 

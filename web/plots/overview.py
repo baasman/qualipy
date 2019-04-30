@@ -5,11 +5,10 @@ import numpy as np
 
 
 
-def bar_plot_missing(data, metric, schema):
-    df = data[data['_metric'] == metric].copy()
-    df.value = df.value.astype(float)
-    df = df.sort_values('value')
-    y = df.groupby('_name').value.mean()
+def bar_plot_missing(data, schema):
+    data.value = data.value.astype(float)
+    data = data.sort_values('value')
+    y = data.groupby('_name').value.mean()
     x = y.index
     nullable = ['value: {}, null: {}'.format(round(value, 2), str(schema[i]['nullable']))
                 for value, i in zip(y, x)]
@@ -86,10 +85,9 @@ def create_simple_line_plot_subplots(data):
 
 
 def create_type_plots(data, schema):
-    dtype_data = data[(data['_metric'] == 'dtype')]
-    x_index = dtype_data['_date']
+    x_index = data['_date']
 
-    uniques = dtype_data.groupby('_name').apply(lambda g: g.drop_duplicates('value').shape[0])
+    uniques = data.groupby('_name').apply(lambda g: g.drop_duplicates('value').shape[0])
     uniques = uniques[uniques > 1].index
 
     try:
@@ -99,7 +97,7 @@ def create_type_plots(data, schema):
                                       vertical_spacing=.10, subplot_titles=uniques.values)
             number_of_lines = []
             for idx, var in enumerate(uniques, 1):
-                values = dtype_data[dtype_data['_name'] == var]['value'].values
+                values = data[data['_name'] == var]['value'].values
                 n = values.shape[0]
                 unique_vals = np.unique(values)
                 lines = []
@@ -116,11 +114,11 @@ def create_type_plots(data, schema):
                 number_of_lines.append(len(lines))
 
                 for line in lines:
-                    data = line['data']
+                    line_data = line['data']
                     name = line['name']
                     fig.append_trace(go.Scatter(
                         x=x_index,
-                        y=data,
+                        y=line_data,
                         mode='lines',
                         name=name,
                         line=dict(
@@ -160,7 +158,6 @@ def create_type_plots(data, schema):
 
 
 def create_unique_columns_plot(data):
-    data = data[(data['_metric'] == 'is_unique')]
     x = data['_date']
     traces = []
     unique_vars = data['_name'].unique()

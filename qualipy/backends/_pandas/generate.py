@@ -17,7 +17,7 @@ class GeneratorPandas():
         return data
 
     @staticmethod
-    def generate_description(data, column, measure, date, custom_funcs=None, kwargs=None):
+    def generate_description(data, column, measure, date, standard_viz, over_time=True, custom_funcs=None, kwargs=None):
         arguments = str(kwargs) if kwargs else NaN
         metric_name = measure
         if measure in custom_funcs:
@@ -29,6 +29,8 @@ class GeneratorPandas():
             '_metric': metric_name,
             '_arguments': arguments,
             '_date': date,
-            '_name': column
+            '_name': column,
+            '_standard_viz': standard_viz,
+            '_over_time': over_time
         }
 

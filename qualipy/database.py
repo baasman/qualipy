@@ -9,7 +9,9 @@ def create_table(engine, table_name):
             "_metric" CHARACTER(30) not null,
             "_arguments" CHARACTER(100) null,
             "value" BLOB,
-            "_type" CHARACTER not null DEFAULT 'custom'
+            "_type" CHARACTER not null DEFAULT 'custom',
+            "_standard_viz" CHARACTER(100) null,
+            "_over_time" BOOLEAN null DEFAULT true
         );
     '''.format(table_name)
     with engine.connect() as conn:

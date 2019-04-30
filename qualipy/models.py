@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 
 import os
 import datetime
@@ -23,8 +24,22 @@ GENERATORS = {
 
 
 BUILTIN_VIZ = ['value_counts', 'crosstab', 'correlation_plot']
-OVERVIEW = ['rows', 'columns', 'index']
-GENERAL_FUNCTIONS = ['perc_missing', 'dtype', 'is_unique']
+OVERVIEW_PAGE_COLUMNS = ['rows', 'columns', 'index']
+OVERVIEW_PAGE_METRICS_DEFAULT = ['perc_missing', 'dtype', 'is_unique']
+STANDARD_VIZ = {
+    'value_counts': {
+        'plot': 'value_counts',
+        'over_time': True
+    },
+    'crosstab': {
+        'plot': 'heatmap',
+        'over_time': False
+    },
+    'correlation': {
+        'plot': 'heatmap',
+        'over_time': False
+    }
+}
 
 
 def _create_value(value, metric, name, date):
@@ -32,7 +47,9 @@ def _create_value(value, metric, name, date):
         'value': value,
         '_date': date,
         '_name': name,
-        '_metric': metric
+        '_metric': metric,
+        '_standard_viz': np.NaN,
+        '_over_time': True
     }
 
 
@@ -197,8 +214,16 @@ class DataSet(object):
         else:
             metric_name = metric
             kwargs = {}
-        measure = self.generator.generate_description(data=self.current_data, column=column, measure=metric_name,
-                                                      date=self.time_of_run, custom_funcs=self.custom_funcs, kwargs=kwargs)
+        if metric_name in STANDARD_VIZ:
+            standard_viz = STANDARD_VIZ[metric_name]['plot']
+            over_time = STANDARD_VIZ[metric_name]['over_time']
+        else:
+            standard_viz = np.NaN
+            over_time= True
+        measure = self.generator.generate_description(data=self.current_data, column=column,
+                                                      measure=metric_name, standard_viz=standard_viz,
+                                                      date=self.time_of_run, over_time=over_time,
+                                                      custom_funcs=self.custom_funcs, kwargs=kwargs)
         return measure
 
 
@@ -232,9 +257,9 @@ class DataSet(object):
 
     def _set_type(self, data):
         data['_type'] = 'custom'
-        data.loc[data['_metric'].isin(BUILTIN_VIZ), '_type'] = 'built-in-viz'
-        data.loc[data['_name'].isin(OVERVIEW), '_type'] = 'overview'
-        data.loc[data['_metric'].isin(GENERAL_FUNCTIONS), '_type'] = 'overview'
+        data.loc[data['_metric'].isin(list(STANDARD_VIZ.keys())), '_type'] = 'standard_viz'
+        data.loc[data['_name'].isin(OVERVIEW_PAGE_COLUMNS), '_type'] = 'overview'
+        data.loc[data['_metric'].isin(OVERVIEW_PAGE_METRICS_DEFAULT), '_type'] = 'overview'
         return data
 
     def _write(self, measures):

@@ -3,7 +3,7 @@ import dash_core_components as dcc
 from web.dash_components import column_choice, batch_choice
 
 
-def generate_layout(data, column_options, value_count_column_options, single_batch_column_options):
+def generate_layout(data, column_options, standard_over_time, standard_not_over_time):
 
 
     # General Overview
@@ -27,7 +27,7 @@ def generate_layout(data, column_options, value_count_column_options, single_bat
     # Categorical column built-ins
     tab3_html = []
     tab3_html.append(html.H5('Column Choice'))
-    tab3_html.append(column_choice(value_count_column_options, 'tab-3-col-choice', multi=True))
+    tab3_html.append(column_choice(standard_over_time, 'tab-3-col-choice-multi', multi=True))
     tab3_html.append(html.Br())
     tab3_html.append(html.Div(id='tab-3-results'))
     tab3_html.append(html.Br())
@@ -47,7 +47,7 @@ def generate_layout(data, column_options, value_count_column_options, single_bat
     tab5_html = []
     tab5_html.append(batch_choice(data['_date'].unique(), id='batch-choice-5',
                                   include_all=False, multi=False))
-    tab5_html.append(column_choice(single_batch_column_options, 'tab-5-col-choice', multi=False))
+    tab5_html.append(column_choice(standard_not_over_time, 'tab-5-col-choice', multi=False))
     tab5_html.append(html.Br())
     tab5_html.append(html.Div(id='tab-5-results'))
     tab5_html.append(html.Br())
