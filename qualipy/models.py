@@ -75,7 +75,10 @@ class DataSet(object):
         self.current_data = None
         self.reset = reset
 
-        self.engine = engine
+        if engine is None:
+            self.engine = os.path.join(HOME, '.qualipy', 'qualipy.db')
+        else:
+            self.engine = engine
 
         self._set_custom_funcs(config)
         self._locate_history_data()
@@ -153,14 +156,10 @@ class DataSet(object):
             projects = {}
 
         if self.table_name not in projects or self.reset:
-            if self.engine is not None:
-                db = str(self.engine.url)
-            else:
-                db = None
             projects[self.table_name] = {
                 'columns': list(self.columns.keys()),
                 'executions': [datetime.datetime.now().strftime('%m/%d/%Y %H:%M')],
-                'db': None if db is None else db,
+                'db': str(self.engine.url),
                 'schema': self.schema
             }
         else:

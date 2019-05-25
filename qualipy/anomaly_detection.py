@@ -8,5 +8,3 @@ def find_anomalies_by_std(new_data, hist_data, name, metric, std_away):
     if abs(new_data_metric) > (mean_of_metric + std_away * std):
         return True, new_data_metric
     return False, None
-
-

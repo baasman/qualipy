@@ -333,8 +333,6 @@ def index():
                                            (full_data['_type'] == 'standard_viz')]['_name'].unique()
             standard_not_over_time = full_data[(full_data['_over_time'] == False) &
                                                (full_data['_type'] == 'standard_viz')]['_name'].unique()
-            print(standard_not_over_time)
-            print(standard_over_time)
         except:
             standard_over_time = []
             standard_not_over_time = []
