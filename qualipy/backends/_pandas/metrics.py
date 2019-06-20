@@ -8,7 +8,7 @@ from qualipy.column import function
 
 #numeric
 
-@function(anomaly=False)
+@function()
 def mean(data, column):
     return data[column].mean()
 
@@ -25,12 +25,15 @@ def _get_quantile(data, column, quantile=.5):
     return data[column].quantile(quantile)
 
 
+@function()
 def _get_number_of_duplicates(data, column):
     return data.shape[0] - data.drop_duplicates().shape[0]
 
-@function(anomaly=False)
+
+@function()
 def percentage_missing(data, column):
     return get_column(data, column).isnull().sum() / data.shape[0]
+
 
 def _get_nunique(data, column):
     return get_column(data, column).nunique()
@@ -43,7 +46,7 @@ def _get_top(data, column):
 def _get_freq(data, column):
     return data[column].describe()['freq']
 
-@function(anomaly=False)
+@function()
 def is_unique(data, column):
     if column == 'index':
         return data.index.unique().shape[0] == data.shape[0]
@@ -59,7 +62,7 @@ def _get_number_of_outliers(data, column, std_away):
 
 # non numeric
 
-@function(anomaly=False)
+@function(return_format=dict)
 def value_counts(data, column):
     return data[data[column] != 'nan'][column].value_counts().sort_values(ascending=False).head(10).to_dict()
 
@@ -74,10 +77,11 @@ def heatmap(data, column, column_two=None, include_nan=True):
     }
     return cross_data
 
-def correlation(data, column, other_columns):
-    cols_to_use = [column]
-    cols_to_use.extend(other_columns)
-    corrs = data[cols_to_use]
+@function(other_column='y', return_format=dict)
+def correlation(data, column, y):
+    corrs = pd.DataFrame({
+        column: data[column].values,
+        'other_col': y.values})
     corrs_data = {
         'z': corrs.values.tolist(),
         'y': corrs.index.values.tolist(),

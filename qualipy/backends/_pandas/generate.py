@@ -1,4 +1,5 @@
 from qualipy.metrics import PANDAS_METRIC_MAP
+from qualipy.exceptions import InvalidReturnValue
 
 from numpy import NaN
 
@@ -17,7 +18,7 @@ def _create_arg_string(keyword_arguments, other_columns=None):
 class GeneratorPandas():
 
     @staticmethod
-    def set_type(data, column, type):
+    def set_column_type(data, column, type):
         """
         type should be a valid numpy/pandas type
         """
@@ -26,6 +27,20 @@ class GeneratorPandas():
         else:
             data[column] = data[column].astype(type)
         return data
+
+    @staticmethod
+    def set_return_value_type(value, return_format):
+        if return_format in [int, float, str, dict, bool]:
+            try:
+                value = return_format(value)
+            except TypeError as e:
+                raise InvalidReturnValue("Invalid return value: {}, was expecting"
+                                         " '{}'".format(e, str(return_format)))
+        elif return_format == 'custom':
+            pass
+        else:
+            raise InvalidReturnValue("Unsupported type: '{}'".format(str(return_format)))
+        return value
 
     @staticmethod
     def generate_description(function, data, column,

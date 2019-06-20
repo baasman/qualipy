@@ -31,7 +31,7 @@ from web.plots.batch import (
 from web.dash_components import overview_table, schema_table, alerts_markdown
 from web.layout import generate_layout
 from qualipy.database import get_table
-from qualipy.models import STANDARD_VIZ
+from qualipy.run import STANDARD_VIZ
 
 
 

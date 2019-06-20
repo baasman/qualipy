@@ -1,9 +1,20 @@
 from functools import wraps
 
+import types
+
+def copy_func(f, name=None):
+    fn = types.FunctionType(f.__code__, f.__globals__, name or f.__name__,
+        f.__defaults__, f.__closure__)
+    fn.__dict__.update(f.__dict__)
+    return fn
+
 
 # TODO: should have separate decorators for methods and functions
-def function(allowed_arguments=None, return_format='numeric',
-             arguments=None, anomaly=False, other_column=None):
+def function(allowed_arguments=None, return_format=float,
+             arguments=None, anomaly=False, other_column=None,
+             fail=False):
+    # fail: if returns false, stop program
+
     def inner_fun(method):
         method.anomaly = anomaly
         method.allowed_arguments = [] if allowed_arguments is None else allowed_arguments
@@ -11,6 +22,7 @@ def function(allowed_arguments=None, return_format='numeric',
         method.has_decorator = True
         method.return_format = return_format
         method.other_column = other_column
+        method.fail = fail
         @wraps(method)
         def wrapper(*args, **kwargs):
             return method(*args, **kwargs)
@@ -24,7 +36,7 @@ class Column(object):
     def _as_dict(self, name):
         dict_ = {
             'name': name,
-            'type': self.column_type,
+            'type': getattr(self, 'column_type', None),
             'null': getattr(self, 'null', True),
             'unique': getattr(self, 'unique', True),
             'default_functions': self._get_default_methods(),
@@ -41,7 +53,7 @@ class Column(object):
         custom_funcs = getattr(self, 'custom_funs', None)
         if custom_funcs:
             for custom_func in self.custom_funs:
-                function = custom_func['function']
+                function = copy_func(custom_func['function'])
                 function.arguments = custom_func.get('parameters', {})
                 methods[function.__name__] = function
         return methods

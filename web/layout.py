@@ -36,18 +36,19 @@ def generate_layout(data, column_options, standard_over_time, standard_not_over_
 
 
     # Categorical column built-ins
-    tab3_html = []
-    tab3_html.append(html.H5('Column Choice'))
-    tab3_html.append(column_choice(standard_over_time, 'tab-3-col-choice-multi', multi=True))
-    tab3_html.append(html.Br())
-    tab3_html.append(html.Div(id='tab-3-results'))
-    tab3_html.append(html.Br())
-    tab3_html.append(html.A('Home', href='/index', target='_blank'))
-    children.append(dcc.Tab(
-        label='Categorical',
-        value='tab-3',
-        children=tab3_html
-    ))
+    if len(standard_over_time) > 0:
+        tab3_html = []
+        tab3_html.append(html.H5('Column Choice'))
+        tab3_html.append(column_choice(standard_over_time, 'tab-3-col-choice-multi', multi=True))
+        tab3_html.append(html.Br())
+        tab3_html.append(html.Div(id='tab-3-results'))
+        tab3_html.append(html.Br())
+        tab3_html.append(html.A('Home', href='/index', target='_blank'))
+        children.append(dcc.Tab(
+            label='Categorical',
+            value='tab-3',
+            children=tab3_html
+        ))
 
 
     # General built in data quality checks
@@ -65,8 +66,8 @@ def generate_layout(data, column_options, standard_over_time, standard_not_over_
 
 
     # Single batch analyzer
-    tab5_html = []
     if len(standard_not_over_time) > 0:
+        tab5_html = []
         tab5_html.append(batch_choice(data['_date'].unique(), id='batch-choice-5',
                                       include_all=False, multi=False))
         tab5_html.append(column_choice(standard_not_over_time, 'tab-5-col-choice', multi=False))

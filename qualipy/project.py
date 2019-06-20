@@ -1,3 +1,6 @@
+from copy import deepcopy
+
+
 class Project(object):
 
     def __init__(self, project_name, backend='pandas'):
