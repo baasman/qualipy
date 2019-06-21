@@ -13,8 +13,6 @@ def copy_func(f, name=None):
 def function(allowed_arguments=None, return_format=float,
              arguments=None, anomaly=False, other_column=None,
              fail=False):
-    # fail: if returns false, stop program
-
     def inner_fun(method):
         method.anomaly = anomaly
         method.allowed_arguments = [] if allowed_arguments is None else allowed_arguments
@@ -53,8 +51,12 @@ class Column(object):
         custom_funcs = getattr(self, 'custom_funs', None)
         if custom_funcs:
             for custom_func in self.custom_funs:
-                function = copy_func(custom_func['function'])
-                function.arguments = custom_func.get('parameters', {})
+                if isinstance(custom_func, dict):
+                    function = copy_func(custom_func['function'])
+                    function.arguments = custom_func.get('parameters', {})
+                else:
+                    function = copy_func(custom_func)
+                    function.arguments = {}
                 methods[function.__name__] = function
         return methods
 

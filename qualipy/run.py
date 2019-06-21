@@ -13,6 +13,7 @@ from qualipy.util import get_column
 from qualipy.anomaly_detection import find_anomalies_by_std
 from qualipy.exceptions import (
     FailException,
+    InvalidColumn
 )
 
 
@@ -71,7 +72,7 @@ def _check_for_anomaly(function):
 
 class DataSet(object):
 
-    def __init__(self, project, engine=None, backend='pandas', reset=False, time_of_run=None):
+    def __init__(self, project, backend='pandas', reset=False, time_of_run=None):
         self.project = project
         self.alert_table_name = '{}_alerts'.format(project.project_name)
         self.time_of_run = datetime.datetime.now() if time_of_run is None else time_of_run
@@ -79,11 +80,6 @@ class DataSet(object):
         self.current_data = None
         self.reset = reset
         self.generator = GENERATORS[backend]()
-
-        if engine is None:
-            self.engine = os.path.join(HOME, '.qualipy', 'qualipy.db')
-        else:
-            self.engine = engine
 
         self._locate_history_data()
         self._get_alerts()
@@ -128,61 +124,40 @@ class DataSet(object):
                 }
         return
 
-    def _add_to_project_list(self):
-        project_file_path = os.path.join(HOME, '.qualipy', 'projects.json')
-        try:
-            with open(project_file_path, 'r') as f:
-                projects = json.loads(f.read())
-        except:
-            projects = {}
-
-        if self.project.project_name not in projects or self.reset:
-            projects[self.project.project_name] = {
-                'columns': list(self.project.columns.keys()),
-                'executions': [datetime.datetime.now().strftime('%m/%d/%Y %H:%M')],
-                'db': str(self.engine.url),
-                'schema': self.schema
-            }
-        else:
-            projects[self.project.project_name]['executions'].append(str(datetime.datetime.now()))
-        with open(project_file_path, 'w') as f:
-            json.dump(projects, f)
-
-
     def _locate_history_data(self):
-        with self.engine.connect() as conn:
+        with self.project.engine.connect() as conn:
             exists = conn.execute('select name from sqlite_master '
                                   'where type="table" '
                                   'and name="{}"'.format(self.project.project_name)).fetchone()
             if not exists:
-                create_table(self.engine, self.project.project_name)
+                create_table(self.project.engine, self.project.project_name)
             if self.reset:
                 try:
                     conn.execute('drop table {}'.format(self.project.project_name))
                 except:
                     pass
-                create_table(self.engine, self.project.project_name)
+                create_table(self.project.engine, self.project.project_name)
                 conn.execute('delete from {}'.format(self.project.project_name))
 
-            hist_data = get_table(engine=self.engine, table_name=self.project.project_name)
+            hist_data = get_table(engine=self.project.engine, table_name=self.project.project_name)
         return hist_data
 
     def _get_alerts(self):
-        with self.engine.connect() as conn:
+        with self.project.engine.connect() as conn:
             exists = conn.execute('select name from sqlite_master '
                                   'where type="table" '
                                   'and name="{}"'.format(self.alert_table_name)).fetchone()
             if not exists:
-                create_alert_table(self.engine, self.alert_table_name)
+                create_alert_table(self.project.engine, self.alert_table_name)
             if self.reset:
                 try:
                     conn.execute('drop table {}'.format(self.alert_table_name))
                 except:
                     pass
-                create_alert_table(self.engine, self.alert_table_name)
+                create_alert_table(self.project.engine, self.alert_table_name)
                 conn.execute('delete from {}'.format(self.alert_table_name))
 
-            self.alert_data = get_table(engine=self.engine,
+            self.alert_data = get_table(engine=self.project.engine,
                                         table_name=self.alert_table_name)
 
     def _generate_metrics(self):
@@ -276,6 +251,6 @@ class DataSet(object):
 
         # all values are getting binary data for now, need to think of solution for this
         data.value = data.value.apply(lambda v: pickle.dumps(v))
-        data.to_sql(self.project.project_name, self.engine, if_exists='append', index=False)
+        data.to_sql(self.project.project_name, self.project.engine, if_exists='append', index=False)
 
-        self._add_to_project_list()
+        self.project.add_to_project_list(self.schema)
