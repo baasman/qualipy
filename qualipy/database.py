@@ -4,14 +4,14 @@ import pandas as pd
 def create_table(engine, table_name):
     create_table_query = '''
         create table {} (
-            "_name" CHARACTER(20) not null,
-            "_date" DATETIME not null,
-            "_metric" CHARACTER(30) not null,
-            "_arguments" CHARACTER(100) null,
+            "column_name" CHARACTER(20) not null,
+            "date" DATETIME not null,
+            "metric" CHARACTER(30) not null,
+            "arguments" CHARACTER(100) null,
             "value" BLOB,
-            "_type" CHARACTER not null DEFAULT 'custom',
-            "_standard_viz" CHARACTER(100) null,
-            "_over_time" BOOLEAN null DEFAULT true
+            "type" CHARACTER not null DEFAULT 'custom',
+            "standard_viz" CHARACTER(100) null,
+            "is_static" BOOLEAN null DEFAULT true
         );
     '''.format(table_name)
     with engine.connect() as conn:

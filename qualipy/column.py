@@ -51,17 +51,22 @@ class Column(object):
         custom_funcs = getattr(self, 'custom_funs', None)
         if custom_funcs:
             for custom_func in self.custom_funs:
-                if isinstance(custom_func, dict):
-                    function = copy_func(custom_func['function'])
-                    function.arguments = custom_func.get('parameters', {})
-                else:
-                    function = copy_func(custom_func)
-                    function.arguments = {}
-                methods[function.__name__] = function
+                copied_function = self._copy_function_spec(custom_func)
+                methods[copied_function.__name__] = copied_function
         return methods
 
     def _get_default_methods(self):
         default_functions = {}
-        for fun in getattr(self, 'default_funs', []):
-            default_functions[fun.__name__] = fun
+        for function in getattr(self, 'default_funs', []):
+            copied_function = self._copy_function_spec(function)
+            default_functions[copied_function.__name__] = copied_function
         return default_functions
+
+    def _copy_function_spec(self, function):
+        if isinstance(function, dict):
+            copied_function = copy_func(function['function'])
+            copied_function.arguments = function.get('parameters', {})
+        else:
+            copied_function = copy_func(function)
+            copied_function.arguments = {}
+        return copied_function

@@ -76,7 +76,7 @@ def select_data(project, column=None, batch=None, url=None, general=False):
             data = data[data['_name'].isin(column)]
         else:
             data = data[data['_name'] == column]
-    data = data.sort_values(['_name', '_metric', '_date'])
+    data = data.sort_values(['_name', '_metric', 'date'])
 
     if general:
         data = data[data['_type'] == 'overview']
@@ -92,7 +92,7 @@ def select_data(project, column=None, batch=None, url=None, general=False):
             batch_values = [i['value'] for i in batch]
         except TypeError:
             batch_values = batch
-        data = data[data['_date'].isin(batch_values)]
+        data = data[data['date'].isin(batch_values)]
         return data
 
 
@@ -125,8 +125,8 @@ def update_tab_1(n_clicks):
         session['project'],
         data[data['_name'] == 'rows'].value.sum(),
         data[data['_name'] == 'columns'].value.iloc[-1],
-        data['_date'].min(),
-        data['_date'].nunique(),
+        data['date'].min(),
+        data['date'].nunique(),
     ]
     over_table = pd.DataFrame([row],
                               columns=['project', 'number_of_rows',

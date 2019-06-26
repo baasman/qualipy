@@ -8,54 +8,58 @@ from qualipy.column import function
 
 #numeric
 
-@function()
+@function(return_format=float)
 def mean(data, column):
     return data[column].mean()
 
-
-def _get_std(data, column):
+@function(return_format=float)
+def std(data, column):
     return data[column].std()
 
-
-def _get_min(data, column):
+@function()
+def min(data, column):
     return data[column].min()
 
-
-def _get_quantile(data, column, quantile=.5):
+@function(allowed_arguments=['quantile'],
+          return_format=float)
+def quantile(data, column, quantile=.5):
     return data[column].quantile(quantile)
 
 
-@function()
-def _get_number_of_duplicates(data, column):
+@function(return_format=int)
+def number_of_duplicates(data, column):
     return data.shape[0] - data.drop_duplicates().shape[0]
 
 
-@function()
+@function(return_format=float)
 def percentage_missing(data, column):
     return get_column(data, column).isnull().sum() / data.shape[0]
 
-
-def _get_nunique(data, column):
+@function(return_format=int)
+def nunique(data, column):
     return get_column(data, column).nunique()
 
-
-def _get_top(data, column):
+@function()
+def get_top(data, column):
     return data[column].describe()['top']
 
-
-def _get_freq(data, column):
+@function()
+def freq(data, column):
     return data[column].describe()['freq']
 
-@function()
+@function(return_format=bool)
 def is_unique(data, column):
     if column == 'index':
         return data.index.unique().shape[0] == data.shape[0]
     return data[column].unique().shape[0] == data.shape[0]
 
-def _get_correlation(data, column, column_two):
+@function(other_column='column_two', return_format=float)
+def correlation_two_columns(data, column, column_two):
     return data[column].corr(data[column_two])
 
-def _get_number_of_outliers(data, column, std_away):
+@function(allowed_arguments=['std_away'],
+          return_format=int)
+def number_of_outliers(data, column, std_away):
     data = data[data[column].notnull()]
     return data[np.abs(stats.zscore(data[column])) > std_away].shape[0]
 
@@ -66,10 +70,13 @@ def _get_number_of_outliers(data, column, std_away):
 def value_counts(data, column):
     return data[data[column] != 'nan'][column].value_counts().sort_values(ascending=False).head(10).to_dict()
 
+@function(other_column='column_two',
+          allowed_arguments=['include_nan'],
+          return_format=dict)
 def heatmap(data, column, column_two=None, include_nan=True):
     if include_nan:
-        data = data[(data[column] != 'nan') & (data[column_two] != 'nan')]
-    cross = pd.crosstab(data[column], data[column_two])
+        data = data[(data[column] != 'nan') & (column_two != 'nan')]
+    cross = pd.crosstab(data[column], column_two)
     cross_data = {
         'z': cross.values.tolist(),
         'y': cross.index.values.tolist(),
@@ -77,7 +84,8 @@ def heatmap(data, column, column_two=None, include_nan=True):
     }
     return cross_data
 
-@function(other_column='y', return_format=dict)
+@function(other_column='y',
+          return_format=dict)
 def correlation(data, column, y):
     corrs = pd.DataFrame({
         column: data[column].values,

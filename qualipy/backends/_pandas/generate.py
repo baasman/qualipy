@@ -1,5 +1,6 @@
-from qualipy.metrics import PANDAS_METRIC_MAP
 from qualipy.exceptions import InvalidReturnValue
+from qualipy.util import get_column
+from qualipy.backends.base import BackendBase
 
 from numpy import NaN
 
@@ -15,7 +16,7 @@ def _create_arg_string(keyword_arguments, other_columns=None):
     return NaN
 
 
-class GeneratorPandas():
+class BackendPandas(BackendBase):
 
     @staticmethod
     def set_column_type(data, column, type):
@@ -27,6 +28,18 @@ class GeneratorPandas():
         else:
             data[column] = data[column].astype(type)
         return data
+
+    @staticmethod
+    def get_other_columns(other_column, arguments, data):
+        if other_column is not None:
+            other_columns = {}
+            if other_column in arguments:
+                other_columns[other_column] = data[arguments[other_column]]
+            else:
+                other_columns[other_column] = data[other_column]
+        else:
+            other_columns = None
+        return other_columns
 
     @staticmethod
     def set_return_value_type(value, return_format):
@@ -43,20 +56,40 @@ class GeneratorPandas():
         return value
 
     @staticmethod
+    def set_schema(data, columns):
+        schema = {col:
+            {
+                'nullable': info['null'],
+                'unique': info['unique'],
+                'dtype': str(get_column(data, col).dtype)
+            }
+            for col, info in columns.items()}
+        return schema
+
+    @staticmethod
+    def get_shape(data):
+        rows, cols = data.shape
+        return rows, cols
+
+    @staticmethod
+    def get_dtype(data, column):
+        return data[column].dtype
+
+    @staticmethod
     def generate_description(function, data, column,
                              date, function_name, standard_viz,
-                             over_time=True, other_columns=None, kwargs=None):
+                             is_static=True, other_columns=None, kwargs=None):
         kwargs = {} if kwargs is None else kwargs
         if other_columns is not None:
             kwargs = {**kwargs, **other_columns}
         value = function(data, column, **kwargs)
         return {
             'value': value,
-            '_metric': function_name,
-            '_arguments': _create_arg_string(kwargs, other_columns),
-            '_date': date,
-            '_name': column,
-            '_standard_viz': standard_viz,
-            '_over_time': over_time,
+            'metric': function_name,
+            'arguments': _create_arg_string(kwargs, other_columns),
+            'date': date,
+            'column_name': column,
+            'standard_viz': standard_viz,
+            'is_static': is_static,
         }
 

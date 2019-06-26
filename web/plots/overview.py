@@ -56,7 +56,7 @@ def create_simple_line_plot_subplots(data):
                  (data['_metric'] == 'count')]
     data_values1 = data1['value'].values
     data_values2 = data2['value'].values
-    x = data1['_date']
+    x = data1['date']
 
     fig = tools.make_subplots(rows=2, cols=1,
                               shared_xaxes=True, shared_yaxes=False,
@@ -85,7 +85,7 @@ def create_simple_line_plot_subplots(data):
 
 
 def create_type_plots(data, schema):
-    x_index = data['_date']
+    x_index = data['date']
 
     uniques = data.groupby('_name').apply(lambda g: g.drop_duplicates('value').shape[0])
     uniques = uniques[uniques > 1].index
@@ -158,7 +158,7 @@ def create_type_plots(data, schema):
 
 
 def create_unique_columns_plot(data):
-    x = data['_date']
+    x = data['date']
     traces = []
     unique_vars = data['_name'].unique()
     for idx, var in enumerate(unique_vars, 1):

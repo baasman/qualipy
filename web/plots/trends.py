@@ -15,7 +15,7 @@ def create_trend_line(data, var, metric):
     std_line_lower = np.repeat(mean - (2 * std), main_line.shape[0])
     std_line_higher = np.repeat(mean + (2 * std), main_line.shape[0])
 
-    x_axis = data['_date']
+    x_axis = data['date']
 
     plot = dcc.Graph(
         id='num-data-graph-{}-{}'.format(title, metric),
@@ -110,7 +110,7 @@ def create_value_count_area_chart(data, var, metric):
     print(data_values)
     traces = []
     unique_vals = reduce(lambda x, y: x.union(y), [set(i.keys()) for i in data_values])
-    x = data['_date']
+    x = data['date']
     for value in unique_vals:
         traces.append(
             dict(
@@ -141,7 +141,7 @@ def create_simple_line_plot(data, var, metric):
     data = data[(data['_name'] == var) &
                 (data['_metric'] == metric)]
     data_values = data['value'].values
-    x = data['_date']
+    x = data['date']
     trace = dict(
         x=x,
         y=data_values

@@ -53,7 +53,7 @@ def generate_layout(data, column_options, standard_over_time, standard_not_over_
 
     # General built in data quality checks
     tab4_html = []
-    tab4_html.append(batch_choice(data['_date'].unique(), id='batch-choice-4', include_all=True))
+    tab4_html.append(batch_choice(data['date'].unique(), id='batch-choice-4', include_all=True))
     tab4_html.append(html.Br(id='placeholder-2'))
     tab4_html.append(html.Div(id='tab-4-results'))
     tab4_html.append(html.Br())
@@ -68,7 +68,7 @@ def generate_layout(data, column_options, standard_over_time, standard_not_over_
     # Single batch analyzer
     if len(standard_not_over_time) > 0:
         tab5_html = []
-        tab5_html.append(batch_choice(data['_date'].unique(), id='batch-choice-5',
+        tab5_html.append(batch_choice(data['date'].unique(), id='batch-choice-5',
                                       include_all=False, multi=False))
         tab5_html.append(column_choice(standard_not_over_time, 'tab-5-col-choice', multi=False))
         tab5_html.append(html.Br())
