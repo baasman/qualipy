@@ -35,3 +35,8 @@ class BackendBase(abc.ABC):
     def get_dtype(data, column):
         return
 
+    @staticmethod
+    @abc.abstractmethod
+    def check_type(data, column, desired_type, force=False):
+        return
+

@@ -2,6 +2,7 @@ from functools import wraps
 
 import types
 
+
 def copy_func(f, name=None):
     fn = types.FunctionType(f.__code__, f.__globals__, name or f.__name__,
         f.__defaults__, f.__closure__)
@@ -9,7 +10,16 @@ def copy_func(f, name=None):
     return fn
 
 
-# TODO: should have separate decorators for methods and functions
+def copy_function_spec(function):
+    if isinstance(function, dict):
+        copied_function = copy_func(function['function'])
+        copied_function.arguments = function.get('parameters', {})
+    else:
+        copied_function = copy_func(function)
+        copied_function.arguments = {}
+    return copied_function
+
+
 def function(allowed_arguments=None, return_format=float,
              arguments=None, anomaly=False, other_column=None,
              fail=False):
@@ -35,38 +45,23 @@ class Column(object):
         dict_ = {
             'name': name,
             'type': getattr(self, 'column_type', None),
+            'force_type': getattr(self, 'force_type', False),
             'null': getattr(self, 'null', True),
             'unique': getattr(self, 'unique', True),
-            'default_functions': self._get_default_methods(),
-            'custom_functions': self._get_methods()
+            'functions': self._get_functions(),
         }
         return dict_
 
-    def _get_methods(self):
+    def _get_functions(self):
         methods = {}
         for fun in dir(self):
             function = getattr(self, fun, None)
             if getattr(function, 'has_decorator', False):
                 methods[fun] = function
-        custom_funcs = getattr(self, 'custom_funs', None)
-        if custom_funcs:
-            for custom_func in self.custom_funs:
-                copied_function = self._copy_function_spec(custom_func)
+        given_methods = getattr(self, 'functions', None)
+        if given_methods:
+            for func in given_methods:
+                copied_function = copy_function_spec(func)
                 methods[copied_function.__name__] = copied_function
         return methods
 
-    def _get_default_methods(self):
-        default_functions = {}
-        for function in getattr(self, 'default_funs', []):
-            copied_function = self._copy_function_spec(function)
-            default_functions[copied_function.__name__] = copied_function
-        return default_functions
-
-    def _copy_function_spec(self, function):
-        if isinstance(function, dict):
-            copied_function = copy_func(function['function'])
-            copied_function.arguments = function.get('parameters', {})
-        else:
-            copied_function = copy_func(function)
-            copied_function.arguments = {}
-        return copied_function

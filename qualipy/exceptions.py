@@ -11,3 +11,8 @@ class InvalidReturnValue(Exception):
 class InvalidColumn(Exception):
     def __init__(self, message):
         super(InvalidColumn, self).__init__(message)
+
+
+class InvalidType(Exception):
+    def __init__(self, message):
+        super(InvalidType, self).__init__(message)

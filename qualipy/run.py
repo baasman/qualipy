@@ -98,20 +98,19 @@ class DataSet(object):
         for col, specs in self.project.columns.items():
 
             # enforce type for function
-            type = specs['type']
-            if type:
-                self.current_data = self.generator.set_column_type(self.current_data, col, type)
+            self.generator.check_type(data=self.current_data, column=col,
+                                      desired_type=specs['type'], force=specs['force_type'])
 
-            for function_name, function in {**specs['default_functions'], **specs['custom_functions']}.items():
+            # run through functions for column
+            for function_name, function in specs['functions'].items():
 
-                # is this a built in viz, over time?
                 standard_viz, is_static = set_standard_viz_params(function_name, STANDARD_VIZ_STATIC,
                                                                   STANDARD_VIZ_DYNAMIC)
 
                 should_fail = function.fail
                 arguments = function.arguments
-                other_columns = self.generator.get_other_columns(function.other_column,
-                                                                 arguments, self.current_data)
+                other_columns = self.generator.get_other_columns(other_column=function.other_column,
+                                                                 arguments=arguments, data=self.current_data)
 
                 # generate result row
                 result = self.generator.generate_description(function=function, data=self.current_data, column=col,
@@ -119,7 +118,9 @@ class DataSet(object):
                                                              date=self.time_of_run, other_columns=other_columns,
                                                              is_static=is_static, kwargs=arguments)
 
-                result['value'] = self.generator.set_return_value_type(result['value'], function.return_format)
+                # set value type
+                result['value'] = self.generator.set_return_value_type(value=result['value'],
+                                                                       return_format=function.return_format)
 
                 if should_fail and not result['value']:
                     raise FailException("Program halted by function '{}' for variable '{}' with "
@@ -130,7 +131,7 @@ class DataSet(object):
 
         self.current_run = pd.DataFrame(measures)
         for col, specs in self.project.columns.items():
-            for function_name, function in {**specs['default_functions'], **specs['custom_functions']}.items():
+            for function_name, function in specs['functions'].items():
                 if function.anomaly:
                     anomalies.append(self.get_alerts(column_name=col, function_name=function_name,
                                                      std_away=2))

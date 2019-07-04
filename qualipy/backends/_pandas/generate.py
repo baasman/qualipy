@@ -1,6 +1,9 @@
 from qualipy.exceptions import InvalidReturnValue
 from qualipy.util import get_column
 from qualipy.backends.base import BackendBase
+from qualipy.exceptions import InvalidType
+
+import warnings
 
 from numpy import NaN
 
@@ -14,6 +17,14 @@ def _create_arg_string(keyword_arguments, other_columns=None):
             keyword_arguments = {**keyword_arguments, **col_arguments}
         return str(keyword_arguments)
     return NaN
+
+
+def _set_columns(other_column, other_columns, arguments, data):
+    if other_column in arguments:
+        other_columns[other_column] = data[arguments[other_column]]
+    else:
+        other_columns[other_column] = data[other_column]
+    return other_columns
 
 
 class BackendPandas(BackendBase):
@@ -31,12 +42,14 @@ class BackendPandas(BackendBase):
 
     @staticmethod
     def get_other_columns(other_column, arguments, data):
+
+
         if other_column is not None:
             other_columns = {}
-            if other_column in arguments:
-                other_columns[other_column] = data[arguments[other_column]]
-            else:
-                other_columns[other_column] = data[other_column]
+            if not isinstance(other_column, list):
+                other_column = [other_column]
+            for col in other_column:
+                other_columns = _set_columns(col, other_columns, arguments, data)
         else:
             other_columns = None
         return other_columns
@@ -92,4 +105,16 @@ class BackendPandas(BackendBase):
             'standard_viz': standard_viz,
             'is_static': is_static,
         }
+
+    @staticmethod
+    def check_type(data, column, desired_type, force=False):
+        is_equal = desired_type.check_approximate_type(data[column].dtype)
+        if is_equal:
+            return
+        elif force and not is_equal:
+            raise InvalidType('Incorrect type for column {}. Expected {}, '
+                              'got {}'.format(column, desired_type, data[column].dtype))
+        elif not force and not is_equal:
+            # TODO: make warning message more useful
+            warnings.warn('Type is not equal')
 
