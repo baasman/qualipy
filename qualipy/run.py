@@ -5,8 +5,8 @@ import os
 import datetime
 import pickle
 
-from qualipy.backends._pandas.generate import BackendPandas
-from qualipy.backends._pandas.metrics import is_unique, percentage_missing
+from qualipy.backends.pandas_backend.generator import BackendPandas
+from qualipy.backends.pandas_backend.functions import is_unique, percentage_missing
 from qualipy.database import create_table, get_table, create_alert_table
 from qualipy.anomaly_detection import find_anomalies_by_std
 from qualipy.exceptions import (
@@ -55,10 +55,11 @@ def set_standard_viz_params(function_name, viz_options_static,
 
 class DataSet(object):
 
-    def __init__(self, project, backend='pandas', reset=False, time_of_run=None):
+    def __init__(self, project, backend='pandas', reset=False, time_of_run=None, batch_name=None):
         self.project = project
         self.alert_table_name = '{}_alerts'.format(project.project_name)
         self.time_of_run = datetime.datetime.now() if time_of_run is None else time_of_run
+        self.batch_name = batch_name if batch_name is not None else self.time_of_run
 
         self.current_data = None
         self.reset = reset
@@ -173,6 +174,7 @@ class DataSet(object):
     def _write(self, measures):
         data = pd.DataFrame(measures)
         data = self._set_type(data)
+        data['batch_name'] = self.batch_name
         self.current_data_measures = data.copy()
 
         # all values are getting binary data for now, need to think of solution for this

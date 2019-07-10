@@ -5,7 +5,7 @@ from functools import reduce
 
 
 def create_trend_line(data, var, metric):
-    title = '{}_{}'.format(var, data._arguments.iloc[0])
+    title = '{}_{}'.format(var, data.arguments.iloc[0])
     main_line = data.value
     mean = main_line.mean()
     median = main_line.median()
@@ -138,8 +138,8 @@ def create_value_count_area_chart(data, var, metric):
 
 
 def create_simple_line_plot(data, var, metric):
-    data = data[(data['_name'] == var) &
-                (data['_metric'] == metric)]
+    data = data[(data['column_name'] == var) &
+                (data['metric'] == metric)]
     data_values = data['value'].values
     x = data['date']
     trace = dict(

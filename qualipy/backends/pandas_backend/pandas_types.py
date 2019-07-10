@@ -1,5 +1,4 @@
 from operator import eq
-import re
 
 import numpy as np
 

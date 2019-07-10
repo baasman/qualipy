@@ -8,7 +8,7 @@ import numpy as np
 def bar_plot_missing(data, schema):
     data.value = data.value.astype(float)
     data = data.sort_values('value')
-    y = data.groupby('_name').value.mean()
+    y = data.groupby('column_name').value.mean()
     x = y.index
     nullable = ['value: {}, null: {}'.format(round(value, 2), str(schema[i]['nullable']))
                 for value, i in zip(y, x)]
@@ -50,10 +50,10 @@ def bar_plot_missing(data, schema):
 
 
 def create_simple_line_plot_subplots(data):
-    data1 = data[(data['_name'] == 'rows') &
-                 (data['_metric'] == 'count')]
-    data2 = data[(data['_name'] == 'columns') &
-                 (data['_metric'] == 'count')]
+    data1 = data[(data['column_name'] == 'rows') &
+                 (data['metric'] == 'count')]
+    data2 = data[(data['column_name'] == 'columns') &
+                 (data['metric'] == 'count')]
     data_values1 = data1['value'].values
     data_values2 = data2['value'].values
     x = data1['date']
@@ -87,7 +87,7 @@ def create_simple_line_plot_subplots(data):
 def create_type_plots(data, schema):
     x_index = data['date']
 
-    uniques = data.groupby('_name').apply(lambda g: g.drop_duplicates('value').shape[0])
+    uniques = data.groupby('column_name').apply(lambda g: g.drop_duplicates('value').shape[0])
     uniques = uniques[uniques > 1].index
 
     try:
@@ -97,7 +97,7 @@ def create_type_plots(data, schema):
                                       vertical_spacing=.10, subplot_titles=uniques.values)
             number_of_lines = []
             for idx, var in enumerate(uniques, 1):
-                values = data[data['_name'] == var]['value'].values
+                values = data[data['column_name'] == var]['value'].values
                 n = values.shape[0]
                 unique_vals = np.unique(values)
                 lines = []
@@ -160,9 +160,9 @@ def create_type_plots(data, schema):
 def create_unique_columns_plot(data):
     x = data['date']
     traces = []
-    unique_vars = data['_name'].unique()
+    unique_vars = data['column_name'].unique()
     for idx, var in enumerate(unique_vars, 1):
-        vals = data[data['_name'] == var].value.values
+        vals = data[data['column_name'] == var].value.values
         uniques = [idx if i else np.NaN for i in vals]
         non_uniques = [np.NaN if i else idx for i in vals]
         traces.append(

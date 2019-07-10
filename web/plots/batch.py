@@ -4,7 +4,7 @@ import plotly.graph_objs as go
 
 def heatmap(data, col, metric):
     value = data.value.iloc[0]
-    column_two_name = data._arguments.iloc[0]
+    column_two_name = data.arguments.iloc[0]
     trace = go.Heatmap(
         x=['cat-{}'.format(i) for i in value['x']],
         y=['cat-{}'.format(i) for i in value['y']],

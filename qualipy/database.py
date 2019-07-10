@@ -11,7 +11,8 @@ def create_table(engine, table_name):
             "value" BLOB,
             "type" CHARACTER not null DEFAULT 'custom',
             "standard_viz" CHARACTER(100) null,
-            "is_static" BOOLEAN null DEFAULT true
+            "is_static" BOOLEAN null DEFAULT true,
+            "batch_name" CHARACTER null DEFAULT true
         );
     '''.format(table_name)
     with engine.connect() as conn:

@@ -1,4 +1,4 @@
-from qualipy.backends._pandas.metrics import (
+from qualipy.backends.pandas_backend.functions import (
     _get_std,
     _get_quantile,
     _get_min,

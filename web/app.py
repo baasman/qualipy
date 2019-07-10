@@ -31,8 +31,6 @@ from web.plots.batch import (
 from web.dash_components import overview_table, schema_table, alerts_markdown
 from web.layout import generate_layout
 from qualipy.database import get_table
-from qualipy.run import STANDARD_VIZ
-
 
 
 server = flask.Flask(__name__)
@@ -73,15 +71,15 @@ def select_data(project, column=None, batch=None, url=None, general=False):
 
     if column is not None and not general:
         if not isinstance(column, str):
-            data = data[data['_name'].isin(column)]
+            data = data[data['column_name'].isin(column)]
         else:
-            data = data[data['_name'] == column]
-    data = data.sort_values(['_name', '_metric', 'date'])
+            data = data[data['column_name'] == column]
+    data = data.sort_values(['column_name', 'metric', 'date'])
 
     if general:
-        data = data[data['_type'] == 'overview']
+        data = data[data['type'] == 'overview']
     else:
-        data = data[data['_type'] != 'overview']
+        data = data[data['type'] != 'overview']
 
     if batch is None or batch == 'all':
         return data
@@ -123,8 +121,8 @@ def update_tab_1(n_clicks):
                        general=True)
     row = [
         session['project'],
-        data[data['_name'] == 'rows'].value.sum(),
-        data[data['_name'] == 'columns'].value.iloc[-1],
+        data[data['column_name'] == 'rows'].value.sum(),
+        data[data['column_name'] == 'columns'].value.iloc[-1],
         data['date'].min(),
         data['date'].nunique(),
     ]
@@ -171,13 +169,13 @@ def update_tab_2(column):
     plots = []
     data = select_data(session['project'], column=column,
                        url=session['db_url'])
-    data = data[data['_type'] == 'custom']
+    data = data[data['type'] == 'custom']
 
-    for idx, metric in enumerate(data[data['_name'] == column]['_metric'].unique()):
-        args = data[data['_metric'] == metric]['_arguments'].iloc[0]
+    for idx, metric in enumerate(data[data['column_name'] == column]['metric'].unique()):
+        args = data[data['metric'] == metric]['arguments'].iloc[0]
         metric_title = metric if args is None else '{}_{}'.format(metric, args)
-        plot_data = data[(data['_name'] == column) &
-                         (data['_metric'] == metric)]
+        plot_data = data[(data['column_name'] == column) &
+                         (data['metric'] == metric)]
         plots.append(
             html.Div(id='trend-plots-{}'.format(idx),
                      children=[
@@ -200,13 +198,13 @@ def update_tab_3(column):
     data = select_data(session['project'], column=column,
                        url=session['db_url'])
 
-    data = data[(data['_type'] == 'standard_viz') & (data['_over_time'] == True)]
+    data = data[(data['type'] == 'standard_viz') & (data['_over_time'] == True)]
 
-    if data[data['_standard_viz'] == 'value_counts'].shape[0] > 0:
+    if data[data['standard_viz'] == 'value_counts'].shape[0] > 0:
         value_count_plots = []
-        for col in data['_name'].unique():
-            plot_data = data[(data['_name'] == column) &
-                             (data['_standard_viz'] == 'value_counts')]
+        for col in data['column_name'].unique():
+            plot_data = data[(data['column_name'] == column) &
+                             (data['standard_viz'] == 'value_counts')]
             value_count_plots.append(create_value_count_area_chart(plot_data, col, 'value_counts'))
         value_count_plots = html.Div(id='value-count-plots',
                                    children=value_count_plots)
@@ -234,10 +232,10 @@ def update_tab_3(column):
 def update_tab_4(batch):
     data = select_data(session['project'], column=None, batch=batch,
                        url=session['db_url'], general=True)
-    type_plot = create_type_plots(data[(data['_metric'] == 'dtype')].copy(), session['schema'])
-    missing_plot = bar_plot_missing(data[(data['_metric'] == 'perc_missing')].copy(), session['schema'])
+    type_plot = create_type_plots(data[(data['metric'] == 'dtype')].copy(), session['schema'])
+    missing_plot = bar_plot_missing(data[(data['metric'] == 'perc_missing')].copy(), session['schema'])
     rows_columns = create_simple_line_plot_subplots(data.copy())
-    unique_plot = create_unique_columns_plot(data[(data['_metric'] == 'is_unique')].copy())
+    unique_plot = create_unique_columns_plot(data[(data['metric'] == 'is_unique')].copy())
 
     ###### row 1
     line_plots = html.Div(id='data-line-plots',
@@ -290,11 +288,11 @@ def update_tab_5(batch, column):
     data = select_data(session['project'], column=column,
                        batch=batch, url=session['db_url'])
 
-    data = data[(data['_type'] == 'standard_viz') & (data['_over_time'] == False)]
+    data = data[(data['type'] == 'standard_viz') & (data['_over_time'] == False)]
 
     heatmap_plots = []
-    for metric in data['_metric'].unique():
-        plot_data = data[(data['_name'] == column) & (data['_metric'] == metric)]
+    for metric in data['metric'].unique():
+        plot_data = data[(data['column_name'] == column) & (data['metric'] == metric)]
         heatmap_plots.append(heatmap(plot_data, column, metric))
 
     page = html.Div(id='tab-5-page',
@@ -330,9 +328,9 @@ def index():
 
         try:
             standard_over_time = full_data[(full_data['_over_time'] == True) &
-                                           (full_data['_type'] == 'standard_viz')]['_name'].unique()
+                                           (full_data['type'] == 'standard_viz')]['column_name'].unique()
             standard_not_over_time = full_data[(full_data['_over_time'] == False) &
-                                               (full_data['_type'] == 'standard_viz')]['_name'].unique()
+                                               (full_data['type'] == 'standard_viz')]['column_name'].unique()
         except:
             standard_over_time = []
             standard_not_over_time = []
