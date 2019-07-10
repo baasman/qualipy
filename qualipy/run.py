@@ -28,7 +28,7 @@ GENERATORS = {
 }
 
 
-def _create_value(value, metric, name, date):
+def _create_value(value, metric, name, date, type):
     return {
         'value': value,
         'date': date,
@@ -36,6 +36,7 @@ def _create_value(value, metric, name, date):
         'metric': metric,
         'standard_viz': np.NaN,
         'is_static': True,
+        'type': type
     }
 
 def set_standard_viz_params(function_name, viz_options_static,
@@ -112,12 +113,13 @@ class DataSet(object):
                 arguments = function.arguments
                 other_columns = self.generator.get_other_columns(other_column=function.other_column,
                                                                  arguments=arguments, data=self.current_data)
+                viz_type = self._set_viz_type(function, function_name)
 
                 # generate result row
                 result = self.generator.generate_description(function=function, data=self.current_data, column=col,
                                                              standard_viz=standard_viz, function_name=function_name,
                                                              date=self.time_of_run, other_columns=other_columns,
-                                                             is_static=is_static, kwargs=arguments)
+                                                             is_static=is_static, viz_type=viz_type, kwargs=arguments)
 
                 # set value type
                 result['value'] = self.generator.set_return_value_type(value=result['value'],
@@ -145,35 +147,42 @@ class DataSet(object):
         if specs['unique']:
             measures.append(self.generator.generate_description(function=is_unique, data=self.current_data, column=col_name,
                                                                 standard_viz=np.NaN, function_name='is_unique',
-                                                                date=self.time_of_run, is_static=True,
+                                                                date=self.time_of_run, is_static=True, viz_type='data-characteristic',
                                                                 kwargs={}))
         measures.append(self.generator.generate_description(function=percentage_missing, data=self.current_data, column=col_name,
-                                                            standard_viz=np.NaN, function_name='is_unique',
-                                                            date=self.time_of_run, is_static=True,
+                                                            standard_viz=np.NaN, function_name='perc_missing',
+                                                            date=self.time_of_run, is_static=True, viz_type='data-characteristic',
                                                             kwargs={}))
         measures.append(_create_value(str(self.generator.get_dtype(self.current_data, col_name)), 'dtype',
-                                      col_name, self.time_of_run))
+                                      col_name, self.time_of_run, 'data-characteristic'))
         return measures
 
     def _get_general_info(self, measures):
         rows, cols = self.generator.get_shape(self.current_data)
-        measures.append(_create_value(rows, 'count', 'rows', self.time_of_run))
-        measures.append(_create_value(cols, 'count', 'columns', self.time_of_run))
+        measures.append(_create_value(rows, 'count', 'rows', self.time_of_run, 'data-characteristic'))
+        measures.append(_create_value(cols, 'count', 'columns', self.time_of_run, 'data-characteristic'))
         return measures
 
-    def _set_type(self, data):
-        data['type'] = 'custom'
-
-        data.loc[data['metric'].isin(list(STANDARD_VIZ_STATIC.keys())), 'type'] = 'standard_viz_static'
-        data.loc[data['metric'].isin(list(STANDARD_VIZ_DYNAMIC.keys())), 'type'] = 'standard_viz_dynamic'
-
-        data.loc[data['column_name'].isin(OVERVIEW_PAGE_COLUMNS), 'type'] = 'overview'
-        data.loc[data['metric'].isin(OVERVIEW_PAGE_METRICS_DEFAULT), 'type'] = 'overview'
-        return data
+    def _set_viz_type(self, function, function_name):
+        return_format = function.return_format
+        types = {
+            float: 'numerical',
+            int: 'numerical',
+            bool: 'boolean',
+            dict: 'custom',
+            str: 'not_sure'
+        }
+        viz_type = types[return_format]
+        if viz_type == 'custom':
+            if function_name in list(STANDARD_VIZ_STATIC.keys()):
+                viz_type = 'standard_viz_static'
+            elif function_name in list(STANDARD_VIZ_DYNAMIC.keys()):
+                viz_type = 'standard_viz_dynamic'
+        return viz_type
 
     def _write(self, measures):
         data = pd.DataFrame(measures)
-        data = self._set_type(data)
+        # data = self.set_additional_viz_type(data)
         data['batch_name'] = self.batch_name
         self.current_data_measures = data.copy()
 

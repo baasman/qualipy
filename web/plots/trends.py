@@ -176,3 +176,69 @@ def histogram(data, var, metric):
         }
     )
     return plot
+
+
+def boolean_plot(data):
+    x = data['date']
+    traces = []
+    unique_vars = data['column_name'].unique()
+    print(unique_vars)
+    for idx, var in enumerate(unique_vars, 1):
+        df = data[data['column_name'] == var]
+        metrics = df.metric.unique()
+        for metric in metrics:
+            vals = data[data['metric'] == metric].value.values
+            trues = [idx if i else np.NaN for i in vals]
+            falses = [np.NaN if i else idx for i in vals]
+            print(trues)
+            print(falses)
+            traces.append(
+                dict(
+                    x=x,
+                    y=trues,
+                    mode='lines',
+                    name='True',
+                    line=dict(
+                        width=8,
+                        color='rgb(62, 239, 52)'
+                    ),
+                    showlegend=True if idx == 1 else False
+
+                )
+            )
+            traces.append(
+                dict(
+                    x=x,
+                    y=falses,
+                    mode='lines',
+                    name='False',
+                    line=dict(
+                        width=8,
+                        color='rgb(234, 11, 11)'
+                    ),
+                    showlegend=True if idx == 1 else False
+                )
+            )
+    plot = dcc.Graph(
+        id='uniqueness-plot',
+        figure={
+            'data': traces,
+            'layout': {
+                'title': {'text': 'Check metrics - over time'},
+                # 'height': 400,
+                # 'width': 800,
+                'yaxis': {
+                    'showticklabels': True,
+                    'showgrid': True,
+                    'zeroline': False,
+                    'tickvals': [1, metrics.shape[0]],
+                    'ticktext': metrics
+                },
+                'xaxis': {
+                    'tickvals': x,
+                }
+            }
+
+        }
+    )
+    return plot

@@ -37,7 +37,7 @@ def overview_table(data):
         id='overview-table',
         columns=[{'name': i, 'id': i} for i in data.columns],
         data=data.to_dict('rows'),
-        sorting=True,
+        sort_action='native',
     )
 
 def schema_table(data):
@@ -45,7 +45,7 @@ def schema_table(data):
         id='schema-table',
         columns=[{'name': i, 'id': i} for i in data.columns],
         data=data.to_dict('rows'),
-        sorting=True,
+        sort_action='native',
     )
 
 def alerts_markdown(data):

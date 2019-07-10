@@ -17,7 +17,8 @@ from web.config import Config
 from web.plots.trends import (
     create_trend_line,
     create_value_count_area_chart,
-    histogram
+    histogram,
+    boolean_plot
 )
 from web.plots.overview import (
     create_type_plots,
@@ -77,9 +78,9 @@ def select_data(project, column=None, batch=None, url=None, general=False):
     data = data.sort_values(['column_name', 'metric', 'date'])
 
     if general:
-        data = data[data['type'] == 'overview']
+        data = data[data['type'] == 'data-characteristic']
     else:
-        data = data[data['type'] != 'overview']
+        data = data[data['type'] != 'data-characteristic']
 
     if batch is None or batch == 'all':
         return data
@@ -136,8 +137,12 @@ def update_tab_1(n_clicks):
     schema['null'] = schema['null'].astype(str)
     schema['unique'] = schema['unique'].astype(str)
 
-    alerts = get_alerts_table(session['project'], url=session['db_url'])
-    markdown = alerts_markdown(alerts.head(10))
+    # alerts = get_alerts_table(session['project'], url=session['db_url'])
+    # markdown = alerts_markdown(alerts.head(10))
+    # alerts_div = html.Div(id='alerts-home',
+    #                     children=[
+    #                         markdown
+    #                     ])
 
     title_data = html.H4('Data characteristics')
     data_char = overview_table(over_table)
@@ -148,13 +153,9 @@ def update_tab_1(n_clicks):
                         children=[
                             title_data, data_char, schema_title, schema
                         ])
-    alerts_div = html.Div(id='alerts-home',
-                        children=[
-                            markdown
-                        ])
     page = html.Div(id='home-page',
                     children=[
-                        overview_div, alerts_div
+                        overview_div
                     ])
     return page
 
@@ -169,7 +170,7 @@ def update_tab_2(column):
     plots = []
     data = select_data(session['project'], column=column,
                        url=session['db_url'])
-    data = data[data['type'] == 'custom']
+    data = data[data['type'] == 'numerical']
 
     for idx, metric in enumerate(data[data['column_name'] == column]['metric'].unique()):
         args = data[data['metric'] == metric]['arguments'].iloc[0]
@@ -188,7 +189,7 @@ def update_tab_2(column):
     return plots
 
 
-#### Categorical Trends ####
+#### standard_viz_dynamic ####
 
 @dash_app1.callback(
     Output(component_id='tab-3-results', component_property='children'),
@@ -198,7 +199,7 @@ def update_tab_3(column):
     data = select_data(session['project'], column=column,
                        url=session['db_url'])
 
-    data = data[(data['type'] == 'standard_viz') & (data['_over_time'] == True)]
+    data = data[(data['type'] == 'standard_viz_dynamic')]
 
     if data[data['standard_viz'] == 'value_counts'].shape[0] > 0:
         value_count_plots = []
@@ -288,7 +289,7 @@ def update_tab_5(batch, column):
     data = select_data(session['project'], column=column,
                        batch=batch, url=session['db_url'])
 
-    data = data[(data['type'] == 'standard_viz') & (data['_over_time'] == False)]
+    data = data[(data['type'] == 'standard_viz_static')]
 
     heatmap_plots = []
     for metric in data['metric'].unique():
@@ -297,6 +298,26 @@ def update_tab_5(batch, column):
 
     page = html.Div(id='tab-5-page',
                     children=heatmap_plots)
+    return page
+
+
+
+#### Boolean graphs tab ####
+
+@dash_app1.callback(
+    Output(component_id='tab-6-results', component_property='children'),
+    [Input(component_id='tab-6-col-choice', component_property='value')]
+)
+def update_tab_6(column):
+    data = select_data(session['project'], column=column,
+                       batch=None, url=session['db_url'])
+
+    data = data[(data['type'] == 'boolean')]
+    plot = boolean_plot(data)
+
+
+    page = html.Div(id='tab-6-page',
+                    children=[plot])
     return page
 
 @server.route('/', methods=['GET', 'POST'])
@@ -317,29 +338,22 @@ def index():
         session['project'] = button_pressed
         column_options = projects[button_pressed]['columns']
         session['column_options'] = column_options
-        if hasattr(config, 'DB_URL'):
-            url = config.DB_URL
-        else:
-            url = projects[button_pressed].get('db')
+        url = projects[button_pressed].get('db')
         session['db_url'] = url
         session['schema'] = projects[button_pressed]['schema']
 
         full_data = select_data(session['project'], url=url)
 
-        try:
-            standard_over_time = full_data[(full_data['_over_time'] == True) &
-                                           (full_data['type'] == 'standard_viz')]['column_name'].unique()
-            standard_not_over_time = full_data[(full_data['_over_time'] == False) &
-                                               (full_data['type'] == 'standard_viz')]['column_name'].unique()
-        except:
-            standard_over_time = []
-            standard_not_over_time = []
-
+        numerical_options = full_data[full_data['type'] == 'numerical'].column_name.unique()
+        standard_viz_dynamic_options = full_data[full_data['type'] == 'standard_viz_dynamic'].column_name.unique()
+        standard_viz_static = full_data[full_data['type'] == 'standard_viz_static'].column_name.unique()
+        boolean_options = full_data[full_data['type'] == 'boolean'].column_name.unique()
 
         dash_app1.layout = html.Div(id='total-div',
-                                    children=generate_layout(data=full_data, column_options=column_options,
-                                                             standard_over_time=standard_over_time,
-                                                             standard_not_over_time=standard_not_over_time))
+                                    children=generate_layout(data=full_data, numerical_column_options=numerical_options,
+                                                             standard_viz_dynamic_options=standard_viz_dynamic_options,
+                                                             standard_viz_static_options=standard_viz_static,
+                                                             boolean_options=boolean_options))
         return redirect(url_for('render_dashboard'))
     return render_template('home/index.html', projects=projects)
 

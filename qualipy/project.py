@@ -1,9 +1,10 @@
 from qualipy.util import HOME
+from qualipy.database import get_table
 
 import json
 import os
 import datetime
-
+import pickle
 
 
 class Project(object):
@@ -33,6 +34,11 @@ class Project(object):
                 self.columns[col] = column._as_dict(col)
         else:
             self.columns[column.column_name] = column._as_dict(column.column_name)
+
+    def get_project_table(self):
+        data = get_table(self.engine, self.project_name)
+        data.value = data.value.apply(lambda r: pickle.loads(r))
+        return data
 
     def add_to_project_list(self, schema):
         project_file_path = os.path.join(self.config_dir, 'projects.json')

@@ -91,7 +91,8 @@ class BackendPandas(BackendBase):
     @staticmethod
     def generate_description(function, data, column,
                              date, function_name, standard_viz,
-                             is_static=True, other_columns=None, kwargs=None):
+                             is_static=True, other_columns=None,
+                             viz_type='numerical', kwargs=None):
         kwargs = {} if kwargs is None else kwargs
         if other_columns is not None:
             kwargs = {**kwargs, **other_columns}
@@ -104,6 +105,7 @@ class BackendPandas(BackendBase):
             'column_name': column,
             'standard_viz': standard_viz,
             'is_static': is_static,
+            'type': viz_type
         }
 
     @staticmethod
