@@ -14,23 +14,18 @@ import json
 import pickle
 
 from web.config import Config
-from web.plots.trends import (
-    create_trend_line,
-    create_value_count_area_chart,
-    histogram,
-    boolean_plot
-)
-from web.plots.overview import (
+from web.components.data_characteristic_page import (
     create_type_plots,
     create_simple_line_plot_subplots,
     create_unique_columns_plot,
-    bar_plot_missing
+    bar_plot_missing,
 )
-from web.plots.batch import (
-    heatmap
-)
-from web.dash_components import overview_table, schema_table, alerts_markdown
 from web.layout import generate_layout
+from web.components.overview_page import overview_table, schema_table
+from web.components.numerical_page import histogram, create_trend_line
+from web.components.boolean_page import error_check_table, boolean_plot
+from web.components.standard_viz_dynamic_page import create_value_count_area_chart
+from web.components.standard_viz_static_page import heatmap
 from qualipy.database import get_table
 
 
@@ -38,18 +33,15 @@ server = flask.Flask(__name__)
 load_dotenv()
 
 server.config.from_object(Config)
-server.config.update(
-    DEBUG=True,
-    SECRET_KEY='supersecrit'
-)
+server.config.update(DEBUG=True, SECRET_KEY="supersecrit")
 config = Config()
 
 
-HOME = os.path.expanduser('~')
+HOME = os.path.expanduser("~")
 
 
-dash_app1 = Dash(__name__, server=server, url_base_pathname='/metrics/')
-dash_app1.config['suppress_callback_exceptions']=True
+dash_app1 = Dash(__name__, server=server, url_base_pathname="/metrics/")
+dash_app1.config["suppress_callback_exceptions"] = True
 dash_app1.layout = html.Div([])
 
 full_data = pd.DataFrame()
@@ -72,26 +64,26 @@ def select_data(project, column=None, batch=None, url=None, general=False):
 
     if column is not None and not general:
         if not isinstance(column, str):
-            data = data[data['column_name'].isin(column)]
+            data = data[data["column_name"].isin(column)]
         else:
-            data = data[data['column_name'] == column]
-    data = data.sort_values(['column_name', 'metric', 'date'])
+            data = data[data["column_name"] == column]
+    data = data.sort_values(["column_name", "metric", "date"])
 
     if general:
-        data = data[data['type'] == 'data-characteristic']
+        data = data[data["type"] == "data-characteristic"]
     else:
-        data = data[data['type'] != 'data-characteristic']
+        data = data[data["type"] != "data-characteristic"]
 
-    if batch is None or batch == 'all':
+    if batch is None or batch == "all":
         return data
     else:
         if not isinstance(batch, list):
             batch = [batch]
         try:
-            batch_values = [i['value'] for i in batch]
+            batch_values = [i["value"] for i in batch]
         except TypeError:
             batch_values = batch
-        data = data[data['date'].isin(batch_values)]
+        data = data[data["date"].isin(batch_values)]
         return data
 
 
@@ -101,89 +93,97 @@ def get_alerts_table(project, url):
     data = alert_data.copy()
     engine = create_engine(url)
     if data.shape[0] == 0:
-        data = get_table(engine, '{}_alerts'.format(project))
+        data = get_table(engine, "{}_alerts".format(project))
         alert_data = data.copy()
 
-    data = data.sort_values('date', ascending=False)
+    data = data.sort_values("date", ascending=False)
     return data
 
 
 #### Overview Tab ####
 
+
 @dash_app1.callback(
-    Output(component_id='tab-1-results', component_property='children'),
-    [Input(component_id='placeholder', component_property='n_clicks')]
+    Output(component_id="tab-1-results", component_property="children"),
+    [Input(component_id="placeholder", component_property="n_clicks")],
 )
 def update_tab_1(n_clicks):
-    data = select_data(session['project'],
-                       batch='all',
-                       column=None,
-                       url=session['db_url'],
-                       general=True)
+    data = select_data(
+        session["project"],
+        batch="all",
+        column=None,
+        url=session["db_url"],
+        general=True,
+    )
     row = [
-        session['project'],
-        data[data['column_name'] == 'rows'].value.sum(),
-        data[data['column_name'] == 'columns'].value.iloc[-1],
-        data['date'].min(),
-        data['date'].nunique(),
+        session["project"],
+        data[data["column_name"] == "rows"].value.sum(),
+        data[data["column_name"] == "columns"].value.iloc[-1],
+        data["date"].min(),
+        data["date"].nunique(),
     ]
-    over_table = pd.DataFrame([row],
-                              columns=['project', 'number_of_rows',
-                                       'number_of_columns', 'last_run_time',
-                                       'number_of_batches'])
-    schema = pd.DataFrame([{'column': col, 'type': info['dtype'], 'null': info['nullable'],
-                            'unique': info['unique']} for
-                           col, info in session['schema'].items()])
-    schema['null'] = schema['null'].astype(str)
-    schema['unique'] = schema['unique'].astype(str)
+    over_table = pd.DataFrame(
+        [row],
+        columns=[
+            "project",
+            "number_of_rows",
+            "number_of_columns",
+            "last_run_time",
+            "number_of_batches",
+        ],
+    )
+    schema = pd.DataFrame(
+        [
+            {
+                "column": col,
+                "type": info["dtype"],
+                "null": info["nullable"],
+                "unique": info["unique"],
+            }
+            for col, info in session["schema"].items()
+        ]
+    )
+    schema["null"] = schema["null"].astype(str)
+    schema["unique"] = schema["unique"].astype(str)
 
-    # alerts = get_alerts_table(session['project'], url=session['db_url'])
-    # markdown = alerts_markdown(alerts.head(10))
-    # alerts_div = html.Div(id='alerts-home',
-    #                     children=[
-    #                         markdown
-    #                     ])
-
-    title_data = html.H4('Data characteristics')
+    title_data = html.H4("Data characteristics")
     data_char = overview_table(over_table)
-    schema_title = html.H4('Schema')
+    schema_title = html.H4("Schema")
     schema = schema_table(schema)
 
-    overview_div = html.Div(id='overview-home',
-                        children=[
-                            title_data, data_char, schema_title, schema
-                        ])
-    page = html.Div(id='home-page',
-                    children=[
-                        overview_div
-                    ])
+    overview_div = html.Div(
+        id="overview-home", children=[title_data, data_char, schema_title, schema]
+    )
+    page = html.Div(id="home-page", children=[overview_div])
     return page
 
 
 #### Numerical Trends ####
 
+
 @dash_app1.callback(
-    Output(component_id='tab-2-results', component_property='children'),
-    [Input(component_id='tab-2-col-choice', component_property='value')]
+    Output(component_id="tab-2-results", component_property="children"),
+    [Input(component_id="tab-2-col-choice", component_property="value")],
 )
 def update_tab_2(column):
     plots = []
-    data = select_data(session['project'], column=column,
-                       url=session['db_url'])
-    data = data[data['type'] == 'numerical']
+    data = select_data(session["project"], column=column, url=session["db_url"])
+    data = data[data["type"] == "numerical"]
 
-    for idx, metric in enumerate(data[data['column_name'] == column]['metric'].unique()):
-        args = data[data['metric'] == metric]['arguments'].iloc[0]
-        metric_title = metric if args is None else '{}_{}'.format(metric, args)
-        plot_data = data[(data['column_name'] == column) &
-                         (data['metric'] == metric)]
+    for idx, metric in enumerate(
+        data[data["column_name"] == column]["metric"].unique()
+    ):
+        args = data[data["metric"] == metric]["arguments"].iloc[0]
+        metric_title = metric if args is None else "{}_{}".format(metric, args)
+        plot_data = data[(data["column_name"] == column) & (data["metric"] == metric)]
         plots.append(
-            html.Div(id='trend-plots-{}'.format(idx),
-                     children=[
-                         html.H3('{}-{}'.format(column, metric_title, id='plot-header')),
-                         create_trend_line(plot_data, column, metric),
-                         histogram(plot_data, column, metric)
-                     ]
+            html.Div(
+                id="trend-plots-{}".format(idx),
+                children=[
+                    html.H3("{}-{}".format(column, metric_title, id="plot-header")),
+                    create_trend_line(plot_data, column, metric),
+                    histogram(plot_data, column, metric),
+                ],
             )
         )
     return plots
@@ -191,187 +191,198 @@ def update_tab_2(column):
 
 #### standard_viz_dynamic ####
 
+
 @dash_app1.callback(
-    Output(component_id='tab-3-results', component_property='children'),
-    [Input(component_id='tab-3-col-choice-multi', component_property='value')]
+    Output(component_id="tab-3-results", component_property="children"),
+    [Input(component_id="tab-3-col-choice-multi", component_property="value")],
 )
 def update_tab_3(column):
-    data = select_data(session['project'], column=column,
-                       url=session['db_url'])
+    data = select_data(session["project"], column=column, url=session["db_url"])
 
-    data = data[(data['type'] == 'standard_viz_dynamic')]
+    data = data[(data["type"] == "standard_viz_dynamic")]
 
-    if data[data['standard_viz'] == 'value_counts'].shape[0] > 0:
-        value_count_plots = []
-        for col in data['column_name'].unique():
-            plot_data = data[(data['column_name'] == column) &
-                             (data['standard_viz'] == 'value_counts')]
-            value_count_plots.append(create_value_count_area_chart(plot_data, col, 'value_counts'))
-        value_count_plots = html.Div(id='value-count-plots',
-                                   children=value_count_plots)
-        value_count_div = html.Div(
-            id='value-count-section',
-            children=[
-                html.H3('Value Frequencies'),
-                value_count_plots
-            ]
-        )
-    else:
-        value_count_div = html.Div(
-            id='value-count-section',
-            children=[]
-        )
-    return value_count_div
+    plots = {"value_counts": create_value_count_area_chart}
+    dynamic_plots = []
+    print("dynamic plots")
+    for metric in data.metric.values:
+        plot_data = data[data.metric == metric]
+        plot = plots[metric](plot_data, column)
+        dynamic_plots.append(plot)
+    dynamic_plot_div = html.Div(id="d-plots", children=dynamic_plots)
+
+    plot_div = html.Div(
+        id="value-count-section", children=[html.H3("Plots"), dynamic_plot_div]
+    )
+    return plot_div
 
 
 #### Data Characteristics tab ####
 
+
 @dash_app1.callback(
-    Output(component_id='tab-4-results', component_property='children'),
-    [Input(component_id='batch-choice-4', component_property='value')]
+    Output(component_id="tab-4-results", component_property="children"),
+    [Input(component_id="batch-choice-4", component_property="value")],
 )
 def update_tab_4(batch):
-    data = select_data(session['project'], column=None, batch=batch,
-                       url=session['db_url'], general=True)
-    type_plot = create_type_plots(data[(data['metric'] == 'dtype')].copy(), session['schema'])
-    missing_plot = bar_plot_missing(data[(data['metric'] == 'perc_missing')].copy(), session['schema'])
+    data = select_data(
+        session["project"],
+        column=None,
+        batch=batch,
+        url=session["db_url"],
+        general=True,
+    )
+    type_plot = create_type_plots(data[(data["metric"] == "dtype")].copy())
+    missing_plot = bar_plot_missing(
+        data[(data["metric"] == "perc_missing")].copy(), session["schema"]
+    )
     rows_columns = create_simple_line_plot_subplots(data.copy())
-    unique_plot = create_unique_columns_plot(data[(data['metric'] == 'is_unique')].copy())
+    unique_plot = create_unique_columns_plot(
+        data[(data["metric"] == "is_unique")].copy(), session["schema"]
+    )
+
+    # plots
+    line_plots = html.Div(id="data-line-plots", children=[rows_columns])
+
+    missing = html.Div(id="missing", children=[missing_plot])
+
+    data_type_plots = html.Div(id="data-type-plots", children=[type_plot])
+
+    unique_plot = html.Div(id="unique-plot", children=[unique_plot])
 
     ###### row 1
-    line_plots = html.Div(id='data-line-plots',
-                          children=[
-                              rows_columns
-                          ])
 
-    missing = html.Div(id='missing',
-                          children=[
-                              missing_plot
-                          ])
-    row1 = html.Div(id='missing-and-rows-column',
-                     children=[
-                         line_plots,
-                         missing
-                     ])
+    row1 = html.Div(id="row1-data-char", children=[line_plots, unique_plot])
     ###### row 2
-    data_type_plots = html.Div(id='data-type-plots',
-                               children=[
-                                   type_plot
-                               ])
-    unique_plot = html.Div(id='unique-plot',
-                               children=[
-                                   unique_plot
-                               ])
-    row2 = html.Div(id='data-type-and-unique-row',
-                    children=[
-                        data_type_plots,
-                        unique_plot
-                    ])
+    row2 = html.Div(id="row2-data-char", children=[missing_plot])
 
-
-
-    page = html.Div(id='overview-page',
-                    children=[
-                        row1,
-                        row2
-                    ])
+    page = html.Div(id="overview-page", children=[row1, row2])
     return page
 
 
 #### Single Batch analyzer tab ####
 
+
 @dash_app1.callback(
-    Output(component_id='tab-5-results', component_property='children'),
-    [Input(component_id='batch-choice-5', component_property='value'),
-     Input(component_id='tab-5-col-choice', component_property='value')]
+    Output(component_id="tab-5-results", component_property="children"),
+    [
+        Input(component_id="batch-choice-5", component_property="value"),
+        Input(component_id="tab-5-col-choice", component_property="value"),
+    ],
 )
 def update_tab_5(batch, column):
-    data = select_data(session['project'], column=column,
-                       batch=batch, url=session['db_url'])
+    data = select_data(
+        session["project"], column=column, batch=batch, url=session["db_url"]
+    )
 
-    data = data[(data['type'] == 'standard_viz_static')]
+    data = data[(data["type"] == "standard_viz_static")]
 
-    heatmap_plots = []
-    for metric in data['metric'].unique():
-        plot_data = data[(data['column_name'] == column) & (data['metric'] == metric)]
-        heatmap_plots.append(heatmap(plot_data, column, metric))
+    plots = {"heatmap": heatmap}
+    static_plots = []
+    for metric in data["metric"].unique():
+        plot_data = data[(data["metric"] == metric)]
+        plot = plots[metric](plot_data, column)
+        static_plots.append(plot)
 
-    page = html.Div(id='tab-5-page',
-                    children=heatmap_plots)
+    page = html.Div(id="tab-5-page", children=static_plots)
     return page
-
 
 
 #### Boolean graphs tab ####
 
+
 @dash_app1.callback(
-    Output(component_id='tab-6-results', component_property='children'),
-    [Input(component_id='tab-6-col-choice', component_property='value')]
+    Output(component_id="tab-6-results", component_property="children"),
+    [Input(component_id="tab-6-col-choice", component_property="value")],
 )
 def update_tab_6(column):
-    data = select_data(session['project'], column=column,
-                       batch=None, url=session['db_url'])
+    data = select_data(
+        session["project"], column=column, batch=None, url=session["db_url"]
+    )
+    error_data = select_data(
+        session["project"], column=None, batch=None, url=session["db_url"]
+    )
+    error_data = error_data[
+        (error_data.type == "boolean") & (error_data.value == False)
+    ]
+    error_data = error_data.sort_values("date", ascending=False)
 
-    data = data[(data['type'] == 'boolean')]
+    data = data[(data["type"] == "boolean")]
     plot = boolean_plot(data)
+    error_table = error_check_table(
+        error_data[["column_name", "metric", "arguments", "batch_name"]]
+    )
 
+    row1 = html.Div(id="row1", children=[plot, error_table])
 
-    page = html.Div(id='tab-6-page',
-                    children=[plot])
+    page = html.Div(id="tab-6-page", children=row1)
     return page
 
-@server.route('/', methods=['GET', 'POST'])
-@server.route('/index', methods=['GET', 'POST'])
+
+@server.route("/", methods=["GET", "POST"])
+@server.route("/index", methods=["GET", "POST"])
 def index():
     global dash_app1
     global full_data
 
     session.clear()
 
-    project_file = os.getenv('PROJECT_FILE', os.path.join(HOME, '.qualipy', 'projects.json'))
+    project_file = os.getenv(
+        "PROJECT_FILE", os.path.join(HOME, ".qualipy", "projects.json")
+    )
 
-    with open(project_file, 'r') as f:
+    with open(project_file, "r") as f:
         projects = json.loads(f.read())
 
-    if request.method == 'POST':
+    if request.method == "POST":
         button_pressed = list(request.form.to_dict(flat=False).keys())[0]
-        session['project'] = button_pressed
-        column_options = projects[button_pressed]['columns']
-        session['column_options'] = column_options
-        url = projects[button_pressed].get('db')
-        session['db_url'] = url
-        session['schema'] = projects[button_pressed]['schema']
+        session["project"] = button_pressed
+        column_options = projects[button_pressed]["columns"]
+        session["column_options"] = column_options
+        url = projects[button_pressed].get("db")
+        session["db_url"] = url
+        session["schema"] = projects[button_pressed]["schema"]
 
-        full_data = select_data(session['project'], url=url)
+        full_data = select_data(session["project"], url=url)
 
-        numerical_options = full_data[full_data['type'] == 'numerical'].column_name.unique()
-        standard_viz_dynamic_options = full_data[full_data['type'] == 'standard_viz_dynamic'].column_name.unique()
-        standard_viz_static = full_data[full_data['type'] == 'standard_viz_static'].column_name.unique()
-        boolean_options = full_data[full_data['type'] == 'boolean'].column_name.unique()
+        numerical_options = full_data[
+            full_data["type"] == "numerical"
+        ].column_name.unique()
+        standard_viz_dynamic_options = full_data[
+            full_data["type"] == "standard_viz_dynamic"
+        ].column_name.unique()
+        standard_viz_static = full_data[
+            full_data["type"] == "standard_viz_static"
+        ].column_name.unique()
+        boolean_options = full_data[full_data["type"] == "boolean"].column_name.unique()
 
-        dash_app1.layout = html.Div(id='total-div',
-                                    children=generate_layout(data=full_data, numerical_column_options=numerical_options,
-                                                             standard_viz_dynamic_options=standard_viz_dynamic_options,
-                                                             standard_viz_static_options=standard_viz_static,
-                                                             boolean_options=boolean_options))
-        return redirect(url_for('render_dashboard'))
-    return render_template('home/index.html', projects=projects)
+        dash_app1.layout = html.Div(
+            id="total-div",
+            children=generate_layout(
+                data=full_data,
+                numerical_column_options=numerical_options,
+                standard_viz_dynamic_options=standard_viz_dynamic_options,
+                standard_viz_static_options=standard_viz_static,
+                boolean_options=boolean_options,
+            ),
+        )
+        return redirect(url_for("render_dashboard"))
+    return render_template("home/index.html", projects=projects)
 
 
-@server.route('/metrics')
+@server.route("/metrics")
 def render_dashboard():
-    return redirect('/dash1')
+    return redirect("/dash1")
 
 
-app = DispatcherMiddleware(server, {
-    '/dash1': dash_app1.server,
-})
+app = DispatcherMiddleware(server, {"/dash1": dash_app1.server})
 
-dash_app1.css.append_css({
-    'external_url': (
-	'https://github.com/plotly/dash-app-stylesheets/blob/master/dash-analytics-report.css'
-    )
-})
+dash_app1.css.append_css(
+    {
+        "external_url": (
+            "https://github.com/plotly/dash-app-stylesheets/blob/master/dash-analytics-report.css"
+        )
+    }
+)
 
-if __name__ == '__main__':
-    run_simple('localhost', 5005, app, use_reloader=True, use_debugger=True)
+if __name__ == "__main__":
+    run_simple("localhost", 5005, app, use_reloader=True, use_debugger=True)

@@ -35,7 +35,7 @@
 
 
 /*Categorical Page*/
-#value-count-plots {
+#d-plots {
     position: relative;
     right: 30px;
     height: 25%;
@@ -45,7 +45,8 @@
 
 /*Data characteristic page*/
 
-#missing-and-rows-column {
+/*row 1*/
+#row1-data-char {
     overflow: hidden;
     display: flex;
     align-items: center;
@@ -60,30 +61,6 @@
     margin-right: 50px;
 }
 
-#missing {
-    overflow: hidden;
-    overflow-y: auto;
-    height: 600px;
-    width: 800px;
-    margin-left: 50px;
-}
-
-
-#data-type-and-unique-row {
-    overflow: hidden;
-    display: flex;
-    align-items: center;
-    text-align: center;
-}
-
-#data-type-plots {
-    float: left;
-    overflow-y: auto;
-    height: 600px;
-    margin-right: 50px;
-    margin-top: 50px;
-}
-
 #unique-plot {
     overflow: hidden;
     overflow-y: auto;
@@ -91,6 +68,32 @@
     margin-left: 50px;
     margin-top: 50px;
 }
+
+
+/*row 2*/
+/*#row2-data-char {*/
+/*    overflow: hidden;*/
+/*    display: flex;*/
+/*    align-items: center;*/
+/*    text-align: center;*/
+/*}*/
+
+#missing {
+    /*height: 1000px;*/
+    width: 800px;
+    margin: auto;
+    overflow-y: auto;
+}
+
+/*#data-type-plots {*/
+/*    float: left;*/
+/*    overflow-y: auto;*/
+/*    height: 600px;*/
+/*    margin-right: 50px;*/
+/*    margin-top: 50px;*/
+/*}*/
+
+
 
 /*Yes I know this is laughably terrible. someone show me how to do this*/
 

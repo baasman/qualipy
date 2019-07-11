@@ -11,12 +11,12 @@ from qualipy.backends.pandas_backend.functions import (
 
 
 PANDAS_METRIC_MAP = {
-    'std': _get_std,
-    'quantile': _get_quantile,
-    'min': _get_min,
-    'nunique': _get_nunique,
-    'top': _get_top,
-    'freq': _get_freq,
-    'correlation': _get_correlation,
-    'number_of_outliers': _get_number_of_outliers,
+    "std": _get_std,
+    "quantile": _get_quantile,
+    "min": _get_min,
+    "nunique": _get_nunique,
+    "top": _get_top,
+    "freq": _get_freq,
+    "correlation": _get_correlation,
+    "number_of_outliers": _get_number_of_outliers,
 }

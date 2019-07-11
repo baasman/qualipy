@@ -11,7 +11,9 @@ from numpy import NaN
 def _create_arg_string(keyword_arguments, other_columns=None):
     if keyword_arguments:
         if other_columns is not None:
-            col_arguments = {'col_{}'.format(idx): k for idx, k in enumerate(other_columns)}
+            col_arguments = {
+                "col_{}".format(idx): k for idx, k in enumerate(other_columns)
+            }
             for col in other_columns:
                 keyword_arguments.pop(col)
             keyword_arguments = {**keyword_arguments, **col_arguments}
@@ -28,13 +30,12 @@ def _set_columns(other_column, other_columns, arguments, data):
 
 
 class BackendPandas(BackendBase):
-
     @staticmethod
     def set_column_type(data, column, type):
         """
         type should be a valid numpy/pandas type
         """
-        if column == 'index':
+        if column == "index":
             data.index = data.index.astype(type)
         else:
             data[column] = data[column].astype(type)
@@ -42,7 +43,6 @@ class BackendPandas(BackendBase):
 
     @staticmethod
     def get_other_columns(other_column, arguments, data):
-
 
         if other_column is not None:
             other_columns = {}
@@ -60,23 +60,28 @@ class BackendPandas(BackendBase):
             try:
                 value = return_format(value)
             except TypeError as e:
-                raise InvalidReturnValue("Invalid return value: {}, was expecting"
-                                         " '{}'".format(e, str(return_format)))
-        elif return_format == 'custom':
+                raise InvalidReturnValue(
+                    "Invalid return value: {}, was expecting"
+                    " '{}'".format(e, str(return_format))
+                )
+        elif return_format == "custom":
             pass
         else:
-            raise InvalidReturnValue("Unsupported type: '{}'".format(str(return_format)))
+            raise InvalidReturnValue(
+                "Unsupported type: '{}'".format(str(return_format))
+            )
         return value
 
     @staticmethod
     def set_schema(data, columns):
-        schema = {col:
-            {
-                'nullable': info['null'],
-                'unique': info['unique'],
-                'dtype': str(get_column(data, col).dtype)
+        schema = {
+            col: {
+                "nullable": info["null"],
+                "unique": info["unique"],
+                "dtype": str(get_column(data, col).dtype),
             }
-            for col, info in columns.items()}
+            for col, info in columns.items()
+        }
         return schema
 
     @staticmethod
@@ -89,23 +94,31 @@ class BackendPandas(BackendBase):
         return data[column].dtype
 
     @staticmethod
-    def generate_description(function, data, column,
-                             date, function_name, standard_viz,
-                             is_static=True, other_columns=None,
-                             viz_type='numerical', kwargs=None):
+    def generate_description(
+        function,
+        data,
+        column,
+        date,
+        function_name,
+        standard_viz,
+        is_static=True,
+        other_columns=None,
+        viz_type="numerical",
+        kwargs=None,
+    ):
         kwargs = {} if kwargs is None else kwargs
         if other_columns is not None:
             kwargs = {**kwargs, **other_columns}
         value = function(data, column, **kwargs)
         return {
-            'value': value,
-            'metric': function_name,
-            'arguments': _create_arg_string(kwargs, other_columns),
-            'date': date,
-            'column_name': column,
-            'standard_viz': standard_viz,
-            'is_static': is_static,
-            'type': viz_type
+            "value": value,
+            "metric": function_name,
+            "arguments": _create_arg_string(kwargs, other_columns),
+            "date": date,
+            "column_name": column,
+            "standard_viz": standard_viz,
+            "is_static": is_static,
+            "type": viz_type,
         }
 
     @staticmethod
@@ -114,9 +127,10 @@ class BackendPandas(BackendBase):
         if is_equal:
             return
         elif force and not is_equal:
-            raise InvalidType('Incorrect type for column {}. Expected {}, '
-                              'got {}'.format(column, desired_type, data[column].dtype))
+            raise InvalidType(
+                "Incorrect type for column {}. Expected {}, "
+                "got {}".format(column, desired_type, data[column].dtype)
+            )
         elif not force and not is_equal:
             # TODO: make warning message more useful
-            warnings.warn('Type is not equal')
-
+            warnings.warn("Type is not equal")
