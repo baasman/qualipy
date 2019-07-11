@@ -2,7 +2,6 @@ import abc
 
 
 class BackendBase(abc.ABC):
-
     @staticmethod
     @abc.abstractmethod
     def set_schema(data, columns):
@@ -10,9 +9,17 @@ class BackendBase(abc.ABC):
 
     @staticmethod
     @abc.abstractmethod
-    def generate_description(function, data, column,
-                             date, function_name, standard_viz,
-                             over_time=True, other_columns=None, kwargs=None):
+    def generate_description(
+        function,
+        data,
+        column,
+        date,
+        function_name,
+        standard_viz,
+        over_time=True,
+        other_columns=None,
+        kwargs=None,
+    ):
         return
 
     @staticmethod
@@ -39,4 +46,3 @@ class BackendBase(abc.ABC):
     @abc.abstractmethod
     def check_type(data, column, desired_type, force=False):
         return
-

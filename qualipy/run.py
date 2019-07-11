@@ -4,6 +4,7 @@ import numpy as np
 import os
 import datetime
 import pickle
+from typing import Any, Dict, Optional, Union, Dict, List
 
 from qualipy.backends.pandas_backend.generator import BackendPandas
 from qualipy.backends.pandas_backend.functions import is_unique, percentage_missing
@@ -16,6 +17,13 @@ from qualipy.config import (
     STANDARD_VIZ_STATIC,
     STANDARD_VIZ_DYNAMIC,
 )
+from qualipy.backends.pandas_backend.pandas_types import (
+    DateTimeType,
+    FloatType,
+    IntType,
+    ObjectType,
+)
+from qualipy.project import Project
 
 
 HOME = os.path.expanduser("~")
@@ -23,8 +31,12 @@ HOME = os.path.expanduser("~")
 
 GENERATORS = {"pandas": BackendPandas}
 
+AllowedTypes = Union[DateTimeType, FloatType, IntType, ObjectType]
 
-def _create_value(value, metric, name, date, type):
+
+def _create_value(
+    value: Any, metric: str, name: str, date: datetime.datetime, type: str
+):
     return {
         "value": value,
         "date": date,
@@ -36,7 +48,11 @@ def _create_value(value, metric, name, date, type):
     }
 
 
-def set_standard_viz_params(function_name, viz_options_static, viz_options_dynamic):
+def set_standard_viz_params(
+    function_name: str,
+    viz_options_static: Dict[str, Dict[str, str]],
+    viz_options_dynamic: Dict[str, Dict[str, str]],
+):
     if function_name in viz_options_static:
         standard_viz = viz_options_static[function_name]["function"]
         is_static = True
@@ -51,7 +67,12 @@ def set_standard_viz_params(function_name, viz_options_static, viz_options_dynam
 
 class DataSet(object):
     def __init__(
-        self, project, backend="pandas", reset=False, time_of_run=None, batch_name=None
+        self,
+        project: Project,
+        backend: str = "pandas",
+        reset: bool = False,
+        time_of_run: Optional[datetime.datetime] = None,
+        batch_name: str = None,
     ):
         self.project = project
         self.alert_table_name = "{}_alerts".format(project.project_name)
@@ -67,14 +88,14 @@ class DataSet(object):
         self._locate_history_data()
         self._get_alerts()
 
-    def run(self):
+    def run(self) -> None:
         self._generate_metrics()
 
-    def set_dataset(self, df):
+    def set_dataset(self, df: pd.DataFrame) -> None:
         self.current_data = df
         self.schema = self.generator.set_schema(df, self.project.columns)
 
-    def _locate_history_data(self):
+    def _locate_history_data(self) -> pd.DataFrame:
         with self.project.engine.connect() as conn:
             exists = conn.execute(
                 "select name from sqlite_master "
@@ -96,7 +117,7 @@ class DataSet(object):
             )
         return hist_data
 
-    def _generate_metrics(self):
+    def _generate_metrics(self) -> None:
         measures = []
         anomalies = []
         for col, specs in self.project.columns.items():
@@ -212,7 +233,7 @@ class DataSet(object):
         )
         return measures
 
-    def _get_general_info(self, measures):
+    def _get_general_info(self, measures: List[Dict[str, Any]]):
         rows, cols = self.generator.get_shape(self.current_data)
         measures.append(
             _create_value(

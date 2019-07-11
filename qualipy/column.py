@@ -1,16 +1,10 @@
 from functools import wraps
 
 import types
-from typing import (
-    Any,
-    Dict,
-    Callable
-)
+from typing import Any, Dict, List, Callable, Optional, Union
 
 
-
-
-def copy_func(f, name=None):
+def copy_func(f: Callable, name: Optional[str] = None) -> Callable:
     fn = types.FunctionType(
         f.__code__, f.__globals__, name or f.__name__, f.__defaults__, f.__closure__
     )
@@ -18,7 +12,7 @@ def copy_func(f, name=None):
     return fn
 
 
-def copy_function_spec(function):
+def copy_function_spec(function: Union[Dict[str, Any], Callable]):
     if isinstance(function, dict):
         copied_function = copy_func(function["function"])
         copied_function.arguments = function.get("parameters", {})
@@ -29,14 +23,14 @@ def copy_function_spec(function):
 
 
 def function(
-    allowed_arguments=None,
-    return_format=float,
-    arguments=None,
-    anomaly=False,
-    other_column=None,
-    fail=False,
-):
-    def inner_fun(method):
+    allowed_arguments: Optional[List[str]] = None,
+    return_format: type = float,
+    arguments: Dict[str, Any] = None,
+    anomaly: bool = False,
+    other_column: Optional[List[str]] = None,
+    fail: bool = False,
+) -> Callable:
+    def inner_fun(method: Callable):
         method.anomaly = anomaly
         method.allowed_arguments = (
             [] if allowed_arguments is None else allowed_arguments

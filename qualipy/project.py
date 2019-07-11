@@ -7,7 +7,7 @@ import os
 import datetime
 import pickle
 import pandas as pd
-from typing import List, Optional, Union
+from typing import List, Optional, Union, Dict
 
 from sqlalchemy import engine
 
@@ -53,7 +53,7 @@ class Project(object):
         data.value = data.value.apply(lambda r: pickle.loads(r))
         return data
 
-    def add_to_project_list(self, schema):
+    def add_to_project_list(self, schema: Dict[str, str]) -> None:
         project_file_path = os.path.join(self.config_dir, "projects.json")
         try:
             with open(project_file_path, "r") as f:

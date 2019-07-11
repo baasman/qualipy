@@ -1,7 +1,8 @@
 import pandas as pd
+from sqlalchemy import engine
 
 
-def create_table(engine, table_name):
+def create_table(engine: engine.base.Engine, table_name: str) -> None:
     create_table_query = """
         create table {} (
             "column_name" CHARACTER(20) not null,
@@ -21,7 +22,7 @@ def create_table(engine, table_name):
         conn.execute(create_table_query)
 
 
-def create_alert_table(engine, table_name):
+def create_alert_table(engine: engine.base.Engine, table_name: str) -> None:
     create_table_query = """
         create table {} (
             "column" CHARACTER(20) not null,
@@ -37,5 +38,5 @@ def create_alert_table(engine, table_name):
         conn.execute(create_table_query)
 
 
-def get_table(engine, table_name):
+def get_table(engine: engine.base.Engine, table_name: str) -> pd.DataFrame:
     return pd.read_sql("select * from {}".format(table_name), engine)
