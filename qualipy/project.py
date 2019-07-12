@@ -1,5 +1,5 @@
 from qualipy.util import HOME
-from qualipy.database import get_table
+from qualipy.database import get_table, create_table, create_alert_table
 from qualipy.column import Column
 
 import json
@@ -9,28 +9,29 @@ import pickle
 import pandas as pd
 from typing import List, Optional, Union, Dict
 
-from sqlalchemy import engine
+from sqlalchemy import engine, create_engine
 
 
 class Project(object):
-    # TODO: ask michoel about typing when variable can be none
     def __init__(
         self,
         project_name: str,
         backend: str = "pandas",
-        engine: engine.base.Engine = None,
-        reset: bool = False,
+        engine: Optional[engine.base.Engine] = None,
+        reset_config: bool = False,
         config_dir: str = None,
     ):
         self.project_name = project_name
         self.backend = backend
         self.columns = {}
-        self.reset = reset
+        self.reset_config = reset_config
         self.config_dir = (
             os.path.join(HOME, ".qualipy") if config_dir is None else config_dir
         )
         if engine is None:
-            self.engine = os.path.join(HOME, ".qualipy", "qualipy.db")
+            self.engine = create_engine(
+                "sqlite:///{}".format(os.path.join(HOME, ".qualipy", "qualipy.db"))
+            )
         else:
             self.engine = engine
 
@@ -53,6 +54,25 @@ class Project(object):
         data.value = data.value.apply(lambda r: pickle.loads(r))
         return data
 
+    def delete_data(self):
+        with self.engine.connect() as conn:
+            try:
+                conn.execute("drop table {}".format(self.project_name))
+            except:
+                pass
+            create_table(self.engine, self.project_name)
+            conn.execute("delete from {}".format(self.project_name))
+
+    def delete_alert_data(self):
+        alert_table_name = "{}_alerts".format(self.project_name)
+        with self.engine.connect() as conn:
+            try:
+                conn.execute("drop table {}".format(alert_table_name))
+            except:
+                pass
+            create_alert_table(self.project.engine, alert_table_name)
+            conn.execute("delete from {}".format(alert_table_name))
+
     def add_to_project_list(self, schema: Dict[str, str]) -> None:
         project_file_path = os.path.join(self.config_dir, "projects.json")
         try:
@@ -61,7 +81,7 @@ class Project(object):
         except:
             projects = {}
 
-        if self.project_name not in projects or self.reset:
+        if self.project_name not in projects or self.reset_config:
             projects[self.project_name] = {
                 "columns": list(self.columns.keys()),
                 "executions": [datetime.datetime.now().strftime("%m/%d/%Y %H:%M")],

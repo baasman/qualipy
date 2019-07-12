@@ -29,11 +29,6 @@ class BackendBase(abc.ABC):
 
     @staticmethod
     @abc.abstractmethod
-    def set_column_type(data, column, type):
-        return
-
-    @staticmethod
-    @abc.abstractmethod
     def get_other_columns(other_column, arguments, data):
         return
 

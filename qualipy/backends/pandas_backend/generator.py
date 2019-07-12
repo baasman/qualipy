@@ -6,6 +6,7 @@ from qualipy.exceptions import InvalidType
 import warnings
 
 from numpy import NaN
+import pandas as pd
 
 
 def _create_arg_string(keyword_arguments, other_columns=None):
@@ -30,17 +31,6 @@ def _set_columns(other_column, other_columns, arguments, data):
 
 
 class BackendPandas(BackendBase):
-    @staticmethod
-    def set_column_type(data, column, type):
-        """
-        type should be a valid numpy/pandas type
-        """
-        if column == "index":
-            data.index = data.index.astype(type)
-        else:
-            data[column] = data[column].astype(type)
-        return data
-
     @staticmethod
     def get_other_columns(other_column, arguments, data):
 

@@ -27,7 +27,7 @@ def function(
     return_format: type = float,
     arguments: Dict[str, Any] = None,
     anomaly: bool = False,
-    other_column: Optional[List[str]] = None,
+    other_column: Union[Optional[List[str]], Optional[str]] = None,
     fail: bool = False,
 ) -> Callable:
     def inner_fun(method: Callable):
@@ -51,14 +51,23 @@ def function(
 
 
 class Column(object):
+
+    column_name = None
+    column_type = None
+    force_type = False
+    null = True
+    force_null = False
+    unique = False
+    functions = []
+
     def _as_dict(self, name: str) -> Dict[str, Any]:
         dict_ = {
             "name": name,
-            "type": getattr(self, "column_type", None),
-            "force_type": getattr(self, "force_type", False),
-            "null": getattr(self, "null", True),
-            "force_null": getattr(self, "null", True),
-            "unique": getattr(self, "unique", False),
+            "type": self.column_type,
+            "force_type": self.force_type,
+            "null": self.null,
+            "force_null": self.force_null,
+            "unique": self.unique,
             "functions": self._get_functions(),
         }
         return dict_
