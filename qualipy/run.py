@@ -172,6 +172,7 @@ class DataSet(object):
                     )
 
                 measures.append(result)
+                # todo: this only works if there are functions!
                 measures = self._get_column_specific_general_info(specs, measures)
 
         self.current_run = pd.DataFrame(measures)
@@ -266,7 +267,6 @@ class DataSet(object):
 
     def _write(self, measures):
         data = pd.DataFrame(measures)
-        # data = self.set_additional_viz_type(data)
         data["batch_name"] = self.batch_name
         self.current_data_measures = data.copy()
 
