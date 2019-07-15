@@ -4,12 +4,15 @@ from qualipy.backends.base import BackendBase
 from qualipy.exceptions import InvalidType
 
 import warnings
+from typing import Optional, Union, List, Dict, Any
 
 from numpy import NaN
 import pandas as pd
 
 
-def _create_arg_string(keyword_arguments, other_columns=None):
+def _create_arg_string(
+    keyword_arguments: Dict[str, Any], other_columns: Optional[List[str]] = None
+) -> str:
     if keyword_arguments:
         if other_columns is not None:
             col_arguments = {

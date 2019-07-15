@@ -48,12 +48,12 @@ full_data = pd.DataFrame()
 alert_data = pd.DataFrame()
 
 
-def select_data(project, column=None, batch=None, url=None, general=False):
+def select_data(project, column=None, batch=None, url=None):
     global full_data
     data = full_data.copy()
 
     try:
-        if data.shape[0] == 0 or general:
+        if data.shape[0] == 0:
             engine = create_engine(url)
             data = get_table(engine, project)
             data.value = data.value.apply(lambda r: pickle.loads(r))
@@ -62,17 +62,12 @@ def select_data(project, column=None, batch=None, url=None, general=False):
     except:
         raise Exception("Can't find any data at {}".format(url))
 
-    if column is not None and not general:
+    if column is not None:
         if not isinstance(column, str):
             data = data[data["column_name"].isin(column)]
         else:
             data = data[data["column_name"] == column]
     data = data.sort_values(["column_name", "metric", "date"])
-
-    if general:
-        data = data[data["type"] == "data-characteristic"]
-    else:
-        data = data[data["type"] != "data-characteristic"]
 
     if batch is None or batch == "all":
         return data
@@ -109,12 +104,9 @@ def get_alerts_table(project, url):
 )
 def update_tab_1(n_clicks):
     data = select_data(
-        session["project"],
-        batch="all",
-        column=None,
-        url=session["db_url"],
-        general=True,
+        session["project"], batch="all", column=None, url=session["db_url"]
     )
+    data = data[data.type == "data-characteristic"]
     row = [
         session["project"],
         data[data["column_name"] == "rows"].value.sum(),
@@ -225,11 +217,7 @@ def update_tab_3(column):
 )
 def update_tab_4(batch):
     data = select_data(
-        session["project"],
-        column=None,
-        batch=batch,
-        url=session["db_url"],
-        general=True,
+        session["project"], column=None, batch=batch, url=session["db_url"]
     )
     type_plot = create_type_plots(data[(data["metric"] == "dtype")].copy())
     missing_plot = bar_plot_missing(
@@ -253,7 +241,7 @@ def update_tab_4(batch):
 
     row1 = html.Div(id="row1-data-char", children=[line_plots, unique_plot])
     ###### row 2
-    row2 = html.Div(id="row2-data-char", children=[missing_plot])
+    row2 = html.Div(id="row2-data-char", children=[missing])
 
     page = html.Div(id="overview-page", children=[row1, row2])
     return page

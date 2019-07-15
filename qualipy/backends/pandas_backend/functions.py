@@ -64,7 +64,7 @@ def is_unique(data, column):
 
 @function(other_column="column_two", return_format=float)
 def correlation_two_columns(data, column, column_two):
-    return data[column].corr(data[column_two])
+    return data[column].corr(column_two)
 
 
 @function(allowed_arguments=["std_away"], return_format=int)

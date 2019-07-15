@@ -1,11 +1,15 @@
-from qualipy import DataSet, Project, Column
+from qualipy import DataSet, Project, Column, function
 from qualipy.backends.pandas_backend.pandas_types import (
     IntType,
     FloatType,
     DateTimeType,
     NumericType,
 )
-from qualipy.backends.pandas_backend.functions import mean, number_of_outliers
+from qualipy.backends.pandas_backend.functions import (
+    mean,
+    number_of_outliers,
+    correlation_two_columns,
+)
 from qualipy.exceptions import InvalidType, NullableError
 
 import pytest
@@ -259,3 +263,28 @@ def test_multiple_columns(data, project):
     hist_data = project.get_project_table()
     assert "integer_col" in hist_data.column_name.values
     assert "float_col" in hist_data.column_name.values
+
+
+###### test other columns #############
+
+
+def test_other_column(data, project):
+    class TestCol(Column):
+        column_name = ["integer_col"]
+        column_type = IntType()
+        null = False
+        force_null = True
+        functions = [
+            {
+                "function": correlation_two_columns,
+                "parameters": {"column_two": "float_col"},
+            }
+        ]
+
+    project.add_column(TestCol())
+
+    ds = DataSet(project=project, batch_name="test")
+    ds.set_dataset(data)
+    ds.run()
+
+    assert 1
