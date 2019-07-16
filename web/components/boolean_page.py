@@ -11,6 +11,13 @@ def error_check_table(data):
         columns=[{"name": i, "id": i} for i in data.columns],
         data=data.to_dict("rows"),
         sort_action="native",
+        css=[
+            {
+                "selector": ".dash-cell div.dash-cell-value",
+                "rule": "display: inline; white-space: inherit; overflow: inherit; text-overflow: inherit;",
+            }
+        ],
+        style_data={"whiteSpace": "normal", "maxWidth": 300, "margin": {"b": 100}},
     )
 
 

@@ -300,7 +300,9 @@ def update_tab_6(column):
         error_data[["column_name", "metric", "arguments", "batch_name"]]
     )
 
-    row1 = html.Div(id="row1", children=[plot, error_table])
+    table_header = html.H3("All Failed Checks")
+
+    row1 = html.Div(id="row1", children=[plot, table_header, error_table])
 
     page = html.Div(id="tab-6-page", children=row1)
     return page

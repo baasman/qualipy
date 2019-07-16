@@ -54,3 +54,5 @@ docs/_build/
 venv/
 examples/
 env/
+.mypy_cache/
+misc/

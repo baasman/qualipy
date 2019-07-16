@@ -200,11 +200,11 @@ def bar_plot_missing(data, schema):
             "layout": {
                 "title": {"text": "Percentage Missing"},
                 "height": max([18 * y.shape[0], 400]),
-                # 'width': 800,
+                "width": 1000,
                 "xaxis": {
                     "title": "Percentage Missing",
                     "range": [0, 1],
-                    # 'automargin': True
+                    "automargin": True,
                 },
                 "yaxis": {"automargin": True},
             },
