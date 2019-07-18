@@ -22,16 +22,17 @@ def generate_layout(
     children.append(dcc.Tab(label="Overview", value="tab-1", children=tab1_html))
 
     # Numerical aggregate trends
-    tab2_html = []
-    tab2_html.append(html.H5("Column Choice"))
-    tab2_html.append(
-        column_choice(numerical_column_options, "tab-2-col-choice", multi=False)
-    )
-    tab2_html.append(html.Br())
-    tab2_html.append(html.Div(id="tab-2-results"))
-    tab2_html.append(html.Br())
-    tab2_html.append(html.A("Home", href="/index", target="_blank"))
-    children.append(dcc.Tab(label="Numerical", value="tab-2", children=tab2_html))
+    if len(numerical_column_options) > 0:
+        tab2_html = []
+        tab2_html.append(html.H5("Column Choice"))
+        tab2_html.append(
+            column_choice(numerical_column_options, "tab-2-col-choice", multi=False)
+        )
+        tab2_html.append(html.Br())
+        tab2_html.append(html.Div(id="tab-2-results"))
+        tab2_html.append(html.Br())
+        tab2_html.append(html.A("Home", href="/index", target="_blank"))
+        children.append(dcc.Tab(label="Numerical", value="tab-2", children=tab2_html))
 
     # Categorical column built-ins
     if len(standard_viz_dynamic_options) > 0:
