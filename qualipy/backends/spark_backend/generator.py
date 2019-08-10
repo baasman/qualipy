@@ -1,17 +1,22 @@
-from qualipy.exceptions import InvalidReturnValue
-from qualipy.util import get_column
+# TODO: remove this once i have it working
+import findspark
+
+findspark.init()
+
 from qualipy.backends.base import BackendBase
-from qualipy.exceptions import InvalidType
-from qualipy.backends.pandas_backend.functions import is_unique, percentage_missing
+from qualipy.exceptions import InvalidType, InvalidReturnValue
+from qualipy.column import function
+from qualipy.backends.spark_backend.functions import is_unique, percentage_missing
 
-import warnings
-import datetime
-from typing import Optional, Union, List, Dict, Any, Callable
-
+import pyspark
 from numpy import NaN
-import pandas as pd
+
+from typing import Tuple, Dict, Union, Callable, List, Optional, Any
+import datetime
+import warnings
 
 
+DataFrame = pyspark.sql.dataframe.DataFrame
 Column = Dict[str, Union[str, bool, Dict[str, Callable]]]
 
 
@@ -30,31 +35,30 @@ def _create_arg_string(
     return NaN
 
 
-def _set_columns(other_column, other_columns, arguments, data):
-    if other_column in arguments:
-        other_columns[other_column] = data[arguments[other_column]]
-    else:
-        other_columns[other_column] = data[other_column]
-    return other_columns
-
-
-class BackendPandas(BackendBase):
+class BackendSpark(BackendBase):
     @staticmethod
-    def get_other_columns(
-        other_column: Optional[Union[List[str], str]],
-        arguments: Dict[str, Any],
-        data: pd.DataFrame,
-    ):
+    def get_shape(data: DataFrame) -> Tuple[int, int]:
+        rows = data.count()
+        columns = len(data.columns)
+        return rows, columns
 
-        if other_column is not None:
-            other_columns = {}
-            if not isinstance(other_column, list):
-                other_column = [other_column]
-            for col in other_column:
-                other_columns = _set_columns(col, other_columns, arguments, data)
-        else:
-            other_columns = None
-        return other_columns
+    @staticmethod
+    def get_dtype(data: DataFrame, column: str) -> str:
+        return data.schema[column].dataType.simpleString()
+
+    @staticmethod
+    def set_schema(
+        data: DataFrame, columns: Dict[str, Column]
+    ) -> Dict[str, Union[bool, str]]:
+        schema = {
+            col: {
+                "nullable": info["null"],
+                "unique": info["unique"],
+                "dtype": BackendSpark.get_dtype(data, col),
+            }
+            for col, info in columns.items()
+        }
+        return schema
 
     @staticmethod
     def set_return_value_type(value: type, return_format: type):
@@ -75,32 +79,17 @@ class BackendPandas(BackendBase):
         return value
 
     @staticmethod
-    def set_schema(
-        data: pd.DataFrame, columns: Dict[str, Column]
-    ) -> Dict[str, Union[bool, str]]:
-        schema = {
-            col: {
-                "nullable": info["null"],
-                "unique": info["unique"],
-                "dtype": str(get_column(data, col).dtype),
-            }
-            for col, info in columns.items()
-        }
-        return schema
-
-    @staticmethod
-    def get_shape(data):
-        rows, cols = data.shape
-        return rows, cols
-
-    @staticmethod
-    def get_dtype(data, column):
-        return data[column].dtype
+    def get_other_columns(
+        other_column: Optional[Union[List[str], str]],
+        arguments: Dict[str, Any],
+        data: DataFrame,
+    ):
+        pass
 
     @staticmethod
     def generate_description(
         function: Callable,
-        data: pd.DataFrame,
+        data: DataFrame,
         column: str,
         date: datetime.datetime,
         function_name: str,
@@ -127,23 +116,13 @@ class BackendPandas(BackendBase):
 
     @staticmethod
     def check_type(data, column, desired_type, force=False):
-        is_equal = desired_type.check_approximate_type(data[column].dtype)
-        if is_equal:
-            return
-        elif force and not is_equal:
-            raise InvalidType(
-                "Incorrect type for column {}. Expected {}, "
-                "got {}".format(column, desired_type, data[column].dtype)
-            )
-        elif not force and not is_equal:
-            # TODO: make warning message more useful
-            warnings.warn("Type is not equal")
+        pass
 
     @staticmethod
     def generate_column_general_info(specs, data, time_of_run):
         col_name = specs["name"]
         if specs["unique"]:
-            unique = BackendPandas.generate_description(
+            unique = BackendSpark.generate_description(
                 function=is_unique,
                 data=data,
                 column=col_name,
@@ -156,7 +135,7 @@ class BackendPandas(BackendBase):
             )
         else:
             unique = None
-        perc_missing = BackendPandas.generate_description(
+        perc_missing = BackendSpark.generate_description(
             function=percentage_missing,
             data=data,
             column=col_name,
@@ -168,3 +147,40 @@ class BackendPandas(BackendBase):
             kwargs={},
         )
         return unique, perc_missing
+
+
+if __name__ == "__main__":
+    from pyspark.sql import SparkSession
+    import pyspark.sql.functions as F
+
+    spark = SparkSession.builder.master("local").appName("test").getOrCreate()
+
+    df = spark.read.format("csv").load(
+        "/Users/baasman/PycharmProjects/qualipy/examples/iris.csv",
+        header="true",
+        inferSchema="true",
+    )
+
+    BackendSpark.get_shape(df)
+    BackendSpark.get_dtype(df, "sepal_length")
+
+    cols = {
+        "sepal_length": {
+            "name": "sepal_length",
+            "type": "double",
+            "force_type": True,
+            "null": True,
+            "force_null": False,
+            "unique": False,
+            "functions": {},
+        }
+    }
+    BackendSpark.set_schema(df, cols)
+
+    @function(return_format=float)
+    def greater_than_3(data, column):
+        return data.filter(F.col(column) > 5).count()
+
+    val = BackendSpark.generate_description(
+        greater_than_3, df, "sepal_length", "now", "greater_than", False
+    )

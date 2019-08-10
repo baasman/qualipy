@@ -17,6 +17,7 @@ flask = "*"
 dash = "*"
 qualipy = {path = "."}
 python-dotenv = "*"
+pyspark = "*"
 
 [requires]
 python_version = "3.6"

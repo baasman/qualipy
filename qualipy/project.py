@@ -16,13 +16,11 @@ class Project(object):
     def __init__(
         self,
         project_name: str,
-        backend: str = "pandas",
         engine: Optional[engine.base.Engine] = None,
         reset_config: bool = False,
         config_dir: str = None,
     ):
         self.project_name = project_name
-        self.backend = backend
         self.columns = {}
         self.reset_config = reset_config
         self.config_dir = (
@@ -47,7 +45,7 @@ class Project(object):
             for col in column.column_name:
                 self.columns[col] = column._as_dict(col)
         else:
-            self.columns[column.column_name] = column._as_dict(column.column_name)
+            self.columns[column.column_name] = column._as_dict(name=column.column_name)
 
     def get_project_table(self) -> pd.DataFrame:
         data = get_table(self.engine, self.project_name)
@@ -72,6 +70,9 @@ class Project(object):
                 pass
             create_alert_table(self.project.engine, alert_table_name)
             conn.execute("delete from {}".format(alert_table_name))
+
+    def delete_from_project_list(self):
+        pass
 
     def add_to_project_list(self, schema: Dict[str, str]) -> None:
         project_file_path = os.path.join(self.config_dir, "projects.json")
