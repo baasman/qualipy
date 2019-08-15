@@ -33,7 +33,9 @@ def generate_layout(
         tab2_html.append(html.Br())
         tab2_html.append(html.A("Home", href="/index", target="_blank"))
     else:
-        tab2_html.append(html.P("No numerical aggregates taken"))
+        tab2_html.append(
+            html.P("There are no numerical aggregates tracked for this dataset")
+        )
     children.append(dcc.Tab(label="Numerical", value="tab-2", children=tab2_html))
 
     # Categorical column built-ins
@@ -50,7 +52,9 @@ def generate_layout(
         tab3_html.append(html.Br())
         tab3_html.append(html.A("Home", href="/index", target="_blank"))
     else:
-        tab3_html.append(html.P("No categorical aggregates taken"))
+        tab3_html.append(
+            html.P("There are no categorical aggregates tracked for this dataset")
+        )
     children.append(dcc.Tab(label="Categorical", value="tab-3", children=tab3_html))
 
     # General built in data quality checks
@@ -66,7 +70,7 @@ def generate_layout(
         dcc.Tab(label="Data Characteristics", value="tab-4", children=tab4_html)
     )
 
-    # built in visualizations static
+    # Single batch analyzer
     tab5_html = []
     if len(standard_viz_static_options) > 0:
         tab5_html.append(
@@ -85,7 +89,9 @@ def generate_layout(
         tab5_html.append(html.Br())
         tab5_html.append(html.A("Home", href="/index", target="_blank"))
     else:
-        tab5_html.append(html.P("No built in visualization for static time used"))
+        tab5_html.append(
+            html.P("There are no built-in vizualizations chosen for this dataset")
+        )
     children.append(
         dcc.Tab(label="Single Batch Metrics", value="tab-5", children=tab5_html)
     )
@@ -101,10 +107,7 @@ def generate_layout(
         tab6_html.append(html.Br())
         tab6_html.append(html.A("Home", href="/index", target="_blank"))
     else:
-        tab5_html.append(html.P("No boolean checks done"))
+        tab6_html.append(html.P("There are no boolean checks chosen for this dataset"))
     children.append(dcc.Tab(label="Boolean Metrics", value="tab-6", children=tab6_html))
 
-    return [
-        # html.Img(src='/assets/logo.png', style={'width': '300px', 'height': 'auto'}),
-        dcc.Tabs(id="tabs", value="tab-1", children=children)
-    ]
+    return [dcc.Tabs(id="tabs", value="tab-1", children=children)]

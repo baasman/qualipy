@@ -5,18 +5,14 @@ import os
 import datetime
 import pickle
 from typing import Any, Dict, Optional, Union, Dict, List, Callable
+import warnings
 
 from qualipy.backends.pandas_backend.generator import BackendPandas
 from qualipy.backends.pandas_backend.functions import is_unique, percentage_missing
 from qualipy.database import create_table, get_table, create_alert_table
 from qualipy.anomaly_detection import find_anomalies_by_std
 from qualipy.exceptions import FailException, NullableError
-from qualipy.config import (
-    OVERVIEW_PAGE_COLUMNS,
-    OVERVIEW_PAGE_METRICS_DEFAULT,
-    STANDARD_VIZ_STATIC,
-    STANDARD_VIZ_DYNAMIC,
-)
+from qualipy.config import STANDARD_VIZ_STATIC, STANDARD_VIZ_DYNAMIC
 from qualipy.backends.pandas_backend.pandas_types import (
     DateTimeType,
     FloatType,
@@ -25,11 +21,18 @@ from qualipy.backends.pandas_backend.pandas_types import (
 )
 from qualipy.project import Project
 
+try:
+    from qualipy.backends.spark_backend.generator import BackendSpark
+except Exception as e:
+    print(e)
+    warnings.warn("Unable to import pyspark")
+    BackendSpark = None
+
 
 HOME = os.path.expanduser("~")
 
 
-GENERATORS = {"pandas": BackendPandas}
+GENERATORS = {"pandas": BackendPandas, "spark": BackendSpark}
 
 # types
 AllowedTypes = Union[DateTimeType, FloatType, IntType, ObjectType]
@@ -74,6 +77,7 @@ class DataSet(object):
         backend: str = "pandas",
         time_of_run: Optional[datetime.datetime] = None,
         batch_name: str = None,
+        spark_context=None,
     ):
         self.project = project
         self.alert_table_name = "{}_alerts".format(project.project_name)
@@ -84,6 +88,8 @@ class DataSet(object):
 
         self.current_data = None
         self.generator = GENERATORS[backend]()
+
+        self.spark_context = spark_context
 
         self._locate_history_data()
         self._get_alerts()
@@ -184,39 +190,18 @@ class DataSet(object):
 
     def _get_column_specific_general_info(self, specs, measures: Measure):
         col_name = specs["name"]
-        if specs["unique"]:
-            measures.append(
-                self.generator.generate_description(
-                    function=is_unique,
-                    data=self.current_data,
-                    column=col_name,
-                    standard_viz=np.NaN,
-                    function_name="is_unique",
-                    date=self.time_of_run,
-                    is_static=True,
-                    viz_type="data-characteristic",
-                    kwargs={},
-                )
-            )
-        perc_missing = self.generator.generate_description(
-            function=percentage_missing,
-            data=self.current_data,
-            column=col_name,
-            standard_viz=np.NaN,
-            function_name="perc_missing",
-            date=self.time_of_run,
-            is_static=True,
-            viz_type="data-characteristic",
-            kwargs={},
+        unique, perc_missing = self.generator.generate_column_general_info(
+            specs, self.current_data, self.time_of_run
         )
+        if unique is not None:
+            measures.append(unique)
+        measures.append(perc_missing)
+
         if perc_missing["value"] > 0 and specs["force_null"] and not specs["null"]:
             raise NullableError(
                 "Column {} has {} percent missing even"
-                " though it is not nullable".format(
-                    specs["name"], perc_missing["value"]
-                )
+                " though it is not nullable".format(col_name, perc_missing["value"])
             )
-        measures.append(perc_missing)
         measures.append(
             _create_value(
                 str(self.generator.get_dtype(self.current_data, col_name)),

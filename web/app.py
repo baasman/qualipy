@@ -52,6 +52,8 @@ def select_data(project, column=None, batch=None, url=None):
     global full_data
     data = full_data.copy()
 
+    print("selecting data")
+    print(data.shape)
     try:
         if data.shape[0] == 0:
             engine = create_engine(url)
@@ -70,6 +72,7 @@ def select_data(project, column=None, batch=None, url=None):
     data = data.sort_values(["column_name", "metric", "date"])
 
     if batch is None or batch == "all":
+        print(data.shape)
         return data
     else:
         if not isinstance(batch, list):
@@ -79,6 +82,7 @@ def select_data(project, column=None, batch=None, url=None):
         except TypeError:
             batch_values = batch
         data = data[data["date"].isin(batch_values)]
+        print(data.shape)
         return data
 
 
@@ -195,7 +199,6 @@ def update_tab_3(column):
 
     plots = {"value_counts": create_value_count_area_chart}
     dynamic_plots = []
-    print("dynamic plots")
     for metric in data.metric.values:
         plot_data = data[data.metric == metric]
         plot = plots[metric](plot_data, column)
@@ -264,7 +267,7 @@ def update_tab_5(batch, column):
 
     data = data[(data["type"] == "standard_viz_static")]
 
-    plots = {"heatmap": heatmap}
+    plots = {"heatmap": heatmap, "correlation": heatmap}
     static_plots = []
     for metric in data["metric"].unique():
         plot_data = data[(data["metric"] == metric)]

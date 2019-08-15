@@ -41,3 +41,8 @@ class BackendBase(abc.ABC):
     @abc.abstractmethod
     def check_type(data, column, desired_type, force=False):
         return
+
+    @staticmethod
+    @abc.abstractmethod
+    def generate_column_general_info(specs, data, time_of_run):
+        return

@@ -18,6 +18,7 @@ import numpy as np
 from sqlalchemy import create_engine
 
 import os
+import json
 
 
 @pytest.fixture
@@ -46,8 +47,12 @@ def db():
 
 @pytest.fixture
 def project(db):
-    path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "test.db")
-    return Project(project_name="test", engine=db, reset_config=True)
+    path = os.path.join(os.path.dirname(os.path.realpath(__file__)))
+    yield Project(project_name="test", engine=db, reset_config=True, config_dir=path)
+    try:
+        os.remove(os.path.join(path, "projects.json"))
+    except:
+        pass
 
 
 ####### project checks ##########
@@ -67,6 +72,24 @@ def test_project_get_table(data, project):
 
     hist_data = project.get_project_table()
     assert hist_data.shape[0] > 0
+
+
+def test_project_file(data, project):
+    class TestCol(Column):
+        column_name = "integer_col"
+        column_type = IntType()
+        force_type = True
+
+    project.add_column(TestCol())
+
+    ds = DataSet(project=project, batch_name="test")
+    ds.set_dataset(data)
+    ds.run()
+
+    with open(os.path.join(project.config_dir, "projects.json"), "r") as f:
+        project_file = json.loads(f.read())
+
+    assert "test" in project_file
 
 
 def test_default_checks_done(data, project):
