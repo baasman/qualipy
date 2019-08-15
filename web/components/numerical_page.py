@@ -1,5 +1,33 @@
 import dash_core_components as dcc
 import numpy as np
+from plotly.subplots import make_subplots
+import plotly.graph_objs as go
+
+
+def all_trends(data):
+    df = data.copy()
+    df["metric_name"] = df.metric.astype(str) + np.where(
+        df.arguments.isnull(), "", df.arguments
+    )
+    col_name = df.column_name.values[0]
+    fig = make_subplots(
+        rows=df.metric_name.nunique(),
+        cols=1,
+        shared_xaxes=True,
+        shared_yaxes=False,
+        vertical_spacing=0.1,
+        subplot_titles=df.metric_name.unique(),
+    )
+    for row, (name, group) in enumerate(df.groupby("metric_name"), start=1):
+        x = group.date
+        fig.append_trace(go.Scatter(x=x, y=group.value.values), row=row, col=1)
+
+    fig["layout"].update(
+        title_text="All Numerical Trends - {}".format(col_name), showlegend=False
+    )
+
+    plot = dcc.Graph(id="all-num-aggs-{}".format(col_name), figure=fig)
+    return plot
 
 
 def create_trend_line(data, var, metric):

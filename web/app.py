@@ -22,7 +22,7 @@ from web.components.data_characteristic_page import (
 )
 from web.layout import generate_layout
 from web.components.overview_page import overview_table, schema_table
-from web.components.numerical_page import histogram, create_trend_line
+from web.components.numerical_page import histogram, create_trend_line, all_trends
 from web.components.boolean_page import error_check_table, boolean_plot
 from web.components.standard_viz_dynamic_page import create_value_count_area_chart
 from web.components.standard_viz_static_page import heatmap
@@ -159,29 +159,38 @@ def update_tab_1(n_clicks):
 
 @dash_app1.callback(
     Output(component_id="tab-2-results", component_property="children"),
-    [Input(component_id="tab-2-col-choice", component_property="value")],
+    [
+        Input(component_id="tab-2-col-choice", component_property="value"),
+        Input(component_id="tab-2-view-choice", component_property="value"),
+    ],
 )
-def update_tab_2(column):
+def update_tab_2(column, view):
     plots = []
     data = select_data(session["project"], column=column, url=session["db_url"])
     data = data[data["type"] == "numerical"]
 
-    for idx, metric in enumerate(
-        data[data["column_name"] == column]["metric"].unique()
-    ):
-        args = data[data["metric"] == metric]["arguments"].iloc[0]
-        metric_title = metric if args is None else "{}_{}".format(metric, args)
-        plot_data = data[(data["column_name"] == column) & (data["metric"] == metric)]
-        plots.append(
-            html.Div(
-                id="trend-plots-{}".format(idx),
-                children=[
-                    html.H3("{}-{}".format(column, metric_title, id="plot-header")),
-                    create_trend_line(plot_data, column, metric),
-                    histogram(plot_data, column, metric),
-                ],
+    if view == "detailed":
+        for idx, metric in enumerate(
+            data[data["column_name"] == column]["metric"].unique()
+        ):
+            args = data[data["metric"] == metric]["arguments"].iloc[0]
+            metric_title = metric if args is None else "{}_{}".format(metric, args)
+            plot_data = data[
+                (data["column_name"] == column) & (data["metric"] == metric)
+            ]
+            plots.append(
+                html.Div(
+                    id="trend-plots-{}".format(idx),
+                    children=[
+                        html.H3("{}-{}".format(column, metric_title, id="plot-header")),
+                        create_trend_line(plot_data, column, metric),
+                        histogram(plot_data, column, metric),
+                    ],
+                )
             )
-        )
+    else:
+        all_trends_view = all_trends(data)
+        plots.append(html.Div(children=[all_trends_view]))
     return plots
 
 

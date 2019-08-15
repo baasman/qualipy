@@ -199,7 +199,7 @@ def bar_plot_missing(data, schema):
             ],
             "layout": {
                 "title": {"text": "Percentage Missing"},
-                "height": max([18 * y.shape[0], 400]),
+                "height": max([20 * y.shape[0], 400]),
                 "width": 1000,
                 "xaxis": {
                     "title": "Percentage Missing",

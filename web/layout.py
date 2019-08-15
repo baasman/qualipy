@@ -1,6 +1,6 @@
 import dash_html_components as html
 import dash_core_components as dcc
-from web.dash_components import column_choice, batch_choice
+from web.dash_components import column_choice, batch_choice, view_style
 
 
 def generate_layout(
@@ -28,6 +28,8 @@ def generate_layout(
         tab2_html.append(
             column_choice(numerical_column_options, "tab-2-col-choice", multi=False)
         )
+        tab2_html.append(html.H5("Type of view"))
+        tab2_html.append(view_style("tab-2-view-choice", multi=False))
         tab2_html.append(html.Br())
         tab2_html.append(html.Div(id="tab-2-results"))
         tab2_html.append(html.Br())

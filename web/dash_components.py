@@ -12,6 +12,16 @@ def column_choice(column_options, id="column-choice", multi=True):
     )
 
 
+def view_style(id="view-choice", multi=False):
+    return dcc.Dropdown(
+        id=id,
+        options=[{"label": i, "value": i} for i in ["simple", "detailed"]],
+        value="simple",
+        multi=multi,
+        style={"width": "300px", "marginTop": "30px"},
+    )
+
+
 def batch_choice(batches, id, include_all=True, multi=True):
     if include_all:
         options = [{"label": i, "value": i} for i in batches] + [

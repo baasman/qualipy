@@ -11,7 +11,7 @@ def create_value_count_area_chart(data, var):
     for value in unique_vals:
         traces.append(
             dict(
-                x=data["batch_name"],
+                x=data["date"],
                 y=[i.get(value, 0) for i in data_values],
                 hoverinfo="x+y",
                 mode="lines",
