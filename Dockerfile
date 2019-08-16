@@ -8,13 +8,12 @@ RUN apt-get update -y && \
 ENV LC_ALL C.UTF-8
 ENV LANG C.UTF-8
 
-COPY qualipy /python/qualipy
-COPY requirements.txt /python/requirements.txt
-COPY setup.py /python/setup.py
-RUN pip3 install .
 
+COPY qualipy /python/qualipy
+WORKDIR /python/
+COPY requirements.txt setup.py MANIFEST.in ./
 COPY web /python/web
-RUN pip3 install -r /python/web/requirements.txt
+RUN pip3 install /python
 
 WORKDIR /python/web
 
