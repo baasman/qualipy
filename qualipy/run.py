@@ -6,6 +6,7 @@ import datetime
 import pickle
 from typing import Any, Dict, Optional, Union, Dict, List, Callable
 import warnings
+import uuid
 
 from qualipy.backends.pandas_backend.generator import BackendPandas
 from qualipy.backends.pandas_backend.functions import is_unique, percentage_missing
@@ -70,6 +71,7 @@ def set_standard_viz_params(
     return standard_viz, is_static
 
 
+# TODO: set up key metric page
 class DataSet(object):
     def __init__(
         self,
@@ -80,7 +82,6 @@ class DataSet(object):
         spark_context=None,
     ):
         self.project = project
-        self.alert_table_name = "{}_alerts".format(project.project_name)
         self.time_of_run = (
             datetime.datetime.now() if time_of_run is None else time_of_run
         )
@@ -102,15 +103,6 @@ class DataSet(object):
         self.schema = self.generator.set_schema(df, self.project.columns)
 
     def _locate_history_data(self) -> pd.DataFrame:
-        with self.project.engine.connect() as conn:
-            exists = conn.execute(
-                "select name from sqlite_master "
-                'where type="table" '
-                'and name="{}"'.format(self.project.project_name)
-            ).fetchone()
-            if not exists:
-                create_table(self.project.engine, self.project.project_name)
-
         hist_data = get_table(
             engine=self.project.engine, table_name=self.project.project_name
         )
@@ -245,33 +237,13 @@ class DataSet(object):
         return viz_type
 
     def _write(self, measures: Measure) -> None:
-        data = pd.DataFrame(measures)
-        data["batch_name"] = self.batch_name
-        self.current_data_measures = data.copy()
-
-        # all values are getting binary data for now, need to think of solution for this
-        data.value = data.value.apply(lambda v: pickle.dumps(v))
-        data.to_sql(
-            self.project.project_name,
-            self.project.engine,
-            if_exists="append",
-            index=False,
-        )
-
+        self.generator.write(measures, self.project, self.batch_name)
         self.project.add_to_project_list(self.schema)
 
     def _get_alerts(self) -> None:
-        with self.project.engine.connect() as conn:
-            exists = conn.execute(
-                "select name from sqlite_master "
-                'where type="table" '
-                'and name="{}"'.format(self.alert_table_name)
-            ).fetchone()
-            if not exists:
-                create_alert_table(self.project.engine, self.alert_table_name)
-            self.alert_data = get_table(
-                engine=self.project.engine, table_name=self.alert_table_name
-            )
+        self.alert_data = get_table(
+            engine=self.project.engine, table_name=self.project.alert_table_name
+        )
 
     def get_alerts(self, column_name: str, function_name: str, std_away: int = 3):
 

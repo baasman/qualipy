@@ -7,6 +7,7 @@ from qualipy.backends.pandas_backend.functions import is_unique, percentage_miss
 import warnings
 import datetime
 from typing import Optional, Union, List, Dict, Any, Callable
+import uuid
 
 from numpy import NaN
 import pandas as pd
@@ -168,3 +169,23 @@ class BackendPandas(BackendBase):
             kwargs={},
         )
         return unique, perc_missing
+
+    @staticmethod
+    def write(measures, project, batch_name):
+        data = pd.DataFrame(measures)
+        value_ids = [uuid.uuid4() for _ in range(data.shape[0])]
+        data["batch_name"] = batch_name
+        data["valueID"] = value_ids
+        data.valueID = data.valueID.astype(str)
+
+        value_data = data[["valueID", "value"]]
+        value_data.value = value_data.value.astype(str)
+
+        data = data.drop("value", axis=1)
+
+        # data.value = data.value.apply(lambda v: pickle.dumps(v))
+        with project.engine.begin() as conn:
+            data.to_sql(project.project_name, con=conn, if_exists="append", index=False)
+            value_data.to_sql(
+                project.value_table, con=conn, if_exists="append", index=False
+            )

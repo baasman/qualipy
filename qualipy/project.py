@@ -1,5 +1,13 @@
 from qualipy.util import HOME
-from qualipy.database import get_table, create_table, create_alert_table
+from qualipy.database import (
+    delete_data,
+    create_table,
+    create_alert_table,
+    create_custom_value_table,
+    create_value_table,
+    get_all_values,
+    create_table_if_not_exists,
+)
 from qualipy.column import Column
 
 import json
@@ -7,7 +15,7 @@ import os
 import datetime
 import pickle
 import pandas as pd
-from typing import List, Optional, Union, Dict
+from typing import List, Optional, Union, Dict, Callable
 
 from sqlalchemy import engine, create_engine
 
@@ -21,6 +29,9 @@ class Project(object):
         config_dir: str = None,
     ):
         self.project_name = project_name
+        self.alert_table_name = "{}_alerts".format(self.project_name)
+        self.value_table = "{}_values".format(self.project_name)
+        self.value_custom_table = "{}_values_custom".format(self.project_name)
         self.columns = {}
         self.reset_config = reset_config
         self.config_dir = (
@@ -32,6 +43,10 @@ class Project(object):
             )
         else:
             self.engine = engine
+        self._create_table(self.project_name, create_table)
+        self._create_table(self.value_table, create_value_table)
+        self._create_table(self.value_custom_table, create_custom_value_table)
+        self._create_table(self.alert_table_name, create_alert_table)
 
     def add_column(self, column: Column) -> None:
         if isinstance(column, list):
@@ -39,6 +54,16 @@ class Project(object):
                 self._add_column(col)
         else:
             self._add_column(column)
+
+    def _create_table(self, name: str, create_function: Callable):
+        with self.engine.connect() as conn:
+            exists = conn.execute(
+                "select name from sqlite_master "
+                'where type="table" '
+                'and name="{}"'.format(name)
+            ).fetchone()
+            if not exists:
+                create_function(self.engine, name)
 
     def _add_column(self, column: Union[Column, List[Column]]) -> None:
         if isinstance(column.column_name, list):
@@ -48,28 +73,16 @@ class Project(object):
             self.columns[column.column_name] = column._as_dict(name=column.column_name)
 
     def get_project_table(self) -> pd.DataFrame:
-        data = get_table(self.engine, self.project_name)
-        data.value = data.value.apply(lambda r: pickle.loads(r))
+        data = get_all_values(self.engine, self.project_name)
+        data = data.drop("valueID", axis=1)
         return data
 
     def delete_data(self):
-        with self.engine.connect() as conn:
-            try:
-                conn.execute("drop table {}".format(self.project_name))
-            except:
-                pass
-            create_table(self.engine, self.project_name)
-            conn.execute("delete from {}".format(self.project_name))
-
-    def delete_alert_data(self):
-        alert_table_name = "{}_alerts".format(self.project_name)
-        with self.engine.connect() as conn:
-            try:
-                conn.execute("drop table {}".format(alert_table_name))
-            except:
-                pass
-            create_alert_table(self.project.engine, alert_table_name)
-            conn.execute("delete from {}".format(alert_table_name))
+        with self.engine.begin() as conn:
+            delete_data(conn, self.project_name, create_table)
+            delete_data(conn, self.value_table, create_value_table)
+            delete_data(conn, self.value_custom_table, create_custom_value_table)
+            delete_data(conn, self.alert_table_name, create_alert_table)
 
     def delete_from_project_list(self):
         pass
