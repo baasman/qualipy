@@ -26,7 +26,8 @@ from web.components.numerical_page import histogram, create_trend_line, all_tren
 from web.components.boolean_page import error_check_table, boolean_plot
 from web.components.standard_viz_dynamic_page import create_value_count_area_chart
 from web.components.standard_viz_static_page import heatmap
-from qualipy.database import get_table
+from qualipy.database import get_table, get_project_table
+from qualipy.util import set_value_type
 
 
 server = flask.Flask(__name__)
@@ -57,8 +58,7 @@ def select_data(project, column=None, batch=None, url=None):
     try:
         if data.shape[0] == 0:
             engine = create_engine(url)
-            data = get_table(engine, project)
-            data.value = data.value.apply(lambda r: pickle.loads(r))
+            data = get_project_table(engine, project)
         else:
             data = full_data.copy()
     except:
@@ -113,8 +113,8 @@ def update_tab_1(n_clicks):
     data = data[data.type == "data-characteristic"]
     row = [
         session["project"],
-        data[data["column_name"] == "rows"].value.sum(),
-        data[data["column_name"] == "columns"].value.iloc[-1],
+        data[data["column_name"] == "rows"].value.astype(int).sum(),
+        data[data["column_name"] == "columns"].value.astype(int).iloc[-1],
         data["date"].min(),
         data["date"].nunique(),
     ]
@@ -178,6 +178,7 @@ def update_tab_2(column, view):
             plot_data = data[
                 (data["column_name"] == column) & (data["metric"] == metric)
             ]
+            plot_data = set_value_type(plot_data)
             plots.append(
                 html.Div(
                     id="trend-plots-{}".format(idx),
@@ -301,9 +302,10 @@ def update_tab_6(column):
     error_data = select_data(
         session["project"], column=None, batch=None, url=session["db_url"]
     )
-    error_data = error_data[
-        (error_data.type == "boolean") & (error_data.value == False)
-    ]
+    error_data = error_data[error_data.type == "boolean"]
+    error_data = set_value_type(error_data)
+    error_data = error_data[error_data.value == False]
+
     error_data = error_data.sort_values("date", ascending=False)
 
     data = data[(data["type"] == "boolean")]

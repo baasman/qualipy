@@ -6,7 +6,7 @@ from qualipy.database import (
     create_custom_value_table,
     create_value_table,
     get_all_values,
-    create_table_if_not_exists,
+    get_project_table,
 )
 from qualipy.column import Column
 
@@ -63,7 +63,7 @@ class Project(object):
                 'and name="{}"'.format(name)
             ).fetchone()
             if not exists:
-                create_function(self.engine, name)
+                create_function(conn, name)
 
     def _add_column(self, column: Union[Column, List[Column]]) -> None:
         if isinstance(column.column_name, list):
@@ -73,9 +73,7 @@ class Project(object):
             self.columns[column.column_name] = column._as_dict(name=column.column_name)
 
     def get_project_table(self) -> pd.DataFrame:
-        data = get_all_values(self.engine, self.project_name)
-        data = data.drop("valueID", axis=1)
-        return data
+        return get_project_table(self.engine, self.project_name)
 
     def delete_data(self):
         with self.engine.begin() as conn:

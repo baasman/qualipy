@@ -18,6 +18,7 @@ class BackendBase(abc.ABC):
         standard_viz,
         over_time=True,
         other_columns=None,
+        return_format="float",
         kwargs=None,
     ):
         return

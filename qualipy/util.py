@@ -15,3 +15,12 @@ def get_column(data: pd.DataFrame, name: str) -> pd.Series:
 
 
 HOME = os.path.expanduser("~")
+
+
+def set_value_type(data: pd.DataFrame) -> pd.DataFrame:
+    type = data.return_format.values[0]
+    if type == "bool":
+        data.value = data.value.map({"True": True, "False": False})
+    else:
+        data.value = data.value.astype(type)
+    return data

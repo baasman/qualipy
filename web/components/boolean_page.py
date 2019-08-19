@@ -4,6 +4,8 @@ import dash_table
 
 from functools import reduce
 
+from qualipy.util import set_value_type
+
 
 def error_check_table(data):
     return dash_table.DataTable(
@@ -26,6 +28,7 @@ def boolean_plot(data):
     batch_names = data["batch_name"]
     traces = []
     unique_vars = data["column_name"].unique()
+    data = set_value_type(data)
     for var in unique_vars:
         df = data[data["column_name"] == var]
         metrics = df.metric.unique()

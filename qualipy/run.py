@@ -41,7 +41,12 @@ Measure = List[Dict[str, Any]]
 
 
 def _create_value(
-    value: Any, metric: str, name: str, date: datetime.datetime, type: str
+    value: Any,
+    metric: str,
+    name: str,
+    date: datetime.datetime,
+    type: str,
+    return_format: str,
 ):
     return {
         "value": value,
@@ -51,6 +56,7 @@ def _create_value(
         "standard_viz": np.NaN,
         "is_static": True,
         "type": type,
+        "return_format": return_format,
     }
 
 
@@ -111,6 +117,7 @@ class DataSet(object):
     def _generate_metrics(self) -> None:
         measures = []
         anomalies = []
+        types = {float: "float", int: "int", bool: "bool", dict: "dict", str: "str"}
         for col, specs in self.project.columns.items():
 
             # enforce type for function
@@ -133,6 +140,8 @@ class DataSet(object):
 
                 should_fail = function.fail
                 arguments = function.arguments
+                return_format = function.return_format
+                return_format_repr = types[return_format]
                 other_columns = self.generator.get_other_columns(
                     other_column=function.other_column,
                     arguments=arguments,
@@ -151,12 +160,13 @@ class DataSet(object):
                     other_columns=other_columns,
                     is_static=is_static,
                     viz_type=viz_type,
+                    return_format=return_format_repr,
                     kwargs=arguments,
                 )
 
                 # set value type
                 result["value"] = self.generator.set_return_value_type(
-                    value=result["value"], return_format=function.return_format
+                    value=result["value"], return_format=return_format
                 )
 
                 if should_fail and not result["value"]:
@@ -201,6 +211,7 @@ class DataSet(object):
                 col_name,
                 self.time_of_run,
                 "data-characteristic",
+                "str",
             )
         )
         return measures
@@ -209,12 +220,12 @@ class DataSet(object):
         rows, cols = self.generator.get_shape(self.current_data)
         measures.append(
             _create_value(
-                rows, "count", "rows", self.time_of_run, "data-characteristic"
+                rows, "count", "rows", self.time_of_run, "data-characteristic", "int"
             )
         )
         measures.append(
             _create_value(
-                cols, "count", "columns", self.time_of_run, "data-characteristic"
+                cols, "count", "columns", self.time_of_run, "data-characteristic", "int"
             )
         )
         return measures

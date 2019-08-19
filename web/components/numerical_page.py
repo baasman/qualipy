@@ -3,6 +3,8 @@ import numpy as np
 from plotly.subplots import make_subplots
 import plotly.graph_objs as go
 
+from qualipy.util import set_value_type
+
 
 def all_trends(data):
     df = data.copy()
@@ -20,6 +22,7 @@ def all_trends(data):
     )
     for row, (name, group) in enumerate(df.groupby("metric_name"), start=1):
         x = group.date
+        group = set_value_type(group)
         fig.append_trace(go.Scatter(x=x, y=group.value.values), row=row, col=1)
 
     fig["layout"].update(

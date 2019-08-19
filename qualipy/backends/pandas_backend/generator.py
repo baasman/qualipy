@@ -8,6 +8,7 @@ import warnings
 import datetime
 from typing import Optional, Union, List, Dict, Any, Callable
 import uuid
+import pickle
 
 from numpy import NaN
 import pandas as pd
@@ -109,6 +110,7 @@ class BackendPandas(BackendBase):
         is_static: bool = True,
         other_columns: Optional[Dict[str, Any]] = None,
         viz_type: str = "numerical",
+        return_format: str = "float",
         kwargs: Dict[str, Any] = None,
     ):
         kwargs = {} if kwargs is None else kwargs
@@ -122,6 +124,7 @@ class BackendPandas(BackendBase):
             "date": date,
             "column_name": column,
             "standard_viz": standard_viz,
+            "return_format": return_format,
             "is_static": is_static,
             "type": viz_type,
         }
@@ -178,8 +181,17 @@ class BackendPandas(BackendBase):
         data["valueID"] = value_ids
         data.valueID = data.valueID.astype(str)
 
-        value_data = data[["valueID", "value"]]
+        value_data = data[
+            data.type.isin(["numerical", "boolean", "data-characteristic"])
+        ][["valueID", "value"]]
         value_data.value = value_data.value.astype(str)
+
+        value_data_custom = data[
+            data.type.isin(["standard_viz_dynamic", "standard_viz_static"])
+        ][["valueID", "value"]]
+        value_data_custom.value = value_data_custom.value.apply(
+            lambda v: pickle.dumps(v)
+        )
 
         data = data.drop("value", axis=1)
 
@@ -188,4 +200,7 @@ class BackendPandas(BackendBase):
             data.to_sql(project.project_name, con=conn, if_exists="append", index=False)
             value_data.to_sql(
                 project.value_table, con=conn, if_exists="append", index=False
+            )
+            value_data_custom.to_sql(
+                project.value_custom_table, con=conn, if_exists="append", index=False
             )
