@@ -13,7 +13,6 @@ from qualipy.column import Column
 import json
 import os
 import datetime
-import pickle
 import pandas as pd
 from typing import List, Optional, Union, Dict, Callable
 
@@ -25,7 +24,6 @@ class Project(object):
         self,
         project_name: str,
         engine: Optional[engine.base.Engine] = None,
-        reset_config: bool = False,
         config_dir: str = None,
     ):
         self.project_name = project_name
@@ -33,7 +31,6 @@ class Project(object):
         self.value_table = "{}_values".format(self.project_name)
         self.value_custom_table = "{}_values_custom".format(self.project_name)
         self.columns = {}
-        self.reset_config = reset_config
         self.config_dir = (
             os.path.join(HOME, ".qualipy") if config_dir is None else config_dir
         )
@@ -85,7 +82,9 @@ class Project(object):
     def delete_from_project_list(self):
         pass
 
-    def add_to_project_list(self, schema: Dict[str, str]) -> None:
+    def add_to_project_list(
+        self, schema: Dict[str, str], reset_config: bool = False
+    ) -> None:
         project_file_path = os.path.join(self.config_dir, "projects.json")
         try:
             with open(project_file_path, "r") as f:
@@ -93,7 +92,7 @@ class Project(object):
         except:
             projects = {}
 
-        if self.project_name not in projects or self.reset_config:
+        if self.project_name not in projects or reset_config:
             projects[self.project_name] = {
                 "columns": list(self.columns.keys()),
                 "executions": [datetime.datetime.now().strftime("%m/%d/%Y %H:%M")],
