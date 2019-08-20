@@ -1,6 +1,6 @@
 import dash_html_components as html
 import dash_core_components as dcc
-from web.dash_components import column_choice, batch_choice, view_style
+from qualipy_web.dash_components import column_choice, batch_choice, view_style
 
 
 def generate_layout(

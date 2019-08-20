@@ -1,4 +1,4 @@
-from werkzeug.wsgi import DispatcherMiddleware
+from werkzeug.middleware.dispatcher import DispatcherMiddleware
 from werkzeug.serving import run_simple
 import flask
 from flask.cli import load_dotenv
@@ -11,21 +11,26 @@ from sqlalchemy import create_engine
 
 import os
 import json
-import pickle
 
-from web.config import Config
-from web.components.data_characteristic_page import (
+from qualipy_web.config import Config
+from qualipy_web.components.data_characteristic_page import (
     create_type_plots,
     create_simple_line_plot_subplots,
     create_unique_columns_plot,
     bar_plot_missing,
 )
-from web.layout import generate_layout
-from web.components.overview_page import overview_table, schema_table
-from web.components.numerical_page import histogram, create_trend_line, all_trends
-from web.components.boolean_page import error_check_table, boolean_plot
-from web.components.standard_viz_dynamic_page import create_value_count_area_chart
-from web.components.standard_viz_static_page import heatmap
+from qualipy_web.layout import generate_layout
+from qualipy_web.components.overview_page import overview_table, schema_table
+from qualipy_web.components.numerical_page import (
+    histogram,
+    create_trend_line,
+    all_trends,
+)
+from qualipy_web.components.boolean_page import error_check_table, boolean_plot
+from qualipy_web.components.standard_viz_dynamic_page import (
+    create_value_count_area_chart,
+)
+from qualipy_web.components.standard_viz_static_page import heatmap
 from qualipy.database import get_table, get_project_table
 from qualipy.util import set_value_type
 
