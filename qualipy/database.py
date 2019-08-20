@@ -75,8 +75,8 @@ def get_all_values(engine: engine.base.Engine, table_name: str) -> pd.DataFrame:
     query = f"""
     select *
     from {table_name}
-    join (select * from {value_table} UNION select * from pc_test_values_custom) as {value_table + '_all'}
-    on pc_test.valueID = {value_table + '_all'}.valueID;
+    join (select * from {value_table} UNION select * from {table_name + '_values_custom'}) as {value_table + '_all'}
+    on {table_name}.valueID = {value_table + '_all'}.valueID;
     """
     return pd.read_sql(query, engine)
 
