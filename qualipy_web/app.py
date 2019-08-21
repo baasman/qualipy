@@ -339,16 +339,26 @@ def index():
         "PROJECT_FILE", os.path.join(HOME, ".qualipy", "projects.json")
     )
 
+    config_file = os.getenv(
+        "CONFIG_FILE", os.path.join(HOME, ".qualipy", "config.json")
+    )
+
     with open(project_file, "r") as f:
         projects = json.loads(f.read())
+
+    with open(config_file, "r") as f:
+        config = json.loads(f.read())
 
     if request.method == "POST":
         button_pressed = list(request.form.to_dict(flat=False).keys())[0]
         session["project"] = button_pressed
         column_options = projects[button_pressed]["columns"]
         session["column_options"] = column_options
-        url = projects[button_pressed].get("db")
-        session["db_url"] = url
+        if "db_url" in config:
+            url = config["db_url"]
+        else:
+            url = projects[button_pressed].get("db")
+        session["db_url"] = config["db_url"]
         session["schema"] = projects[button_pressed]["schema"]
 
         full_data = select_data(session["project"], url=url)
