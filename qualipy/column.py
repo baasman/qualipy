@@ -16,9 +16,11 @@ def copy_function_spec(function: Union[Dict[str, Any], Callable]):
     if isinstance(function, dict):
         copied_function = copy_func(function["function"])
         copied_function.arguments = function.get("parameters", {})
+        copied_function.key_function = function.get("key", False)
     else:
         copied_function = copy_func(function)
         copied_function.arguments = {}
+        copied_function.key_function = False
     return copied_function
 
 

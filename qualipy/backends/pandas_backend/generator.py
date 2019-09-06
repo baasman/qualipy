@@ -111,6 +111,7 @@ class BackendPandas(BackendBase):
         other_columns: Optional[Dict[str, Any]] = None,
         viz_type: str = "numerical",
         return_format: str = "float",
+        key_function: bool = False,
         kwargs: Dict[str, Any] = None,
     ):
         kwargs = {} if kwargs is None else kwargs
@@ -126,6 +127,7 @@ class BackendPandas(BackendBase):
             "standard_viz": standard_viz,
             "return_format": return_format,
             "is_static": is_static,
+            "key_function": key_function,
             "type": viz_type,
         }
 

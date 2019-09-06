@@ -171,10 +171,10 @@ def update_tab_1(n_clicks):
 )
 def update_tab_2(column, view):
     plots = []
-    data = select_data(session["project"], column=column, url=session["db_url"])
-    data = data[data["type"] == "numerical"]
 
     if view == "detailed":
+        data = select_data(session["project"], column=column, url=session["db_url"])
+        data = data[data["type"] == "numerical"]
         for idx, metric in enumerate(
             data[data["column_name"] == column]["metric"].unique()
         ):
@@ -194,9 +194,16 @@ def update_tab_2(column, view):
                     ],
                 )
             )
-    else:
+    elif view == "simple":
+        data = select_data(session["project"], column=column, url=session["db_url"])
+        data = data[data["type"] == "numerical"]
         all_trends_view = all_trends(data)
         plots.append(html.Div(children=[all_trends_view]))
+    elif view == "key metrics":
+        data = select_data(session["project"], column=None, url=session["db_url"])
+        data = data[(data["type"] == "numerical") & (data["key_function"] == 1)]
+        all_key_trends = all_trends(data, show_column_in_name=True)
+        plots.append(html.Div(children=[all_key_trends]))
     return plots
 
 

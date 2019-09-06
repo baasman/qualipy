@@ -16,6 +16,7 @@ def create_table(conn: engine.base.Connection, table_name: str) -> None:
             "return_format" CHARACTER DEFAULT 'float',
             "standard_viz" CHARACTER(100) null,
             "is_static" BOOLEAN null DEFAULT true,
+            "key_function" BOOLEAN null DEFAULT FALSE,
             "batch_name" CHARACTER null DEFAULT true,
             "valueID" CHARACTER(36) null 
         );

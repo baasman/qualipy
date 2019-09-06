@@ -6,11 +6,13 @@ import plotly.graph_objs as go
 from qualipy.util import set_value_type
 
 
-def all_trends(data):
+def all_trends(data, show_column_in_name=False):
     df = data.copy()
     df["metric_name"] = df.metric.astype(str) + np.where(
         df.arguments.isnull(), "", df.arguments
     )
+    if show_column_in_name:
+        df.metric_name = df.metric_name + "-" + df.column_name
     col_name = df.column_name.values[0]
     fig = make_subplots(
         rows=df.metric_name.nunique(),

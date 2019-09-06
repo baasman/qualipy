@@ -15,7 +15,9 @@ def column_choice(column_options, id="column-choice", multi=True):
 def view_style(id="view-choice", multi=False):
     return dcc.Dropdown(
         id=id,
-        options=[{"label": i, "value": i} for i in ["simple", "detailed"]],
+        options=[
+            {"label": i, "value": i} for i in ["simple", "detailed", "key metrics"]
+        ],
         value="simple",
         multi=multi,
         style={"width": "300px", "marginTop": "30px"},

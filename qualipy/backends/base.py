@@ -19,6 +19,7 @@ class BackendBase(abc.ABC):
         over_time=True,
         other_columns=None,
         return_format="float",
+        key_function=False,
         kwargs=None,
     ):
         return

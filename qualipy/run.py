@@ -57,6 +57,7 @@ def _create_value(
         "is_static": True,
         "type": type,
         "return_format": return_format,
+        "key_function": False,
     }
 
 
@@ -141,6 +142,7 @@ class DataSet(object):
                 should_fail = function.fail
                 arguments = function.arguments
                 return_format = function.return_format
+                is_key_function = function.key_function
                 return_format_repr = types[return_format]
                 other_columns = self.generator.get_other_columns(
                     other_column=function.other_column,
@@ -161,6 +163,7 @@ class DataSet(object):
                     is_static=is_static,
                     viz_type=viz_type,
                     return_format=return_format_repr,
+                    key_function=is_key_function,
                     kwargs=arguments,
                 )
 
