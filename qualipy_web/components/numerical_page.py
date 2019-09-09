@@ -20,7 +20,7 @@ def all_trends(data, show_column_in_name=False):
         shared_xaxes=True,
         shared_yaxes=False,
         vertical_spacing=0.1,
-        subplot_titles=df.metric_name.unique(),
+        subplot_titles=df.metric_name.unique().tolist(),
     )
     for row, (name, group) in enumerate(df.groupby("metric_name"), start=1):
         x = group.date

@@ -79,7 +79,7 @@ class Project(object):
             delete_data(conn, self.value_custom_table, create_custom_value_table)
             delete_data(conn, self.alert_table_name, create_alert_table)
 
-    def delete_from_project_list(self):
+    def set_project_config(self):
         pass
 
     def add_to_project_list(

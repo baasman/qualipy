@@ -51,10 +51,9 @@ dash_app1.config["suppress_callback_exceptions"] = True
 dash_app1.layout = html.Div([])
 
 full_data = pd.DataFrame()
-alert_data = pd.DataFrame()
 
 
-def select_data(project, column=None, batch=None, url=None):
+def select_data(project, column=None, batch=None, url=None, live_update=False):
     global full_data
     data = full_data.copy()
 
@@ -91,27 +90,17 @@ def select_data(project, column=None, batch=None, url=None):
         return data
 
 
-def get_alerts_table(project, url):
-    global alert_data
-
-    data = alert_data.copy()
-    engine = create_engine(url)
-    if data.shape[0] == 0:
-        data = get_table(engine, "{}_alerts".format(project))
-        alert_data = data.copy()
-
-    data = data.sort_values("date", ascending=False)
-    return data
-
-
 #### Overview Tab ####
 
 
 @dash_app1.callback(
-    Output(component_id="tab-1-results", component_property="children"),
-    [Input(component_id="placeholder", component_property="n_clicks")],
+    Output(component_id="overview-page-results", component_property="children"),
+    [
+        Input(component_id="placeholder", component_property="n_clicks"),
+        Input(component_id="live-refresh", component_property="n_intervals"),
+    ],
 )
-def update_tab_1(n_clicks):
+def update_tab_1(n_clicks, n_intervals):
     data = select_data(
         session["project"], batch="all", column=None, url=session["db_url"]
     )
@@ -163,10 +152,10 @@ def update_tab_1(n_clicks):
 
 
 @dash_app1.callback(
-    Output(component_id="tab-2-results", component_property="children"),
+    Output(component_id="numerical-page-results", component_property="children"),
     [
-        Input(component_id="tab-2-col-choice", component_property="value"),
-        Input(component_id="tab-2-view-choice", component_property="value"),
+        Input(component_id="numerical-page-col-choice", component_property="value"),
+        Input(component_id="numerical-page-view-choice", component_property="value"),
     ],
 )
 def update_tab_2(column, view):
@@ -211,8 +200,12 @@ def update_tab_2(column, view):
 
 
 @dash_app1.callback(
-    Output(component_id="tab-3-results", component_property="children"),
-    [Input(component_id="tab-3-col-choice-multi", component_property="value")],
+    Output(component_id="categorical-page-results", component_property="children"),
+    [
+        Input(
+            component_id="categorical-page-col-choice-multi", component_property="value"
+        )
+    ],
 )
 def update_tab_3(column):
     data = select_data(session["project"], column=column, url=session["db_url"])
@@ -304,8 +297,8 @@ def update_tab_5(batch, column):
 
 
 @dash_app1.callback(
-    Output(component_id="tab-6-results", component_property="children"),
-    [Input(component_id="tab-6-col-choice", component_property="value")],
+    Output(component_id="bool-tab-results", component_property="children"),
+    [Input(component_id="bool-tab-col-choice", component_property="value")],
 )
 def update_tab_6(column):
     data = select_data(
@@ -365,7 +358,7 @@ def index():
             url = config["db_url"]
         else:
             url = projects[button_pressed].get("db")
-        session["db_url"] = config["db_url"]
+        session["db_url"] = url
         session["schema"] = projects[button_pressed]["schema"]
 
         full_data = select_data(session["project"], url=url)
