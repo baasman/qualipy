@@ -31,7 +31,7 @@ from qualipy_web.components.standard_viz_dynamic_page import (
     create_value_count_area_chart,
 )
 from qualipy_web.components.standard_viz_static_page import heatmap
-from qualipy.database import get_table, get_project_table
+from qualipy.database import get_table, get_project_table, get_last_time
 from qualipy.util import set_value_type
 
 
@@ -51,22 +51,37 @@ dash_app1.config["suppress_callback_exceptions"] = True
 dash_app1.layout = html.Div([])
 
 full_data = pd.DataFrame()
+last_date = None
 
 
-def select_data(project, column=None, batch=None, url=None, live_update=False):
+def select_data(
+    project, column=None, batch=None, url=None, live_update=False, n_intervals=0
+):
     global full_data
+    global last_date
     data = full_data.copy()
+    engine = create_engine(url)
 
     print("selecting data")
     print(data.shape)
     try:
         if data.shape[0] == 0:
-            engine = create_engine(url)
             data = get_project_table(engine, project)
         else:
             data = full_data.copy()
     except:
         raise Exception("Can't find any data at {}".format(url))
+
+    if n_intervals == 0:
+        last_date = data.insert_time.max()
+    if live_update and n_intervals > 0:
+        new_last_time = get_last_time(engine, project)
+        if new_last_time > last_date:
+            new_data = get_project_table(engine, project, last_date)
+            data = pd.concat([data, new_data])
+            last_date = new_last_time
+            print("adding new data")
+            print(data.shape)
 
     if column is not None:
         if not isinstance(column, str):
@@ -102,7 +117,12 @@ def select_data(project, column=None, batch=None, url=None, live_update=False):
 )
 def update_tab_1(n_clicks, n_intervals):
     data = select_data(
-        session["project"], batch="all", column=None, url=session["db_url"]
+        session["project"],
+        batch="all",
+        column=None,
+        url=session["db_url"],
+        live_update=True,
+        n_intervals=n_intervals,
     )
     data = data[data.type == "data-characteristic"]
     row = [
@@ -369,9 +389,6 @@ def index():
         standard_viz_dynamic_options = full_data[
             full_data["type"] == "standard_viz_dynamic"
         ].column_name.unique()
-        standard_viz_static = full_data[
-            full_data["type"] == "standard_viz_static"
-        ].column_name.unique()
         boolean_options = full_data[full_data["type"] == "boolean"].column_name.unique()
 
         dash_app1.layout = html.Div(
@@ -380,7 +397,6 @@ def index():
                 data=full_data,
                 numerical_column_options=numerical_options,
                 standard_viz_dynamic_options=standard_viz_dynamic_options,
-                standard_viz_static_options=standard_viz_static,
                 boolean_options=boolean_options,
             ),
         )

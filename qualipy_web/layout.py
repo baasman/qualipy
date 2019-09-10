@@ -4,11 +4,7 @@ from qualipy_web.dash_components import column_choice, batch_choice, view_style
 
 
 def generate_layout(
-    data,
-    numerical_column_options,
-    standard_viz_dynamic_options,
-    standard_viz_static_options,
-    boolean_options,
+    data, numerical_column_options, standard_viz_dynamic_options, boolean_options
 ):
 
     children = []

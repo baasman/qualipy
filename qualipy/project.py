@@ -79,8 +79,16 @@ class Project(object):
             delete_data(conn, self.value_custom_table, create_custom_value_table)
             delete_data(conn, self.alert_table_name, create_alert_table)
 
-    def set_project_config(self):
-        pass
+    def delete_from_project_config(self):
+        project_file_path = os.path.join(self.config_dir, "projects.json")
+        try:
+            with open(project_file_path, "r") as f:
+                projects = json.loads(f.read())
+        except:
+            projects = {}
+        projects.pop(self.project_name, None)
+        with open(project_file_path, "w") as f:
+            json.dump(projects, f)
 
     def add_to_project_list(
         self, schema: Dict[str, str], reset_config: bool = False

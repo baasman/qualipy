@@ -178,6 +178,7 @@ class BackendPandas(BackendBase):
     @staticmethod
     def write(measures, project, batch_name):
         data = pd.DataFrame(measures)
+        data["insert_time"] = datetime.datetime.now().replace(tzinfo=None)
         value_ids = [uuid.uuid4() for _ in range(data.shape[0])]
         data["batch_name"] = batch_name
         data["valueID"] = value_ids
