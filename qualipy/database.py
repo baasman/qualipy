@@ -78,7 +78,7 @@ def get_all_values(
 ) -> pd.DataFrame:
     value_table = table_name + "_values"
     if last_date is not None:
-        where_stmt = f"where insert_time > {last_date}"
+        where_stmt = f"where insert_time > '{last_date}'"
     else:
         where_stmt = ""
     query = f"""
@@ -131,5 +131,5 @@ def get_last_time(engine, project_name: str):
         time = conn.execute(
             f"select insert_time from {project_name} order by rowid desc limit 1"
         ).fetchone()[0]
-        time = datetime.datetime.strptime(time.split(".")[0], "%Y-%d-%m %H:%M:%S")
+        time = datetime.datetime.strptime(time.split(".")[0], "%Y-%m-%d %H:%M:%S")
     return time

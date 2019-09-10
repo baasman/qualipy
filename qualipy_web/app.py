@@ -73,13 +73,16 @@ def select_data(
         raise Exception("Can't find any data at {}".format(url))
 
     if n_intervals == 0:
-        last_date = data.insert_time.max()
+        last_date = pd.to_datetime(data.insert_time.iloc[-1]) + pd.Timedelta(seconds=3)
     if live_update and n_intervals > 0:
-        new_last_time = get_last_time(engine, project)
+        new_last_time = pd.to_datetime(get_last_time(engine, project))
         if new_last_time > last_date:
             new_data = get_project_table(engine, project, last_date)
             data = pd.concat([data, new_data])
+
+            full_data = data
             last_date = new_last_time
+
             print("adding new data")
             print(data.shape)
 
@@ -420,4 +423,4 @@ dash_app1.css.append_css(
 )
 
 if __name__ == "__main__":
-    run_simple("localhost", 5005, app, use_reloader=True, use_debugger=True)
+    run_simple("localhost", 5006, app, use_reloader=True, use_debugger=True)
