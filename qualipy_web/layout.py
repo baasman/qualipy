@@ -33,6 +33,9 @@ def generate_layout(
         numerical_html.append(html.Div(id="numerical-page-results"))
         numerical_html.append(html.Br())
         numerical_html.append(html.A("Home", href="/index", target="_blank"))
+        numerical_html.append(
+            dcc.Interval(id="live-refresh-num", interval=10000, n_intervals=0)
+        )
     else:
         numerical_html.append(
             html.P("There are no numerical aggregates tracked for this dataset")
@@ -71,6 +74,7 @@ def generate_layout(
     tab4_html.append(html.Div(id="tab-4-results"))
     tab4_html.append(html.Br())
     tab4_html.append(html.A("Home", href="/index", target="_blank"))
+    tab4_html.append(dcc.Interval(id="live-refresh-cat", interval=10000, n_intervals=0))
     children.append(
         dcc.Tab(label="Data Characteristics", value="tab-4", children=tab4_html)
     )

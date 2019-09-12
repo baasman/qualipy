@@ -18,6 +18,8 @@ dash = "*"
 qualipy = {path = "."}
 python-dotenv = "*"
 pyspark = "*"
+jupyter = "*"
+scikit-learn = "*"
 
 [requires]
 python_version = "3.6"

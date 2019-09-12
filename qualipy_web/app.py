@@ -83,9 +83,6 @@ def select_data(
             full_data = data
             last_date = new_last_time
 
-            print("adding new data")
-            print(data.shape)
-
     if column is not None:
         if not isinstance(column, str):
             data = data[data["column_name"].isin(column)]
@@ -179,13 +176,20 @@ def update_tab_1(n_clicks, n_intervals):
     [
         Input(component_id="numerical-page-col-choice", component_property="value"),
         Input(component_id="numerical-page-view-choice", component_property="value"),
+        Input(component_id="live-refresh-num", component_property="n_intervals"),
     ],
 )
-def update_tab_2(column, view):
+def update_tab_2(column, view, n_intervals):
     plots = []
 
     if view == "detailed":
-        data = select_data(session["project"], column=column, url=session["db_url"])
+        data = select_data(
+            session["project"],
+            column=column,
+            url=session["db_url"],
+            live_update=True,
+            n_intervals=n_intervals,
+        )
         data = data[data["type"] == "numerical"]
         for idx, metric in enumerate(
             data[data["column_name"] == column]["metric"].unique()
@@ -207,12 +211,24 @@ def update_tab_2(column, view):
                 )
             )
     elif view == "simple":
-        data = select_data(session["project"], column=column, url=session["db_url"])
+        data = select_data(
+            session["project"],
+            column=column,
+            url=session["db_url"],
+            live_update=True,
+            n_intervals=n_intervals,
+        )
         data = data[data["type"] == "numerical"]
         all_trends_view = all_trends(data)
         plots.append(html.Div(children=[all_trends_view]))
     elif view == "key metrics":
-        data = select_data(session["project"], column=None, url=session["db_url"])
+        data = select_data(
+            session["project"],
+            column=None,
+            url=session["db_url"],
+            live_update=True,
+            n_intervals=n_intervals,
+        )
         data = data[(data["type"] == "numerical") & (data["key_function"] == 1)]
         all_key_trends = all_trends(data, show_column_in_name=True)
         plots.append(html.Div(children=[all_key_trends]))
@@ -254,11 +270,19 @@ def update_tab_3(column):
 
 @dash_app1.callback(
     Output(component_id="tab-4-results", component_property="children"),
-    [Input(component_id="batch-choice-4", component_property="value")],
+    [
+        Input(component_id="batch-choice-4", component_property="value"),
+        Input(component_id="live-refresh-cat", component_property="n_intervals"),
+    ],
 )
-def update_tab_4(batch):
+def update_tab_4(batch, n_intervals):
     data = select_data(
-        session["project"], column=None, batch=batch, url=session["db_url"]
+        session["project"],
+        column=None,
+        batch=batch,
+        url=session["db_url"],
+        live_update=True,
+        n_intervals=n_intervals,
     )
     type_plot = create_type_plots(data[(data["metric"] == "dtype")].copy())
     missing_plot = bar_plot_missing(
