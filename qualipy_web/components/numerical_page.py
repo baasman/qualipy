@@ -4,6 +4,9 @@ from plotly.subplots import make_subplots
 import plotly.graph_objs as go
 
 from qualipy.util import set_value_type
+from qualipy.anomaly_detection import LoadedModel
+
+import traceback
 
 
 def all_trends(data, show_column_in_name=False):
@@ -25,6 +28,19 @@ def all_trends(data, show_column_in_name=False):
     for row, (name, group) in enumerate(df.groupby("metric_name"), start=1):
         x = group.date
         group = set_value_type(group)
+        try:
+            mod = LoadedModel()
+            mod.load(
+                "vmstat_pc_analysis",
+                group.column_name.values[0],
+                group.metric.values[0],
+                group.arguments.values[0],
+            )
+            preds = mod.predict(group.value.values.reshape((1, -1)))
+            print(preds)
+        except:
+            print(traceback.format_exc())
+            pass
         fig.append_trace(go.Scatter(x=x, y=group.value.values), row=row, col=1)
 
     fig["layout"].update(

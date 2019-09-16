@@ -11,7 +11,7 @@ import uuid
 from qualipy.backends.pandas_backend.generator import BackendPandas
 from qualipy.backends.pandas_backend.functions import is_unique, percentage_missing
 from qualipy.database import create_table, get_table, create_alert_table
-from qualipy.anomaly_detection import find_anomalies_by_std
+from qualipy.anomaly_detection import AnomalyModel, LoadedModel
 from qualipy.exceptions import FailException, NullableError
 from qualipy.config import STANDARD_VIZ_STATIC, STANDARD_VIZ_DYNAMIC
 from qualipy.backends.pandas_backend.pandas_types import (
@@ -78,7 +78,6 @@ def set_standard_viz_params(
     return standard_viz, is_static
 
 
-# TODO: set up key metric page
 class DataSet(object):
     def __init__(
         self,
@@ -87,6 +86,7 @@ class DataSet(object):
         time_of_run: Optional[datetime.datetime] = None,
         batch_name: str = None,
         spark_context=None,
+        train_anomaly: bool = False,
     ):
         self.project = project
         self.time_of_run = (
@@ -98,6 +98,7 @@ class DataSet(object):
         self.generator = GENERATORS[backend]()
 
         self.spark_context = spark_context
+        self.train_anomaly = train_anomaly
 
         self._locate_history_data()
         self._get_alerts()
@@ -181,15 +182,6 @@ class DataSet(object):
                 measures.append(result)
 
         self.current_run = pd.DataFrame(measures)
-        for col, specs in self.project.columns.items():
-            for function_name, function in specs["functions"].items():
-                if function.anomaly:
-                    anomalies.append(
-                        self.get_alerts(
-                            column_name=col, function_name=function_name, std_away=2
-                        )
-                    )
-
         measures = self._get_general_info(measures)
         self._write(measures)
 

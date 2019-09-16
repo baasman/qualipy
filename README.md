@@ -84,11 +84,8 @@ and give it a batch name to identify it in the dashboard.
 
 ## Running the webapp
 ```bash
-cd web/
-
-sudo docker build -t qualipy:latest .
-
-sudo docker run -it -p 5006:5005 --mount type=bind,source=/home/<username>/.qualipy-prod/,target=/root/.qualipy qualipy:latest /bin/bash
+qualipy run
 ```
+See `qualipy run --help` for help
 
 

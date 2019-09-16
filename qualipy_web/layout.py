@@ -34,7 +34,7 @@ def generate_layout(
         numerical_html.append(html.Br())
         numerical_html.append(html.A("Home", href="/index", target="_blank"))
         numerical_html.append(
-            dcc.Interval(id="live-refresh-num", interval=10000, n_intervals=0)
+            dcc.Interval(id="live-refresh-num", interval=100000, n_intervals=0)
         )
     else:
         numerical_html.append(
