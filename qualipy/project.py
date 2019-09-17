@@ -19,6 +19,10 @@ from typing import List, Optional, Union, Dict, Callable
 from sqlalchemy import engine, create_engine
 
 
+def _validate_project_name(project_name):
+    assert "-" not in project_name
+
+
 class Project(object):
     def __init__(
         self,
@@ -26,6 +30,7 @@ class Project(object):
         engine: Optional[engine.base.Engine] = None,
         config_dir: str = None,
     ):
+        _validate_project_name(project_name)
         self.project_name = project_name
         self.alert_table_name = "{}_alerts".format(self.project_name)
         self.value_table = "{}_values".format(self.project_name)

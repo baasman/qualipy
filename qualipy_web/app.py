@@ -34,8 +34,29 @@ from qualipy_web.components.standard_viz_static_page import heatmap
 from qualipy.database import get_table, get_project_table, get_last_time
 from qualipy.util import set_value_type
 
+### Middleware
+
+
+class PrefixMiddleware(object):
+    def __init__(self, app_mw, prefix=""):
+        self.app = app_mw
+        self.prefix = prefix
+
+    def __call__(self, environ, start_response):
+
+        if environ["PATH_INFO"].startswith(self.prefix):
+            environ["PATH_INFO"] = environ["PATH_INFO"][len(self.prefix) :]
+            environ["SCRIPT_NAME"] = self.prefix
+            return self.app(environ, start_response)
+        else:
+            start_response("404", [("Content-Type", "text/plain")])
+            return ["This url does not belong to the app.".encode()]
+
+
+###
 
 server = flask.Flask(__name__)
+# server.wsgi_app = PrefixMiddleware(server.wsgi_app, prefix="/qualipy")
 load_dotenv()
 
 server.config.from_object(Config)
@@ -205,7 +226,9 @@ def update_tab_2(column, view, n_intervals):
                     id="trend-plots-{}".format(idx),
                     children=[
                         html.H3("{}-{}".format(column, metric_title, id="plot-header")),
-                        create_trend_line(plot_data, column, metric),
+                        create_trend_line(
+                            plot_data, column, metric, project_name=session["project"]
+                        ),
                         histogram(plot_data, column, metric),
                     ],
                 )
@@ -253,7 +276,8 @@ def update_tab_3(column):
 
     plots = {"value_counts": create_value_count_area_chart}
     dynamic_plots = []
-    for metric in data.metric.values:
+    # TODO: have to completely rework this
+    for metric in data.metric.unique():
         plot_data = data[data.metric == metric]
         plot = plots[metric](plot_data, column)
         dynamic_plots.append(plot)

@@ -25,7 +25,7 @@ class AnomalyModel(object):
         self, model="IsolationForest", args=None, config_loc=default_config_path
     ):
         self.args = (
-            {"behaviour": "new", "contamination": "auto", "n_estimators": 50}
+            {"behaviour": "new", "contamination": 0.03, "n_estimators": 50}
             if args is None
             else args
         )

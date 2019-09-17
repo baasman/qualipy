@@ -17,6 +17,7 @@ def all_trends(data, show_column_in_name=False):
     if show_column_in_name:
         df.metric_name = df.metric_name + "-" + df.column_name
     col_name = df.column_name.values[0]
+    df = df.sort_values(["metric_name", "date"])
     fig = make_subplots(
         rows=df.metric_name.nunique(),
         cols=1,
@@ -28,17 +29,19 @@ def all_trends(data, show_column_in_name=False):
     for row, (name, group) in enumerate(df.groupby("metric_name"), start=1):
         x = group.date
         group = set_value_type(group)
+        print(name)
+        print(group.value.values)
         fig.append_trace(go.Scatter(x=x, y=group.value.values), row=row, col=1)
 
     fig["layout"].update(
-        title_text="All Numerical Trends - {}".format(col_name), showlegend=False
+        title_text="All Numerical Trends".format(col_name), showlegend=False
     )
 
     plot = dcc.Graph(id="all-num-aggs-{}".format(col_name), figure=fig)
     return plot
 
 
-def create_trend_line(data, var, metric):
+def create_trend_line(data, var, metric, project_name=None):
     title = "{}_{}".format(var, data.arguments.iloc[0])
     main_line = data.value
     mean = main_line.mean()
@@ -54,7 +57,7 @@ def create_trend_line(data, var, metric):
     try:
         mod = LoadedModel()
         mod.load(
-            "vmstat_pc_analysis",
+            project_name,
             data.column_name.values[0],
             data.metric.values[0],
             data.arguments.values[0],
