@@ -28,19 +28,6 @@ def all_trends(data, show_column_in_name=False):
     for row, (name, group) in enumerate(df.groupby("metric_name"), start=1):
         x = group.date
         group = set_value_type(group)
-        try:
-            mod = LoadedModel()
-            mod.load(
-                "vmstat_pc_analysis",
-                group.column_name.values[0],
-                group.metric.values[0],
-                group.arguments.values[0],
-            )
-            preds = mod.predict(group.value.values.reshape((1, -1)))
-            print(preds)
-        except:
-            print(traceback.format_exc())
-            pass
         fig.append_trace(go.Scatter(x=x, y=group.value.values), row=row, col=1)
 
     fig["layout"].update(
@@ -64,6 +51,23 @@ def create_trend_line(data, var, metric):
 
     x_axis = data["date"]
 
+    try:
+        mod = LoadedModel()
+        mod.load(
+            "vmstat_pc_analysis",
+            data.column_name.values[0],
+            data.metric.values[0],
+            data.arguments.values[0],
+        )
+        preds = mod.predict(data.value.values.reshape((-1, 1)))  # + np.finfo(float).eps
+        outlier_points = [
+            j if i == -1 else np.NaN for i, j in zip(preds, data.value.values)
+        ]
+        print(outlier_points)
+    except:
+        print(traceback.format_exc())
+        outlier_points = np.repeat(np.NaN, main_line.shape[0])
+
     plot = dcc.Graph(
         id="num-data-graph-{}-{}".format(title, metric),
         figure={
@@ -77,6 +81,13 @@ def create_trend_line(data, var, metric):
                         "dash": "dot",
                         "width": 1.5,
                     },
+                },
+                {
+                    "y": outlier_points,
+                    "x": x_axis,
+                    "name": "Outliers",
+                    "mode": "markers",
+                    "marker": {"color": "rgb(164, 4, 4)", "size": 10},
                 },
                 {
                     "y": mean_line,

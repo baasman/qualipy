@@ -77,7 +77,7 @@ class RunModels(object):
             print(metric_name)
             mod = AnomalyModel()
             try:
-                mod.train(data.value.values.reshape((1, -1)))
+                mod.train(data.value.values.reshape((-1, 1)))
                 mod.save(
                     self.project.project_name,
                     data.column_name.values[0],

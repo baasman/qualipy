@@ -417,6 +417,7 @@ def index():
             full_data["type"] == "standard_viz_dynamic"
         ].column_name.unique()
         boolean_options = full_data[full_data["type"] == "boolean"].column_name.unique()
+        interval_time = config.get("interval_time", 100000)
 
         dash_app1.layout = html.Div(
             id="total-div",
@@ -425,6 +426,7 @@ def index():
                 numerical_column_options=numerical_options,
                 standard_viz_dynamic_options=standard_viz_dynamic_options,
                 boolean_options=boolean_options,
+                interval_time=interval_time,
             ),
         )
         return redirect(url_for("render_dashboard"))

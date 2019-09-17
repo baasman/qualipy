@@ -2,9 +2,17 @@ import dash_html_components as html
 import dash_core_components as dcc
 from qualipy_web.dash_components import column_choice, batch_choice, view_style
 
+import pandas as pd
+
+from typing import List
+
 
 def generate_layout(
-    data, numerical_column_options, standard_viz_dynamic_options, boolean_options
+    data: pd.DataFrame,
+    numerical_column_options: List[str],
+    standard_viz_dynamic_options: List[str],
+    boolean_options: List[str],
+    interval_time: int,
 ):
 
     children = []
@@ -15,7 +23,9 @@ def generate_layout(
     overview_html.append(html.Div(id="overview-page-results"))
     overview_html.append(html.Br())
     overview_html.append(html.A("Home", href="/index", target="_blank"))
-    overview_html.append(dcc.Interval(id="live-refresh", interval=10000, n_intervals=0))
+    overview_html.append(
+        dcc.Interval(id="live-refresh", interval=interval_time, n_intervals=0)
+    )
     children.append(dcc.Tab(label="Overview", value="tab-1", children=overview_html))
 
     # Numerical aggregate trends
@@ -34,7 +44,7 @@ def generate_layout(
         numerical_html.append(html.Br())
         numerical_html.append(html.A("Home", href="/index", target="_blank"))
         numerical_html.append(
-            dcc.Interval(id="live-refresh-num", interval=100000, n_intervals=0)
+            dcc.Interval(id="live-refresh-num", interval=interval_time, n_intervals=0)
         )
     else:
         numerical_html.append(
@@ -74,7 +84,9 @@ def generate_layout(
     tab4_html.append(html.Div(id="tab-4-results"))
     tab4_html.append(html.Br())
     tab4_html.append(html.A("Home", href="/index", target="_blank"))
-    tab4_html.append(dcc.Interval(id="live-refresh-cat", interval=10000, n_intervals=0))
+    tab4_html.append(
+        dcc.Interval(id="live-refresh-cat", interval=interval_time, n_intervals=0)
+    )
     children.append(
         dcc.Tab(label="Data Characteristics", value="tab-4", children=tab4_html)
     )
