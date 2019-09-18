@@ -426,7 +426,7 @@ def index():
         column_options = projects[button_pressed]["columns"]
         session["column_options"] = column_options
         url = projects[button_pressed].get("db", None)
-        if "db_url" in config and not url:
+        if "db_url" in config:
             url = config["db_url"]
         if url is None:
             raise ValueError
@@ -475,4 +475,4 @@ dash_app1.css.append_css(
 )
 
 if __name__ == "__main__":
-    run_simple("localhost", 5006, app, use_reloader=True, use_debugger=True)
+    run_simple("localhost", 5007, app, use_reloader=True, use_debugger=True)

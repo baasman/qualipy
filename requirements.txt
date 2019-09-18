@@ -5,3 +5,4 @@ sqlalchemy
 flask
 dash
 python-dotenv
+scikit-learn

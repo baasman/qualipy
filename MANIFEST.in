@@ -1,1 +1,3 @@
 include requirements.txt
+graft qualipy_web/assets
+graft qualipy_web/templates

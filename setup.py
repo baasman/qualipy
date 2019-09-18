@@ -41,4 +41,5 @@ setup(
             [console_scripts]
             qualipy=qualipy.cli:qualipy
         """,
+    include_package_data=True,
 )

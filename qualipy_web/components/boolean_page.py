@@ -38,7 +38,7 @@ def boolean_plot(data):
             falses = [np.NaN if i else idx for i in vals]
             traces.append(
                 dict(
-                    x=batch_names,
+                    x=x,
                     y=trues,
                     mode="markers",
                     name="True",
@@ -49,7 +49,7 @@ def boolean_plot(data):
             )
             traces.append(
                 dict(
-                    x=batch_names,
+                    x=x,
                     y=falses,
                     mode="markers",
                     text=x,
