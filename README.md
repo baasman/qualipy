@@ -88,4 +88,12 @@ qualipy run
 ```
 See `qualipy run --help` for help
 
+## Training the anomaly models
+Qualipy will train anomaly models for each numerical aggregate you are tracking. For now,
+Qualipy will only train a simplistic Isolation Forest, though more models
+are planned for improved anomaly catching.
+```bash
+qualipy train-anomaly --project_name iris
+```
+See `qualipy train-anomaly --help` for help
 

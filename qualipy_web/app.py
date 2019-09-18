@@ -425,10 +425,12 @@ def index():
         session["project"] = button_pressed
         column_options = projects[button_pressed]["columns"]
         session["column_options"] = column_options
-        if "db_url" in config:
+        url = projects[button_pressed].get("db", None)
+        if "db_url" in config and not url:
             url = config["db_url"]
-        else:
-            url = projects[button_pressed].get("db")
+        if url is None:
+            raise ValueError
+
         session["db_url"] = url
         session["schema"] = projects[button_pressed]["schema"]
 

@@ -9,7 +9,7 @@ def create_simple_line_plot_subplots(data):
     data2 = data[(data["column_name"] == "columns") & (data["metric"] == "count")]
     data_values1 = data1["value"].values
     data_values2 = data2["value"].values
-    x = data1["batch_name"]
+    x = data1["date"]
 
     fig = tools.make_subplots(
         rows=2, cols=1, shared_xaxes=True, shared_yaxes=False, vertical_spacing=0.01
