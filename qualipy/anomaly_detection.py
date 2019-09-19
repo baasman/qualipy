@@ -41,6 +41,7 @@ class AnomalyModel(object):
         file_name = create_file_name(
             self.model_dir, project_name, col_name, metric_name, arguments
         )
+        print(f"Writing anomaly model to {file_name}")
         joblib.dump(self.anom_model, file_name)
 
 
@@ -52,6 +53,7 @@ class LoadedModel(object):
         file_name = create_file_name(
             self.model_dir, project_name, col_name, metric_name, arguments
         )
+        print(f"Loading model from {file_name}")
         self.anom_model = joblib.load(file_name)
 
     def predict(self, test_data):
@@ -60,6 +62,7 @@ class LoadedModel(object):
 
 class RunModels(object):
     def __init__(self, project_name, engine, config_dir=default_config_path):
+        self.config_dir = config_dir
         self.project = Project(project_name, engine, config_dir=config_dir)
 
     def train_all(self):
@@ -75,7 +78,7 @@ class RunModels(object):
         )
         for metric_name, data in df.groupby("metric_name"):
             print(metric_name)
-            mod = AnomalyModel()
+            mod = AnomalyModel(config_loc=self.config_dir)
             try:
                 mod.train(data.value.values.reshape((-1, 1)))
                 mod.save(

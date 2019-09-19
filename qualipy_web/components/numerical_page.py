@@ -39,7 +39,7 @@ def all_trends(data, show_column_in_name=False):
     return plot
 
 
-def create_trend_line(data, var, metric, project_name=None):
+def create_trend_line(data, var, metric, project_name=None, config_dir=None):
     title = "{}_{}".format(var, data.arguments.iloc[0])
     main_line = data.value
     mean = main_line.mean()
@@ -53,7 +53,7 @@ def create_trend_line(data, var, metric, project_name=None):
     x_axis = data["date"]
 
     try:
-        mod = LoadedModel()
+        mod = LoadedModel(config_loc=config_dir)
         mod.load(
             project_name,
             data.column_name.values[0],
@@ -64,7 +64,6 @@ def create_trend_line(data, var, metric, project_name=None):
         outlier_points = [
             j if i == -1 else np.NaN for i, j in zip(preds, data.value.values)
         ]
-        print(outlier_points)
     except:
         print(traceback.format_exc())
         outlier_points = np.repeat(np.NaN, main_line.shape[0])

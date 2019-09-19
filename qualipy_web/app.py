@@ -227,7 +227,11 @@ def update_tab_2(column, view, n_intervals):
                     children=[
                         html.H3("{}-{}".format(column, metric_title, id="plot-header")),
                         create_trend_line(
-                            plot_data, column, metric, project_name=session["project"]
+                            plot_data,
+                            column,
+                            metric,
+                            project_name=session["project"],
+                            config_dir=os.path.dirname(session["config_file"]),
                         ),
                         histogram(plot_data, column, metric),
                     ],
@@ -419,6 +423,7 @@ def index():
 
     with open(config_file, "r") as f:
         config = json.loads(f.read())
+    session["config_file"] = config_file
 
     if request.method == "POST":
         button_pressed = list(request.form.to_dict(flat=False).keys())[0]
