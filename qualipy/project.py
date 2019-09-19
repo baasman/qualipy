@@ -23,6 +23,14 @@ def _validate_project_name(project_name):
     assert "-" not in project_name
 
 
+def create_qualipy_folder(config_dir):
+    if not os.path.exists(config_dir):
+        os.makedirs(config_dir, exist_ok=True)
+        with open(os.path.join(config_dir, "config.json"), "w") as f:
+            json.dump({"interval_time": 100000}, f)
+        os.makedirs(os.path.join(config_dir, "models"), exist_ok=True)
+
+
 class Project(object):
     def __init__(
         self,
@@ -39,6 +47,7 @@ class Project(object):
         self.config_dir = (
             os.path.join(HOME, ".qualipy") if config_dir is None else config_dir
         )
+        create_qualipy_folder(self.config_dir)
         if engine is None:
             self.engine = create_engine(
                 "sqlite:///{}".format(os.path.join(HOME, ".qualipy", "qualipy.db"))

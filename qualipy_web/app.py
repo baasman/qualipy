@@ -411,7 +411,7 @@ def index():
     )
 
     config_file = os.getenv(
-        "CONFIG_FILE", os.path.join(HOME, ".qualipy", "config.json")
+        "QUALIPY_CONFIG_FILE", os.path.join(HOME, ".qualipy", "config.json")
     )
 
     with open(project_file, "r") as f:

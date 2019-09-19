@@ -36,6 +36,7 @@ def run(port, debug, ip, db, config):
         loaded_config["db_url"] = db
         with open(config, "w") as file:
             json.dump(loaded_config, file)
+        os.environ["QUALIPY_CONFIG_FILE"] = config
 
     run_simple(ip, port, app, use_reloader=False, use_debugger=debug)
 
