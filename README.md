@@ -96,7 +96,7 @@ and give it a batch name to identify it in the dashboard.
 
 ## Running the webapp
 ```bash
-qualipy run
+qualipy run --config /tmp/.qualipy/config.json
 ```
 See `qualipy run --help` for help
 

@@ -88,5 +88,4 @@ class RunModels(object):
                     data.arguments.values[0],
                 )
             except ValueError:
-                print(traceback.format_exc())
                 warnings.warn(f"Unable to create anomaly model for {metric_name}")

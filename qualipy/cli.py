@@ -28,15 +28,22 @@ def qualipy():
     help="The standard connection string used by SqlAlchemy. "
     "Has to be identical to where the data is stored",
 )
-@click.option("--config", default=os.path.join(HOME, ".qualipy", "config.json"))
-def run(port, debug, ip, db, config):
+@click.option(
+    "--config_dir",
+    default=os.path.join(HOME, ".qualipy"),
+    help="The path of the config file located in your respective .qualipy folder",
+)
+def run(port, debug, ip, db, config_dir):
+    config_file = os.path.join(config_dir, "config.json")
+    project_file = os.path.join(config_dir, "projects.json")
     if db is not None:
-        with open(config, "r") as file:
+        with open(config_file, "r") as file:
             loaded_config = json.load(file)
         loaded_config["db_url"] = db
-        with open(config, "w") as file:
+        with open(config_file, "w") as file:
             json.dump(loaded_config, file)
-        os.environ["QUALIPY_CONFIG_FILE"] = config
+    os.environ["QUALIPY_CONFIG_FILE"] = config_file
+    os.environ["PROJECT_CONFIG_FILE"] = project_file
 
     run_simple(ip, port, app, use_reloader=False, use_debugger=debug)
 

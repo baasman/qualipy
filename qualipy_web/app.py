@@ -411,7 +411,7 @@ def index():
     session.clear()
 
     project_file = os.getenv(
-        "PROJECT_FILE", os.path.join(HOME, ".qualipy", "projects.json")
+        "QUALIPY_PROJECT_FILE", os.path.join(HOME, ".qualipy", "projects.json")
     )
 
     config_file = os.getenv(

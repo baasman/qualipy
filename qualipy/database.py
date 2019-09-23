@@ -122,7 +122,8 @@ def _unpickle(row):
 def get_project_table(engine, project_name: str, last_date: str = None) -> pd.DataFrame:
     data = get_all_values(engine, project_name, last_date)
     data = data.drop("valueID", axis=1)
-    data.value = data.apply(lambda r: _unpickle(r), axis=1)
+    if data.shape[0] > 0:
+        data.value = data.apply(lambda r: _unpickle(r), axis=1)
     return data
 
 

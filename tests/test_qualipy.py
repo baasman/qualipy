@@ -48,7 +48,7 @@ def db():
 @pytest.fixture
 def project(db):
     path = os.path.join(os.path.dirname(os.path.realpath(__file__)))
-    yield Project(project_name="test", engine=db, reset_config=True, config_dir=path)
+    yield Project(project_name="test", engine=db, config_dir=path)
     try:
         os.remove(os.path.join(path, "projects.json"))
     except:
@@ -105,17 +105,19 @@ def test_default_checks_done(data, project):
     ds.run()
 
     hist_data = project.get_project_table()
-    assert hist_data[hist_data.metric == "perc_missing"].value.values[0] == 0
     assert (
-        hist_data[
-            (hist_data.metric == "count") & (hist_data.column_name == "rows")
-        ].value.values[0]
+        hist_data[hist_data.metric == "perc_missing"].value.astype(float).values[0] == 0
+    )
+    assert (
+        hist_data[(hist_data.metric == "count") & (hist_data.column_name == "rows")]
+        .value.astype(int)
+        .values[0]
         == 3
     )
     assert (
-        hist_data[
-            (hist_data.metric == "count") & (hist_data.column_name == "columns")
-        ].value.values[0]
+        hist_data[(hist_data.metric == "count") & (hist_data.column_name == "columns")]
+        .value.astype(int)
+        .values[0]
         == 3
     )
     assert hist_data[hist_data.metric == "dtype"].value.values[0] == "int64"
