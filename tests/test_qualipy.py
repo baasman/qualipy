@@ -91,6 +91,22 @@ def test_project_file(data, project):
 
     assert "test" in project_file
 
+    project.delete_from_project_config()
+
+    with open(os.path.join(project.config_dir, "projects.json"), "r") as f:
+        project_file = json.loads(f.read())
+
+    assert "test" not in project_file
+
+    project.add_to_project_list(
+        schema={"integer_col": {"unique": False, "dtype": "int32", "nullable": True}}
+    )
+
+    with open(os.path.join(project.config_dir, "projects.json"), "r") as f:
+        project_file = json.loads(f.read())
+
+    assert "test" in project_file
+
 
 def test_default_checks_done(data, project):
     class TestCol(Column):
@@ -230,7 +246,7 @@ def test_function_call_without_arguments(data, project):
     ds.run()
 
     hist_data = project.get_project_table()
-    assert hist_data[hist_data.metric == "mean"].value.values[0] == 2.0
+    assert hist_data[hist_data.metric == "mean"].value.astype(float).values[0] == 2.0
 
 
 def test_function_call_without_arguments_dict_style(data, project):
@@ -248,7 +264,7 @@ def test_function_call_without_arguments_dict_style(data, project):
     ds.run()
 
     hist_data = project.get_project_table()
-    assert hist_data[hist_data.metric == "mean"].value.values[0] == 2.0
+    assert hist_data[hist_data.metric == "mean"].value.astype(float).values[0] == 2.0
 
 
 def test_function_call_with_arguments(data, project):
@@ -266,7 +282,10 @@ def test_function_call_with_arguments(data, project):
     ds.run()
 
     hist_data = project.get_project_table()
-    assert hist_data[hist_data.metric == "number_of_outliers"].value.values[0] == 0
+    assert (
+        hist_data[hist_data.metric == "number_of_outliers"].value.astype(int).values[0]
+        == 0
+    )
 
 
 ###### multiple columns #############

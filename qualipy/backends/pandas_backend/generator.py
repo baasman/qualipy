@@ -79,7 +79,7 @@ class BackendPandas(BackendBase):
     @staticmethod
     def set_schema(
         data: pd.DataFrame, columns: Dict[str, Column]
-    ) -> Dict[str, Union[bool, str]]:
+    ) -> Dict[str, Dict[str, Union[bool, str]]]:
         schema = {
             col: {
                 "nullable": info["null"],

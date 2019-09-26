@@ -38,8 +38,8 @@ def mean(data, column):
 
 
 @function(return_format=float)
-def std(data, column):
-    return data[column].std()
+def percentage_missing(data, column):
+    return data[column].isnull().sum() / data.shape[0]
 
 
 class MyCol(Column):
@@ -53,20 +53,21 @@ class MyCol(Column):
 
     functions = [
         {"function": mean, "parameters": {}},
-        {"function": std, "parameters": {}},
+        {"function": percentage_missing, "parameters": {}},
     ]
 
 
 engine = create_engine("sqlite:////tmp/example.db")
 
-project = Project(project_name="iris", engine=engine, config_dir='/tmp/.qualipy')
+project = Project(project_name="iris", engine=engine, config_dir="/tmp/.qualipy")
 project.delete_data()
+project.get_project_table()
 project.add_column(MyCol())
-
 
 dt_range = pd.date_range("2019-01-01", "2019-02-01", freq="1D")
 for dt in dt_range:
     data = pd.DataFrame({"my_col": np.random.normal(10, 1, 10)})
+    data.loc[np.random.choice([True, False], size=data.shape[0]), "my_col"] = np.NaN
     ds = DataSet(project=project, batch_name=str(dt), time_of_run=dt)
     ds.set_dataset(data)
     ds.run()
@@ -96,7 +97,7 @@ and give it a batch name to identify it in the dashboard.
 
 ## Running the webapp
 ```bash
-qualipy run --config /tmp/.qualipy/config.json
+qualipy run --config_dir /tmp/.qualipy
 ```
 See `qualipy run --help` for help
 

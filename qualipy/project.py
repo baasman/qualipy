@@ -105,7 +105,7 @@ class Project(object):
             json.dump(projects, f)
 
     def add_to_project_list(
-        self, schema: Dict[str, str], reset_config: bool = False
+        self, schema: Dict[str, Dict[str, Union[str, bool]]], reset_config: bool = False
     ) -> None:
         project_file_path = os.path.join(self.config_dir, "projects.json")
         try:
