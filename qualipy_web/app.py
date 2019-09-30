@@ -3,14 +3,17 @@ from werkzeug.serving import run_simple
 import flask
 from flask.cli import load_dotenv
 from flask import request, url_for, render_template, redirect, session
+from flask_caching import Cache
 from dash import Dash
 import dash_html_components as html
 from dash.dependencies import Input, Output
 import pandas as pd
 from sqlalchemy import create_engine
+import pyarrow as pa
 
 import os
 import json
+import uuid
 
 from qualipy_web.config import Config
 from qualipy_web.components.data_characteristic_page import (
@@ -34,6 +37,7 @@ from qualipy_web.components.standard_viz_static_page import heatmap
 from qualipy.database import get_table, get_project_table, get_last_time
 from qualipy.util import set_value_type
 
+
 ### Middleware
 
 
@@ -56,12 +60,28 @@ class PrefixMiddleware(object):
 ###
 
 server = flask.Flask(__name__)
+
 # server.wsgi_app = PrefixMiddleware(server.wsgi_app, prefix="/qualipy")
 load_dotenv()
 
 server.config.from_object(Config)
-server.config.update(DEBUG=True, SECRET_KEY="supersecrit")
+server.config.update(
+    DEBUG=True, SECRET_KEY="supersecrit", CACHE_TYPE="redis", CACHE_DEFAULT_TIMEOUT=300
+)
+cache = Cache(server)
 config = Config()
+
+### caching
+
+context = pa.default_serialization_context()
+
+
+def cache_dataframe(dataframe, session):
+    cache.set(session, context.serialize(dataframe).to_buffer().to_pybytes())
+
+
+def get_cached_dataframe(session):
+    return context.deserialize(cache.get(session))
 
 
 HOME = os.path.expanduser("~")
@@ -72,14 +92,20 @@ dash_app1.config["suppress_callback_exceptions"] = True
 dash_app1.layout = html.Div([])
 
 full_data = pd.DataFrame()
-last_date = None
+cache.set("last_date", None)
 
 
 def select_data(
-    project, column=None, batch=None, url=None, live_update=False, n_intervals=0
+    project,
+    column=None,
+    batch=None,
+    url=None,
+    live_update=False,
+    n_intervals=0,
+    session_id=None,
 ):
     global full_data
-    global last_date
+    last_date = cache.get("last_date")
     data = full_data.copy()
     engine = create_engine(url)
 
@@ -95,6 +121,7 @@ def select_data(
 
     if n_intervals == 0:
         last_date = pd.to_datetime(data.insert_time.iloc[-1]) + pd.Timedelta(seconds=3)
+        cache.set("last_date", last_date)
     if live_update and n_intervals > 0:
         new_last_time = pd.to_datetime(get_last_time(engine, project))
         if new_last_time > last_date:
@@ -102,7 +129,8 @@ def select_data(
             data = pd.concat([data, new_data])
 
             full_data = data
-            last_date = new_last_time
+            # last_date = new_last_time
+            cache.set("last_date", new_last_time)
 
     if column is not None:
         if not isinstance(column, str):
@@ -134,9 +162,10 @@ def select_data(
     [
         Input(component_id="placeholder", component_property="n_clicks"),
         Input(component_id="live-refresh", component_property="n_intervals"),
+        Input(component_id="session-id", component_property="children"),
     ],
 )
-def update_tab_1(n_clicks, n_intervals):
+def update_tab_1(n_clicks, n_intervals, session_id):
     data = select_data(
         session["project"],
         batch="all",
@@ -480,4 +509,7 @@ dash_app1.css.append_css(
 )
 
 if __name__ == "__main__":
+    # warning, app should never be deployed this way - use cli tool
+    os.environ["QUALIPY_PROJECT_FILE"] = os.path.join(HOME, ".qualipy", "projects.json")
+    os.environ["QUALIPY_CONFIG_FILE"] = os.path.join(HOME, ".qualipy", "config.json")
     run_simple("localhost", 5007, app, use_reloader=True, use_debugger=True)

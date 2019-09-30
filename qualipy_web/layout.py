@@ -5,6 +5,7 @@ from qualipy_web.dash_components import column_choice, batch_choice, view_style
 import pandas as pd
 
 from typing import List
+import uuid
 
 
 def generate_layout(
@@ -15,10 +16,15 @@ def generate_layout(
     interval_time: int,
 ):
 
+    session_id = str(uuid.uuid4())
+
     children = []
 
     # General Overview
     overview_html = []
+    overview_html.append(
+        html.Div(session_id, id="session-id", style={"display": "none"})
+    )
     overview_html.append(html.Br(id="placeholder"))
     overview_html.append(html.Div(id="overview-page-results"))
     overview_html.append(html.Br())

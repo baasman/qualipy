@@ -16,4 +16,3 @@ class Config(object):
             _config = {}
         for k, v in _config.items():
             setattr(self, k.upper(), v)
-        self.REDIS_PORT = 6379
