@@ -3,6 +3,7 @@ from qualipy.project import Project
 from sklearn.ensemble import IsolationForest
 import joblib
 import numpy as np
+import pandas as pd
 
 import os
 import warnings
@@ -67,7 +68,9 @@ class RunModels(object):
 
     def train_all(self):
         df = self.project.get_project_table()
-        df = df[df["type"] == "numerical"]
+        df = df[
+            (df["type"] == "numerical") | (df["column_name"].isin(["rows", "columns"]))
+        ]
         df.value = df.value.astype(float)
         df["metric_name"] = (
             df.column_name
@@ -89,3 +92,56 @@ class RunModels(object):
                 )
             except ValueError:
                 warnings.warn(f"Unable to create anomaly model for {metric_name}")
+
+
+class GenerateAnomalies(object):
+    def __init__(self, project_name, engine, config_dir=default_config_path):
+        self.config_dir = config_dir
+        self.project = Project(project_name, engine, config_dir=config_dir)
+
+    def create_anom_num_table(self):
+        df = self.project.get_project_table()
+        df = df[
+            (df["type"] == "numerical") | (df["column_name"].isin(["rows", "columns"]))
+        ]
+        df.value = df.value.astype(float)
+        df["metric_name"] = (
+            df.column_name
+            + "_"
+            + df.metric.astype(str)
+            + "_"
+            + np.where(df.arguments.isnull(), "", df.arguments)
+        )
+        all_rows = []
+        for metric_name, data in df.groupby("metric_name"):
+            print(metric_name)
+            try:
+                mod = LoadedModel(config_loc=self.config_dir)
+                mod.load(
+                    self.project.project_name,
+                    data.column_name.values[0],
+                    data.metric.values[0],
+                    data.arguments.values[0],
+                )
+                preds = mod.predict(data.value.values.reshape((-1, 1)))
+                outlier_rows = data[preds == -1]
+                if outlier_rows.shape[0] > 0:
+                    all_rows.append(outlier_rows)
+            except ValueError:
+                warnings.warn(f"Unable to load anomaly model for {metric_name}")
+            except FileNotFoundError:
+                warnings.warn(f"Unable to load anomaly model for {metric_name}")
+        data = pd.concat(all_rows).sort_values("date", ascending=False)
+        data = data[
+            ["column_name", "date", "metric", "arguments", "value", "batch_name"]
+        ]
+        return data
+
+
+if __name__ == "__main__":
+    from sqlalchemy import create_engine
+
+    engine = create_engine("sqlite:////data/baasman/qualipy_dbs/test.db")
+    g = GenerateAnomalies("pat_enc", engine, config_dir="/home/baasman/.qualipy")
+    rows = g.create_anom_num_table()
+    print(rows)

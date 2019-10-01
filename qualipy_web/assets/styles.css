@@ -33,6 +33,15 @@
     text-align: left;
 }
 
+#schema-table {
+    float: left;
+    margin-right: 100px;
+}
+
+#anom-num-table {
+    margin-left: 100px;
+}
+
 
 /*Categorical Page*/
 #d-plots {

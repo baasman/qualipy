@@ -23,7 +23,12 @@ from qualipy_web.components.data_characteristic_page import (
     bar_plot_missing,
 )
 from qualipy_web.layout import generate_layout
-from qualipy_web.components.overview_page import overview_table, schema_table
+from qualipy_web.components.overview_page import (
+    overview_table,
+    schema_table,
+    anomaly_num_data,
+    anomaly_num_table,
+)
 from qualipy_web.components.numerical_page import (
     histogram,
     create_trend_line,
@@ -32,6 +37,7 @@ from qualipy_web.components.numerical_page import (
 from qualipy_web.components.boolean_page import error_check_table, boolean_plot
 from qualipy_web.components.standard_viz_dynamic_page import (
     create_value_count_area_chart,
+    create_prop_change_list,
 )
 from qualipy_web.components.standard_viz_static_page import heatmap
 from qualipy.database import get_table, get_project_table, get_last_time
@@ -66,7 +72,7 @@ load_dotenv()
 
 server.config.from_object(Config)
 server.config.update(
-    DEBUG=True, SECRET_KEY="supersecrit", CACHE_TYPE="redis", CACHE_DEFAULT_TIMEOUT=300
+    DEBUG=True, SECRET_KEY="supersecrit", CACHE_TYPE="simple", CACHE_DEFAULT_TIMEOUT=300
 )
 cache = Cache(server)
 config = Config()
@@ -81,7 +87,10 @@ def cache_dataframe(dataframe, session):
 
 
 def get_cached_dataframe(session):
-    return context.deserialize(cache.get(session))
+    obj = cache.get(session)
+    if obj is None:
+        return obj
+    return context.deserialize(obj)
 
 
 HOME = os.path.expanduser("~")
@@ -209,10 +218,22 @@ def update_tab_1(n_clicks, n_intervals, session_id):
     title_data = html.H4("Data characteristics")
     data_char = overview_table(over_table)
     schema_title = html.H4("Schema")
-    schema = schema_table(schema)
+    schema = html.Div(id="schema-table", children=[schema_title, schema_table(schema)])
+    anomaly_title = html.H4("Anomalies")
+    anom_data = get_cached_dataframe("anom-data")
+    if anom_data is None:
+        anom_data = anomaly_num_data(
+            project_name=session["project"],
+            db_url=session["db_url"],
+            config_dir=os.path.dirname(session["config_file"]),
+        )
+        cache_dataframe(anom_data, "anom-data")
+    anom_table = anomaly_num_table(anom_data)
+    anom_table = html.Div(id="anom-num-table", children=[anomaly_title, anom_table])
+    schema_anom_div = html.Div(id="schema-anom", children=[schema, anom_table])
 
     overview_div = html.Div(
-        id="overview-home", children=[title_data, data_char, schema_title, schema]
+        id="overview-home", children=[title_data, data_char, schema_anom_div]
     )
     page = html.Div(id="home-page", children=[overview_div])
     return page
@@ -314,6 +335,8 @@ def update_tab_3(column):
         plot_data = data[data.metric == metric]
         plot = plots[metric](plot_data, column)
         dynamic_plots.append(plot)
+        prop_change_plot = create_prop_change_list(plot_data, column)
+        dynamic_plots.append(prop_change_plot)
     dynamic_plot_div = html.Div(id="d-plots", children=dynamic_plots)
 
     plot_div = html.Div(
@@ -512,4 +535,4 @@ if __name__ == "__main__":
     # warning, app should never be deployed this way - use cli tool
     os.environ["QUALIPY_PROJECT_FILE"] = os.path.join(HOME, ".qualipy", "projects.json")
     os.environ["QUALIPY_CONFIG_FILE"] = os.path.join(HOME, ".qualipy", "config.json")
-    run_simple("localhost", 5007, app, use_reloader=True, use_debugger=True)
+    run_simple("localhost", 5007, app, use_reloader=False, use_debugger=True)

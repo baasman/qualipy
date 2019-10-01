@@ -6,3 +6,6 @@ flask
 dash
 python-dotenv
 scikit-learn
+flask_caching
+pyarrow
+redis
