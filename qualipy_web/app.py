@@ -226,7 +226,7 @@ def update_tab_1(n_clicks, n_intervals, session_id):
             project_name=session["project"],
             db_url=session["db_url"],
             config_dir=os.path.dirname(session["config_file"]),
-        )
+        ).head(20)
         cache_dataframe(anom_data, "anom-data")
     anom_table = anomaly_num_table(anom_data)
     anom_table = html.Div(id="anom-num-table", children=[anomaly_title, anom_table])

@@ -60,6 +60,7 @@ class Column(object):
     null = True
     force_null = False
     unique = False
+    is_category = False
     functions = []
 
     def _as_dict(self, name: str) -> Dict[str, Any]:
@@ -70,6 +71,7 @@ class Column(object):
             "null": self.null,
             "force_null": self.force_null,
             "unique": self.unique,
+            "is_category": self.is_category,
             "functions": self._get_functions(),
         }
         return dict_

@@ -40,7 +40,6 @@ class Project(object):
     ):
         _validate_project_name(project_name)
         self.project_name = project_name
-        self.alert_table_name = "{}_alerts".format(self.project_name)
         self.value_table = "{}_values".format(self.project_name)
         self.value_custom_table = "{}_values_custom".format(self.project_name)
         self.columns = {}
@@ -57,7 +56,6 @@ class Project(object):
         self._create_table(self.project_name, create_table)
         self._create_table(self.value_table, create_value_table)
         self._create_table(self.value_custom_table, create_custom_value_table)
-        self._create_table(self.alert_table_name, create_alert_table)
 
     def add_column(self, column: Column) -> None:
         if isinstance(column, list):
@@ -91,7 +89,6 @@ class Project(object):
             delete_data(conn, self.project_name, create_table)
             delete_data(conn, self.value_table, create_value_table)
             delete_data(conn, self.value_custom_table, create_custom_value_table)
-            delete_data(conn, self.alert_table_name, create_alert_table)
 
     def delete_from_project_config(self):
         project_file_path = os.path.join(self.config_dir, "projects.json")

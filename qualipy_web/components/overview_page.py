@@ -1,5 +1,6 @@
 import dash_table
 from sqlalchemy import create_engine
+import pandas as pd
 
 from qualipy.anomaly_detection import GenerateAnomalies
 
@@ -26,7 +27,11 @@ def anomaly_num_data(project_name, db_url, config_dir):
     engine = create_engine(db_url)
     generator = GenerateAnomalies(project_name, engine, config_dir)
     num_anomalies = generator.create_anom_num_table()
-    return num_anomalies
+    cat_anomalies = generator.create_anom_cat_table()
+    anomalies = pd.concat([num_anomalies, cat_anomalies]).sort_values(
+        "date", ascending=False
+    )
+    return anomalies
 
 
 def anomaly_num_table(num_anomalies):
@@ -35,4 +40,9 @@ def anomaly_num_table(num_anomalies):
         columns=[{"name": i, "id": i} for i in num_anomalies.columns],
         data=num_anomalies.to_dict("rows"),
         sort_action="native",
+        style_cell={
+            "overflow": "hidden",
+            "textOverflow": "ellipsis",
+            "maxWidth": "250px",
+        },
     )

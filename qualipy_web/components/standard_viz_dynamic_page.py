@@ -4,14 +4,12 @@ import dash_core_components as dcc
 import numpy as np
 import pandas as pd
 
-
-def running_mean(x, N):
-    cumsum = np.cumsum(np.insert(x, 0, 0))
-    return (cumsum[N:] - cumsum[:-N]) / float(N)
+from qualipy.anomaly_detection import AnomalyModel
 
 
 def create_value_count_area_chart(data, var):
-    data_values = data["value"].tolist()
+    # data_values = data["value"].tolist()
+    data_values = [(pd.Series(c) / pd.Series(c).sum()).to_dict() for c in data["value"]]
     traces = []
     unique_vals = reduce(lambda x, y: x.union(y), [set(i.keys()) for i in data_values])
     x = data["date"]
@@ -48,8 +46,26 @@ def create_prop_change_list(data, var):
         potential_lines.append((cat, differences, sum_abs))
     potential_lines = sorted(potential_lines, key=lambda v: v[2], reverse=True)
 
+    try:
+        all_lines = pd.DataFrame({i[0]: i[1] for i in potential_lines})
+        mod = AnomalyModel()
+        outliers = mod.train_predict(all_lines.values[4:])
+        outliers = np.concatenate([np.array([1, 1, 1, 1]), outliers])
+        outliers = [0 if i == -1 else np.NaN for i in outliers]
+    except:
+        outliers = np.repeat(np.NaN, len(data_values))
+
     for line in potential_lines[:5]:
         traces.append(dict(x=data["date"], y=line[1], mode="lines", name=line[0]))
+    traces.append(
+        dict(
+            x=data["date"],
+            y=outliers,
+            name="Outlier",
+            mode="markers",
+            marker=dict(color="rgb(164, 4, 4)", size=10),
+        )
+    )
 
     plot = dcc.Graph(
         id="prop-change-graph-{}".format(var),

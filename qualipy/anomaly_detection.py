@@ -8,6 +8,7 @@ import pandas as pd
 import os
 import warnings
 import traceback
+from functools import reduce
 
 
 mods = {"IsolationForest": IsolationForest}
@@ -26,7 +27,7 @@ class AnomalyModel(object):
         self, model="IsolationForest", args=None, config_loc=default_config_path
     ):
         self.args = (
-            {"behaviour": "new", "contamination": 0.03, "n_estimators": 50}
+            {"behaviour": "new", "contamination": 0.01, "n_estimators": 50}
             if args is None
             else args
         )
@@ -37,6 +38,9 @@ class AnomalyModel(object):
 
     def train(self, train_data):
         self.anom_model.fit(train_data)
+
+    def train_predict(self, train_data):
+        return self.anom_model.fit_predict(train_data)
 
     def save(self, project_name, col_name, metric_name, arguments=None):
         file_name = create_file_name(
@@ -137,11 +141,59 @@ class GenerateAnomalies(object):
         ]
         return data
 
+    def create_anom_cat_table(self):
+        df = self.project.get_project_table()
+        df = df[df["metric"].isin(["value_counts"])]
+        df["metric_name"] = (
+            df.column_name
+            + "_"
+            + df.metric.astype(str)
+            + "_"
+            + np.where(df.arguments.isnull(), "", df.arguments)
+        )
+        all_rows = []
+        for metric_name, data in df.groupby("metric_name"):
+            print(metric_name)
+
+            try:
+                data_values = [
+                    (pd.Series(c) / pd.Series(c).sum()).to_dict() for c in data["value"]
+                ]
+                unique_vals = reduce(
+                    lambda x, y: x.union(y), [set(i.keys()) for i in data_values]
+                )
+                potential_lines = []
+                for cat in unique_vals:
+                    values = pd.Series([i.get(cat, 0) for i in data_values])
+                    running_means = values.rolling(window=5).mean()
+                    differences = values - running_means
+                    sum_abs = np.abs(differences).sum()
+                    potential_lines.append((cat, differences, sum_abs))
+                potential_lines = sorted(
+                    potential_lines, key=lambda v: v[2], reverse=True
+                )
+                all_lines = pd.DataFrame({i[0]: i[1] for i in potential_lines})
+                mod = AnomalyModel()
+                outliers = mod.train_predict(all_lines.values[4:])
+                outliers = np.concatenate([np.array([1, 1, 1, 1]), outliers])
+                outlier_rows = data[outliers == -1]
+                if outlier_rows.shape[0] > 0:
+                    all_rows.append(outlier_rows)
+            except ValueError:
+                pass
+
+        data = pd.concat(all_rows).sort_values("date", ascending=False)
+        data = data[
+            ["column_name", "date", "metric", "arguments", "value", "batch_name"]
+        ]
+        data.value = data.value.astype(str)
+        return data
+
 
 if __name__ == "__main__":
     from sqlalchemy import create_engine
 
     engine = create_engine("sqlite:////data/baasman/qualipy_dbs/test.db")
     g = GenerateAnomalies("pat_enc", engine, config_dir="/home/baasman/.qualipy")
-    rows = g.create_anom_num_table()
+    rows = g.create_anom_cat_table()
     print(rows)

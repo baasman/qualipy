@@ -101,7 +101,6 @@ class DataSet(object):
         self.train_anomaly = train_anomaly
 
         self._locate_history_data()
-        self._get_alerts()
 
     def run(self) -> None:
         self._generate_metrics()
@@ -245,37 +244,3 @@ class DataSet(object):
     def _write(self, measures: Measure) -> None:
         self.generator.write(measures, self.project, self.batch_name)
         self.project.add_to_project_list(self.schema)
-
-    def _get_alerts(self) -> None:
-        self.alert_data = get_table(
-            engine=self.project.engine, table_name=self.project.alert_table_name
-        )
-
-    def get_alerts(self, column_name: str, function_name: str, std_away: int = 3):
-
-        hist_data = self._locate_history_data()
-        hist_data.value = hist_data.value.apply(lambda r: pickle.loads(r))
-
-        nrows = hist_data[
-            (hist_data["column_name"] == column_name)
-            & (hist_data["metric"] == function_name)
-        ].shape[0]
-
-        if nrows < 1000:
-            print("Not enough batches to accurately determine outliers")
-            return
-
-        is_anomaly, value = find_anomalies_by_std(
-            self.current_data, hist_data, column_name, column_name, std_away
-        )
-        if is_anomaly:
-            return {
-                "column": column_name,
-                "std_away": std_away,
-                "value": value,
-                "date": self.time_of_run,
-                "alert_message": "This value is more than {} standard deviations away".format(
-                    std_away
-                ),
-            }
-        return

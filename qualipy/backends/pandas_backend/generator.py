@@ -162,6 +162,9 @@ class BackendPandas(BackendBase):
             )
         else:
             unique = None
+        if specs["is_category"]:
+            # TODO:
+            pass
         perc_missing = BackendPandas.generate_description(
             function=percentage_missing,
             data=data,
