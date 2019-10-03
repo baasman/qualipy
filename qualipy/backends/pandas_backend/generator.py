@@ -2,7 +2,11 @@ from qualipy.exceptions import InvalidReturnValue
 from qualipy.util import get_column
 from qualipy.backends.base import BackendBase
 from qualipy.exceptions import InvalidType
-from qualipy.backends.pandas_backend.functions import is_unique, percentage_missing
+from qualipy.backends.pandas_backend.functions import (
+    is_unique,
+    percentage_missing,
+    value_counts,
+)
 
 import warnings
 import datetime
@@ -163,8 +167,20 @@ class BackendPandas(BackendBase):
         else:
             unique = None
         if specs["is_category"]:
-            # TODO:
-            pass
+            value_props = BackendPandas.generate_description(
+                function=value_counts,
+                data=data,
+                column=col_name,
+                function_name="value_counts",
+                standard_viz=True,
+                date=time_of_run,
+                is_static=True,
+                viz_type="categorical",
+                kwargs={},
+                return_format="dict",
+            )
+        else:
+            value_props = None
         perc_missing = BackendPandas.generate_description(
             function=percentage_missing,
             data=data,
@@ -176,7 +192,7 @@ class BackendPandas(BackendBase):
             viz_type="data-characteristic",
             kwargs={},
         )
-        return unique, perc_missing
+        return unique, perc_missing, value_props
 
     @staticmethod
     def write(measures, project, batch_name):
@@ -192,9 +208,7 @@ class BackendPandas(BackendBase):
         ][["valueID", "value"]]
         value_data.value = value_data.value.astype(str)
 
-        value_data_custom = data[
-            data.type.isin(["standard_viz_dynamic", "standard_viz_static"])
-        ][["valueID", "value"]]
+        value_data_custom = data[data.type.isin(["categorical"])][["valueID", "value"]]
         value_data_custom.value = value_data_custom.value.apply(
             lambda v: pickle.dumps(v)
         )

@@ -11,7 +11,7 @@ import uuid
 def generate_layout(
     data: pd.DataFrame,
     numerical_column_options: List[str],
-    standard_viz_dynamic_options: List[str],
+    categorical_column_options: List[str],
     boolean_options: List[str],
     interval_time: int,
 ):
@@ -60,11 +60,11 @@ def generate_layout(
 
     # Categorical column built-ins
     categorical_html = []
-    if len(standard_viz_dynamic_options) > 0:
+    if len(categorical_column_options) > 0:
         categorical_html.append(html.H5("Column Choice"))
         categorical_html.append(
             column_choice(
-                standard_viz_dynamic_options,
+                categorical_column_options,
                 "categorical-page-col-choice-multi",
                 multi=False,
             )

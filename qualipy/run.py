@@ -186,11 +186,13 @@ class DataSet(object):
 
     def _get_column_specific_general_info(self, specs, measures: Measure):
         col_name = specs["name"]
-        unique, perc_missing = self.generator.generate_column_general_info(
+        unique, perc_missing, value_props = self.generator.generate_column_general_info(
             specs, self.current_data, self.time_of_run
         )
         if unique is not None:
             measures.append(unique)
+        if value_props is not None:
+            measures.append(value_props)
         measures.append(perc_missing)
 
         if perc_missing["value"] > 0 and specs["force_null"] and not specs["null"]:
@@ -230,15 +232,15 @@ class DataSet(object):
             float: "numerical",
             int: "numerical",
             bool: "boolean",
-            dict: "custom",
+            dict: "categorical",
             str: "not_sure",
         }
         viz_type = types[return_format]
-        if viz_type == "custom":
-            if function_name in list(STANDARD_VIZ_STATIC.keys()):
-                viz_type = "standard_viz_static"
-            elif function_name in list(STANDARD_VIZ_DYNAMIC.keys()):
-                viz_type = "standard_viz_dynamic"
+        # if viz_type == "custom":
+        #     if function_name in list(STANDARD_VIZ_STATIC.keys()):
+        #         viz_type = "standard_viz_static"
+        #     elif function_name in list(STANDARD_VIZ_DYNAMIC.keys()):
+        #         viz_type = "standard_viz_dynamic"
         return viz_type
 
     def _write(self, measures: Measure) -> None:

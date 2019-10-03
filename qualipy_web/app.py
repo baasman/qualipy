@@ -326,21 +326,17 @@ def update_tab_2(column, view, n_intervals):
 def update_tab_3(column):
     data = select_data(session["project"], column=column, url=session["db_url"])
 
-    data = data[(data["type"] == "standard_viz_dynamic")]
+    data = data[(data["type"] == "categorical")]
 
-    plots = {"value_counts": create_value_count_area_chart}
-    dynamic_plots = []
-    # TODO: have to completely rework this
-    for metric in data.metric.unique():
-        plot_data = data[data.metric == metric]
-        plot = plots[metric](plot_data, column)
-        dynamic_plots.append(plot)
-        prop_change_plot = create_prop_change_list(plot_data, column)
-        dynamic_plots.append(prop_change_plot)
-    dynamic_plot_div = html.Div(id="d-plots", children=dynamic_plots)
+    cat_plots = []
+    plot = create_value_count_area_chart(data, column)
+    cat_plots.append(plot)
+    prop_change_plot = create_prop_change_list(data, column)
+    cat_plots.append(prop_change_plot)
+    cat_plots_div = html.Div(id="c-plots", children=cat_plots)
 
     plot_div = html.Div(
-        id="value-count-section", children=[html.H3("Plots"), dynamic_plot_div]
+        id="cat-plots-section", children=[html.H3("Plots"), cat_plots_div]
     )
     return plot_div
 
@@ -496,8 +492,8 @@ def index():
         numerical_options = full_data[
             full_data["type"] == "numerical"
         ].column_name.unique()
-        standard_viz_dynamic_options = full_data[
-            full_data["type"] == "standard_viz_dynamic"
+        categorical_column_options = full_data[
+            full_data["type"] == "categorical"
         ].column_name.unique()
         boolean_options = full_data[full_data["type"] == "boolean"].column_name.unique()
         interval_time = config.get("interval_time", 100000)
@@ -507,7 +503,7 @@ def index():
             children=generate_layout(
                 data=full_data,
                 numerical_column_options=numerical_options,
-                standard_viz_dynamic_options=standard_viz_dynamic_options,
+                categorical_column_options=categorical_column_options,
                 boolean_options=boolean_options,
                 interval_time=interval_time,
             ),

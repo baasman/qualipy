@@ -114,7 +114,7 @@ def create_table_if_not_exists(
 
 
 def _unpickle(row):
-    if row["type"] == "standard_viz_static" or row["type"] == "standard_viz_dynamic":
+    if row["return_format"] == "dict":
         return pickle.loads(row["value"])
     return row["value"]
 
