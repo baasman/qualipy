@@ -220,14 +220,15 @@ def update_tab_1(n_clicks, n_intervals, session_id):
     schema_title = html.H4("Schema")
     schema = html.Div(id="schema-table", children=[schema_title, schema_table(schema)])
     anomaly_title = html.H4("Anomalies")
-    anom_data = get_cached_dataframe("anom-data")
+    print(f"session id: {session_id}")
+    anom_data = get_cached_dataframe(session_id)
     if anom_data is None:
         anom_data = anomaly_num_data(
             project_name=session["project"],
             db_url=session["db_url"],
             config_dir=os.path.dirname(session["config_file"]),
-        ).head(20)
-        cache_dataframe(anom_data, "anom-data")
+        ).head(50)
+        cache_dataframe(anom_data, session_id)
     anom_table = anomaly_num_table(anom_data)
     anom_table = html.Div(id="anom-num-table", children=[anomaly_title, anom_table])
     schema_anom_div = html.Div(id="schema-anom", children=[schema, anom_table])
@@ -457,6 +458,7 @@ def index():
     global full_data
 
     session.clear()
+    cache.clear()
 
     project_file = os.getenv(
         "QUALIPY_PROJECT_FILE", os.path.join(HOME, ".qualipy", "projects.json")
@@ -465,6 +467,8 @@ def index():
     config_file = os.getenv(
         "QUALIPY_CONFIG_FILE", os.path.join(HOME, ".qualipy", "config.json")
     )
+    print(project_file)
+    print(config_file)
 
     with open(project_file, "r") as f:
         projects = json.loads(f.read())

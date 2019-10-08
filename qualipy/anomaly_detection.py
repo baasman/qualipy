@@ -154,7 +154,6 @@ class GenerateAnomalies(object):
         all_rows = []
         for metric_name, data in df.groupby("metric_name"):
             print(metric_name)
-
             try:
                 data_values = [
                     (pd.Series(c) / pd.Series(c).sum()).to_dict() for c in data["value"]
@@ -182,11 +181,13 @@ class GenerateAnomalies(object):
             except ValueError:
                 pass
 
-        data = pd.concat(all_rows).sort_values("date", ascending=False)
-        data = data[
-            ["column_name", "date", "metric", "arguments", "value", "batch_name"]
-        ]
-        data.value = data.value.astype(str)
+        columns = ["column_name", "date", "metric", "arguments", "value", "batch_name"]
+        try:
+            data = pd.concat(all_rows).sort_values("date", ascending=False)
+            data = data[columns]
+            data.value = data.value.astype(str)
+        except:
+            data = pd.DataFrame([], columns=columns)
         return data
 
 

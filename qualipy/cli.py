@@ -43,7 +43,7 @@ def run(port, debug, ip, db, config_dir):
         with open(config_file, "w") as file:
             json.dump(loaded_config, file)
     os.environ["QUALIPY_CONFIG_FILE"] = config_file
-    os.environ["PROJECT_CONFIG_FILE"] = project_file
+    os.environ["QUALIPY_PROJECT_FILE"] = project_file
 
     run_simple(ip, port, app, use_reloader=False, use_debugger=debug)
 
