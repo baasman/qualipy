@@ -54,21 +54,6 @@ def create_custom_value_table(conn: engine.base.Connection, table_name: str) -> 
     conn.execute(create_table_query)
 
 
-def create_alert_table(conn: engine.base.Connection, table_name: str) -> None:
-    create_table_query = """
-        create table {} (
-            "column" CHARACTER(20) not null,
-            "std_away" NUMERIC not null,
-            "value" NUMERIC not null,
-            "alert_message" CHARACTER(100) null,
-            "date" DATETIME not null
-        );
-    """.format(
-        table_name
-    )
-    conn.execute(create_table_query)
-
-
 def get_table(engine: engine.base.Engine, table_name: str) -> pd.DataFrame:
     return pd.read_sql("select * from {}".format(table_name), engine)
 

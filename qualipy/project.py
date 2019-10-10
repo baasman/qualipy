@@ -2,13 +2,11 @@ from qualipy.util import HOME
 from qualipy.database import (
     delete_data,
     create_table,
-    create_alert_table,
     create_custom_value_table,
     create_value_table,
-    get_all_values,
     get_project_table,
 )
-from qualipy.column import Column
+from qualipy.column import Column, Table
 
 import json
 import os
@@ -63,6 +61,9 @@ class Project(object):
                 self._add_column(col)
         else:
             self._add_column(column)
+
+    def add_table(self, table: Table, engine: engine.base.Engine) -> None:
+        table._infer_schema(engine)
 
     def _create_table(self, name: str, create_function: Callable):
         with self.engine.connect() as conn:

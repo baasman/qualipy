@@ -3,15 +3,11 @@ import numpy as np
 
 import os
 import datetime
-import pickle
 from typing import Any, Dict, Optional, Union, Dict, List, Callable
 import warnings
-import uuid
 
 from qualipy.backends.pandas_backend.generator import BackendPandas
-from qualipy.backends.pandas_backend.functions import is_unique, percentage_missing
-from qualipy.database import create_table, get_table, create_alert_table
-from qualipy.anomaly_detection import AnomalyModel, LoadedModel
+from qualipy.database import create_table, get_table
 from qualipy.exceptions import FailException, NullableError
 from qualipy.config import STANDARD_VIZ_STATIC, STANDARD_VIZ_DYNAMIC
 from qualipy.backends.pandas_backend.pandas_types import (
@@ -105,9 +101,12 @@ class DataSet(object):
     def run(self) -> None:
         self._generate_metrics()
 
-    def set_dataset(self, df: pd.DataFrame) -> None:
+    def set_dataset(self, df) -> None:
         self.current_data = df
         self.schema = self.generator.set_schema(df, self.project.columns)
+
+    def set_chunked_dataset(self, df, time_freq: str = "1D", time_column: str = None):
+        pass
 
     def _locate_history_data(self) -> pd.DataFrame:
         hist_data = get_table(
@@ -117,7 +116,6 @@ class DataSet(object):
 
     def _generate_metrics(self) -> None:
         measures = []
-        anomalies = []
         types = {float: "float", int: "int", bool: "bool", dict: "dict", str: "str"}
         for col, specs in self.project.columns.items():
 

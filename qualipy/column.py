@@ -1,27 +1,26 @@
 from functools import wraps
 
-import types
 from typing import Any, Dict, List, Callable, Optional, Union
 
+from qualipy._sql import SQLite
+from qualipy.util import copy_function_spec
 
-def copy_func(f: Callable, name: Optional[str] = None) -> Callable:
-    fn = types.FunctionType(
-        f.__code__, f.__globals__, name or f.__name__, f.__defaults__, f.__closure__
-    )
-    fn.__dict__.update(f.__dict__)
-    return fn
+# TODO: definitely need to abstract this
+from qualipy.backends.pandas_backend.pandas_types import FloatType, ObjectType, IntType
+from qualipy.backends.pandas_backend.functions import (
+    mean,
+    std,
+    percentage_missing,
+    value_counts,
+)
 
 
-def copy_function_spec(function: Union[Dict[str, Any], Callable]):
-    if isinstance(function, dict):
-        copied_function = copy_func(function["function"])
-        copied_function.arguments = function.get("parameters", {})
-        copied_function.key_function = function.get("key", False)
-    else:
-        copied_function = copy_func(function)
-        copied_function.arguments = {}
-        copied_function.key_function = False
-    return copied_function
+SQL = {"sqlite": SQLite}
+
+INFER_TYPES = {"float64": FloatType, "int64": IntType, "object": ObjectType}
+
+DEFAULT_NUM_FUNCTIONS = [mean, std, percentage_missing]
+DEFAULT_CAT_FUNCTIONS = [value_counts]
 
 
 def function(
@@ -88,3 +87,28 @@ class Column(object):
                 copied_function = copy_function_spec(func)
                 methods[copied_function.__name__] = copied_function
         return methods
+
+
+class Table(object):
+
+    columns = "all"
+    infer_schema = True
+    table_name = None
+    db = "sqlite"
+
+    def _infer_columns(self, engine):
+        sql = SQL[self.db]
+        row = sql.get_top_row(engine, self.columns, self.table_name)
+        all_columns = {}
+        for col in row.columns:
+            is_cat = True if row[col].dtype.name == "object" else False
+            all_columns[col] = {
+                "name": col,
+                "type": INFER_TYPES[row[col].dtype.name](),
+                "force_type": False,
+                "null": True,
+                "force_null": False,
+                "unique": False,
+                "is_category": is_cat,
+                "functions": DEFAULT_CAT_FUNCTIONS if is_cat else DEFAULT_NUM_FUNCTIONS,
+            }

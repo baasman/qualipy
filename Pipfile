@@ -20,6 +20,8 @@ python-dotenv = "*"
 pyspark = "*"
 jupyter = "*"
 scikit-learn = "*"
+flask-caching = "*"
+pyarrow = "*"
 
 [requires]
 python_version = "3.6"
