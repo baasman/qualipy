@@ -135,6 +135,7 @@ class SQL:
         query = f"select {var_selection} from {table_name} limit 1"
         with engine.connect() as conn:
             row = pd.read_sql(query, conn)
+        return row
 
 
 class SQLite(SQL):

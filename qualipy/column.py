@@ -7,20 +7,12 @@ from qualipy.util import copy_function_spec
 
 # TODO: definitely need to abstract this
 from qualipy.backends.pandas_backend.pandas_types import FloatType, ObjectType, IntType
-from qualipy.backends.pandas_backend.functions import (
-    mean,
-    std,
-    percentage_missing,
-    value_counts,
-)
+from qualipy.config import DEFAULT_CAT_FUNCTIONS, DEFAULT_NUM_FUNCTIONS
 
 
 SQL = {"sqlite": SQLite}
 
 INFER_TYPES = {"float64": FloatType, "int64": IntType, "object": ObjectType}
-
-DEFAULT_NUM_FUNCTIONS = [mean, std, percentage_missing]
-DEFAULT_CAT_FUNCTIONS = [value_counts]
 
 
 def function(
@@ -96,7 +88,15 @@ class Table(object):
     table_name = None
     db = "sqlite"
 
-    def _infer_columns(self, engine):
+    def query(self, time_column, date):
+        query = f"""
+            select {self.columns_to_select} 
+            from {self.table_name}
+            where {time_column} > {date}
+        
+        """
+
+    def _infer_columns(self, engine) -> Dict[str, Any]:
         sql = SQL[self.db]
         row = sql.get_top_row(engine, self.columns, self.table_name)
         all_columns = {}
@@ -112,3 +112,5 @@ class Table(object):
                 "is_category": is_cat,
                 "functions": DEFAULT_CAT_FUNCTIONS if is_cat else DEFAULT_NUM_FUNCTIONS,
             }
+        self.columns_to_select = list(all_columns.keys())
+        return all_columns

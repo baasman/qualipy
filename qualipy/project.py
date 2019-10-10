@@ -1,4 +1,4 @@
-from qualipy.util import HOME
+from qualipy.util import HOME, import_function_by_name
 from qualipy.database import (
     delete_data,
     create_table,
@@ -63,7 +63,15 @@ class Project(object):
             self._add_column(column)
 
     def add_table(self, table: Table, engine: engine.base.Engine) -> None:
-        table._infer_schema(engine)
+        columns = table._infer_columns(engine)
+        for column_name, values in columns.items():
+            cvals = values
+            imported_functions = []
+            for function in cvals["functions"]:
+                # TODO: assume pandas for now, should change obv
+                imported_functions.append(import_function_by_name(function, "pandas"))
+            cvals["functions"] = imported_functions
+            self.columns[column_name] = cvals
 
     def _create_table(self, name: str, create_function: Callable):
         with self.engine.connect() as conn:

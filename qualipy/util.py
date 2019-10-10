@@ -5,6 +5,7 @@ import pandas as pd
 import os
 import types
 from typing import Any, Dict, Callable, Optional, Union
+import importlib
 
 
 def get_column(data: pd.DataFrame, name: str) -> pd.Series:
@@ -46,3 +47,8 @@ def copy_function_spec(function: Union[Dict[str, Any], Callable]):
         copied_function.arguments = {}
         copied_function.key_function = False
     return copied_function
+
+
+def import_function_by_name(name: str, backend: str) -> Callable:
+    module = importlib.import_module(f"qualipy.backends.{backend}_backend.functions")
+    return getattr(module, name)
