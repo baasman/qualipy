@@ -26,11 +26,24 @@ def schema_table(data):
 def anomaly_num_data(project_name, db_url, config_dir):
     engine = create_engine(db_url)
     generator = GenerateAnomalies(project_name, engine, config_dir)
-    num_anomalies = generator.create_anom_num_table()
-    cat_anomalies = generator.create_anom_cat_table()
-    anomalies = pd.concat([num_anomalies, cat_anomalies]).sort_values(
-        "date", ascending=False
-    )
+    try:
+        num_anomalies = generator.create_anom_num_table()
+        cat_anomalies = generator.create_anom_cat_table()
+        anomalies = pd.concat([num_anomalies, cat_anomalies]).sort_values(
+            "date", ascending=False
+        )
+    except ValueError:
+        anomalies = pd.DataFrame(
+            [],
+            columns=[
+                "column_name",
+                "date",
+                "metric",
+                "arguments",
+                "value",
+                "batch_name",
+            ],
+        )
     return anomalies
 
 

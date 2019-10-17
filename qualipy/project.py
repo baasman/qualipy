@@ -1,11 +1,6 @@
 from qualipy.util import HOME, import_function_by_name
-from qualipy.database import (
-    delete_data,
-    create_table,
-    create_custom_value_table,
-    create_value_table,
-    get_project_table,
-)
+from qualipy.database import delete_data, get_project_table
+from qualipy._sql import SQLite
 from qualipy.column import Column, Table
 
 import json
@@ -21,11 +16,11 @@ def _validate_project_name(project_name):
     assert "-" not in project_name
 
 
-def create_qualipy_folder(config_dir):
+def create_qualipy_folder(config_dir, db_url):
     if not os.path.exists(config_dir):
         os.makedirs(config_dir, exist_ok=True)
         with open(os.path.join(config_dir, "config.json"), "w") as f:
-            json.dump({"interval_time": 100000}, f)
+            json.dump({"interval_time": 100000, "db_url": db_url}, f)
         os.makedirs(os.path.join(config_dir, "models"), exist_ok=True)
 
 
@@ -44,16 +39,16 @@ class Project(object):
         self.config_dir = (
             os.path.join(HOME, ".qualipy") if config_dir is None else config_dir
         )
-        create_qualipy_folder(self.config_dir)
         if engine is None:
             self.engine = create_engine(
-                "sqlite:///{}".format(os.path.join(HOME, ".qualipy", "qualipy.db"))
+                "sqlite:///{}".format(os.path.join(self.config_dir, "qualipy.db"))
             )
         else:
             self.engine = engine
-        self._create_table(self.project_name, create_table)
-        self._create_table(self.value_table, create_value_table)
-        self._create_table(self.value_custom_table, create_custom_value_table)
+        create_qualipy_folder(self.config_dir, db_url=str(self.engine.url))
+        self._create_table(self.project_name, SQLite.create_table)
+        self._create_table(self.value_table, SQLite.create_value_table)
+        self._create_table(self.value_custom_table, SQLite.create_custom_value_table)
 
     def add_column(self, column: Column) -> None:
         if isinstance(column, list):
@@ -62,16 +57,18 @@ class Project(object):
         else:
             self._add_column(column)
 
-    def add_table(self, table: Table, engine: engine.base.Engine) -> None:
-        columns = table._infer_columns(engine)
-        for column_name, values in columns.items():
-            cvals = values
+    def add_table(
+        self, table: Table, data=None, engine: engine.base.Engine = None
+    ) -> None:
+        table._infer_columns(data)
+        for column in table._columns:
             imported_functions = []
-            for function in cvals["functions"]:
-                # TODO: assume pandas for now, should change obv
-                imported_functions.append(import_function_by_name(function, "pandas"))
-            cvals["functions"] = imported_functions
-            self.columns[column_name] = cvals
+            for function in column.functions:
+                imported_functions.append(table._import_function(function))
+            column.functions = imported_functions
+            self.columns[column.name] = column._as_dict(
+                column.name, read_functions=False
+            )
 
     def _create_table(self, name: str, create_function: Callable):
         with self.engine.connect() as conn:
@@ -95,9 +92,9 @@ class Project(object):
 
     def delete_data(self):
         with self.engine.begin() as conn:
-            delete_data(conn, self.project_name, create_table)
-            delete_data(conn, self.value_table, create_value_table)
-            delete_data(conn, self.value_custom_table, create_custom_value_table)
+            delete_data(conn, self.project_name, SQLite.create_table)
+            delete_data(conn, self.value_table, SQLite.create_value_table)
+            delete_data(conn, self.value_custom_table, SQLite.create_custom_value_table)
 
     def delete_from_project_config(self):
         project_file_path = os.path.join(self.config_dir, "projects.json")

@@ -1,18 +1,23 @@
 from functools import wraps
-
 from typing import Any, Dict, List, Callable, Optional, Union
 
-from qualipy._sql import SQLite
-from qualipy.util import copy_function_spec
+import pandas as pd
 
-# TODO: definitely need to abstract this
-from qualipy.backends.pandas_backend.pandas_types import FloatType, ObjectType, IntType
+from qualipy._sql import SQLite
+from qualipy.util import copy_function_spec, import_function_by_name
+
+from qualipy.backends.pandas_backend.pandas_types import (
+    FloatType as pFloatType,
+    ObjectType as pObjectType,
+    IntType as pIntType,
+)
 from qualipy.config import DEFAULT_CAT_FUNCTIONS, DEFAULT_NUM_FUNCTIONS
 
 
 SQL = {"sqlite": SQLite}
 
-INFER_TYPES = {"float64": FloatType, "int64": IntType, "object": ObjectType}
+
+# TODO: make dataclass for column dict structure
 
 
 def function(
@@ -54,7 +59,7 @@ class Column(object):
     is_category = False
     functions = []
 
-    def _as_dict(self, name: str) -> Dict[str, Any]:
+    def _as_dict(self, name: str, read_functions: bool = True) -> Dict[str, Any]:
         dict_ = {
             "name": name,
             "type": self.column_type,
@@ -63,9 +68,13 @@ class Column(object):
             "force_null": self.force_null,
             "unique": self.unique,
             "is_category": self.is_category,
-            "functions": self._get_functions(),
+            "functions": self._get_functions() if read_functions else self.functions,
         }
         return dict_
+
+    def _from_dict(self, args: Dict):
+        for key, val in args.items():
+            setattr(self, key, val)
 
     def _get_functions(self) -> Dict[str, Callable]:
         methods = {}
@@ -86,15 +95,60 @@ class Table(object):
     columns = "all"
     infer_schema = True
     table_name = None
-    db = "sqlite"
+    time_column = None
+    _columns = []
 
-    def query(self, time_column, date):
-        query = f"""
-            select {self.columns_to_select} 
-            from {self.table_name}
-            where {time_column} > {date}
-        
-        """
+    def _infer_columns(self, data):
+        pass
+
+    def _import_function(self, function_name):
+        pass
+
+
+class PandasTable(Table):
+
+    columns = "all"
+    infer_schema = True
+    table_name = None
+    data_source = "pandas"
+    time_column = None
+
+    _INFER_TYPES = {"float64": pFloatType, "int64": pIntType, "object": pObjectType}
+    _columns = []
+
+    def _infer_columns(self, data: pd.DataFrame):
+        for col in data.columns:
+            is_cat = True if data[col].dtype.name == "object" else False
+            column = Column()
+            column._from_dict(
+                {
+                    "name": col,
+                    "type": self._INFER_TYPES[data[col].dtype.name](),
+                    "force_type": False,
+                    "null": True,
+                    "force_null": False,
+                    "unique": False,
+                    "is_category": is_cat,
+                    "functions": DEFAULT_CAT_FUNCTIONS
+                    if is_cat
+                    else DEFAULT_NUM_FUNCTIONS,
+                }
+            )
+            self._columns.append(column)
+
+    def _import_function(self, function_name):
+        return import_function_by_name(function_name, "pandas")
+
+
+class SQLTable(object):
+
+    columns = "all"
+    infer_schema = True
+    table_name = None
+    time_column = None
+
+    _INFER_TYPES = {"float64": pFloatType, "int64": pIntType, "object": pObjectType}
+    _columns = []
 
     def _infer_columns(self, engine) -> Dict[str, Any]:
         sql = SQL[self.db]
@@ -104,7 +158,7 @@ class Table(object):
             is_cat = True if row[col].dtype.name == "object" else False
             all_columns[col] = {
                 "name": col,
-                "type": INFER_TYPES[row[col].dtype.name](),
+                "type": self._INFER_TYPES[row[col].dtype.name](),
                 "force_type": False,
                 "null": True,
                 "force_null": False,
