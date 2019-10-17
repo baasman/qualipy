@@ -95,18 +95,30 @@ class DataSet(object):
 
         self.spark_context = spark_context
         self.train_anomaly = train_anomaly
+        self.chunk = False
 
         self._locate_history_data()
 
     def run(self) -> None:
-        self._generate_metrics()
+        if not self.chunk:
+            self._generate_metrics()
+        else:
+            for chunk in self.time_chunks:
+                self.current_data = chunk["chunk"]
+                self.batch_name = str(chunk["batch_name"])
+                self.time_of_run = chunk["batch_name"].date()
+                self._generate_metrics()
 
     def set_dataset(self, df) -> None:
         self.current_data = df
         self.schema = self.generator.set_schema(df, self.project.columns)
 
-    def set_chunked_dataset(self, df, time_freq: str = "1D", time_column: str = None):
-        pass
+    def set_chunked_dataset(self, df, time_freq: str = "1D"):
+        self.current_data = df
+        self.schema = self.generator.set_schema(df, self.project.columns)
+        self.chunk = True
+        # TODO: obviously change this. hardcoded now
+        self.time_chunks = self.generator.get_chunks(df, time_freq, "CONTACT_DATE")
 
     def _locate_history_data(self) -> pd.DataFrame:
         hist_data = get_table(

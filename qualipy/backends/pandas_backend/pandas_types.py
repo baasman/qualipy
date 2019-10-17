@@ -54,3 +54,8 @@ class ObjectType(BaseType):
 class NumericType(BaseType):
     def check_approximate_type(self, given_dtype):
         return np.issubdtype(given_dtype, np.number)
+
+
+class BoolType(BaseType):
+    def check_approximate_type(self, given_dtype):
+        return eq(given_dtype, bool)

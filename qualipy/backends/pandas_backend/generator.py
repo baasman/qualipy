@@ -215,7 +215,6 @@ class BackendPandas(BackendBase):
 
         data = data.drop("value", axis=1)
 
-        # data.value = data.value.apply(lambda v: pickle.dumps(v))
         with project.engine.begin() as conn:
             data.to_sql(project.project_name, con=conn, if_exists="append", index=False)
             value_data.to_sql(
@@ -224,3 +223,11 @@ class BackendPandas(BackendBase):
             value_data_custom.to_sql(
                 project.value_custom_table, con=conn, if_exists="append", index=False
             )
+
+    @staticmethod
+    def get_chunks(data, time_freq, time_column):
+        groups = [
+            {"batch_name": d[0], "chunk": d[1]}
+            for d in list(data.groupby(pd.Grouper(key=time_column, freq=time_freq)))
+        ]
+        return groups

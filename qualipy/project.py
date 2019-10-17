@@ -57,14 +57,14 @@ class Project(object):
         else:
             self._add_column(column)
 
-    def add_table(
-        self, table: Table, data=None, engine: engine.base.Engine = None
-    ) -> None:
-        table._infer_columns(data)
+    def add_table(self, table: Table) -> None:
+        if table.infer_schema:
+            sample_row = table.extract_sample_row()
+            table._infer_columns(sample_row)
         for column in table._columns:
-            imported_functions = []
+            imported_functions = {}
             for function in column.functions:
-                imported_functions.append(table._import_function(function))
+                imported_functions[function] = table._import_function(function)
             column.functions = imported_functions
             self.columns[column.name] = column._as_dict(
                 column.name, read_functions=False

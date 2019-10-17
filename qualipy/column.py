@@ -10,6 +10,7 @@ from qualipy.backends.pandas_backend.pandas_types import (
     FloatType as pFloatType,
     ObjectType as pObjectType,
     IntType as pIntType,
+    BoolType as pBoolType,
 )
 from qualipy.config import DEFAULT_CAT_FUNCTIONS, DEFAULT_NUM_FUNCTIONS
 
@@ -104,6 +105,9 @@ class Table(object):
     def _import_function(self, function_name):
         pass
 
+    def extract_sample_row(self):
+        pass
+
 
 class PandasTable(Table):
 
@@ -113,17 +117,22 @@ class PandasTable(Table):
     data_source = "pandas"
     time_column = None
 
-    _INFER_TYPES = {"float64": pFloatType, "int64": pIntType, "object": pObjectType}
+    _INFER_TYPES = {
+        "float64": pFloatType,
+        "int64": pIntType,
+        "object": pObjectType,
+        "bool": pBoolType,
+    }
     _columns = []
 
     def _infer_columns(self, data: pd.DataFrame):
-        for col in data.columns:
+        for col in [col for col in data.columns if col != self.time_column]:
             is_cat = True if data[col].dtype.name == "object" else False
             column = Column()
             column._from_dict(
                 {
                     "name": col,
-                    "type": self._INFER_TYPES[data[col].dtype.name](),
+                    "column_type": self._INFER_TYPES[data[col].dtype.name](),
                     "force_type": False,
                     "null": True,
                     "force_null": False,
@@ -137,7 +146,10 @@ class PandasTable(Table):
             self._columns.append(column)
 
     def _import_function(self, function_name):
-        return import_function_by_name(function_name, "pandas")
+        function = import_function_by_name(function_name, "pandas")
+        function.key_function = False
+        function.parameters = {}
+        return function
 
 
 class SQLTable(object):
