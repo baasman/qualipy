@@ -116,6 +116,7 @@ class PandasTable(Table):
     table_name = None
     data_source = "pandas"
     time_column = None
+    ignore = []
 
     _INFER_TYPES = {
         "float64": pFloatType,
@@ -126,7 +127,12 @@ class PandasTable(Table):
     _columns = []
 
     def _infer_columns(self, data: pd.DataFrame):
-        for col in [col for col in data.columns if col != self.time_column]:
+        self.columns = [
+            col
+            for col in data.columns
+            if col != self.time_column and col not in self.ignore
+        ]
+        for col in self.columns:
             is_cat = True if data[col].dtype.name == "object" else False
             column = Column()
             column._from_dict(

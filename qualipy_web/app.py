@@ -480,8 +480,7 @@ def index():
     if request.method == "POST":
         button_pressed = list(request.form.to_dict(flat=False).keys())[0]
         session["project"] = button_pressed
-        column_options = projects[button_pressed]["columns"]
-        session["column_options"] = column_options
+        print(session)
         url = projects[button_pressed].get("db", None)
         if "db_url" in config:
             url = config["db_url"]

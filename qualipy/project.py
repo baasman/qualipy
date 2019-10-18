@@ -61,6 +61,7 @@ class Project(object):
         if table.infer_schema:
             sample_row = table.extract_sample_row()
             table._infer_columns(sample_row)
+        self.time_column = table.time_column
         for column in table._columns:
             imported_functions = {}
             for function in column.functions:

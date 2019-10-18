@@ -117,8 +117,9 @@ class DataSet(object):
         self.current_data = df
         self.schema = self.generator.set_schema(df, self.project.columns)
         self.chunk = True
-        # TODO: obviously change this. hardcoded now
-        self.time_chunks = self.generator.get_chunks(df, time_freq, "CONTACT_DATE")
+        self.time_chunks = self.generator.get_chunks(
+            df, time_freq, self.project.time_column
+        )
 
     def _locate_history_data(self) -> pd.DataFrame:
         hist_data = get_table(
