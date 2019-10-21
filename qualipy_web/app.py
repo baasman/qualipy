@@ -38,6 +38,7 @@ from qualipy_web.components.boolean_page import error_check_table, boolean_plot
 from qualipy_web.components.standard_viz_dynamic_page import (
     create_value_count_area_chart,
     create_prop_change_list,
+    barchart_top_cats,
 )
 from qualipy_web.components.standard_viz_static_page import heatmap
 from qualipy.database import get_table, get_project_table, get_last_time
@@ -332,6 +333,8 @@ def update_tab_3(column):
     cat_plots = []
     plot = create_value_count_area_chart(data, column)
     cat_plots.append(plot)
+    bar_chart = barchart_top_cats(data)
+    cat_plots.append(bar_chart)
     prop_change_plot = create_prop_change_list(data, column)
     cat_plots.append(prop_change_plot)
     cat_plots_div = html.Div(id="c-plots", children=cat_plots)

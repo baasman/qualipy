@@ -60,7 +60,9 @@ class Project(object):
     def add_table(self, table: Table) -> None:
         if table.infer_schema:
             sample_row = table.extract_sample_row()
-            table._infer_columns(sample_row)
+        else:
+            sample_row = None
+        table._generate_columns(sample_row, table.infer_schema)
         self.time_column = table.time_column
         for column in table._columns:
             imported_functions = {}

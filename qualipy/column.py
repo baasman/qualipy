@@ -1,5 +1,6 @@
 from functools import wraps
 from typing import Any, Dict, List, Callable, Optional, Union
+from abc import abstractmethod, ABC
 
 import pandas as pd
 
@@ -11,6 +12,7 @@ from qualipy.backends.pandas_backend.pandas_types import (
     ObjectType as pObjectType,
     IntType as pIntType,
     BoolType as pBoolType,
+    DateTimeType as pDateTimeType,
 )
 from qualipy.config import DEFAULT_CAT_FUNCTIONS, DEFAULT_NUM_FUNCTIONS
 
@@ -91,7 +93,7 @@ class Column(object):
         return methods
 
 
-class Table(object):
+class Table(ABC):
 
     columns = "all"
     infer_schema = True
@@ -99,9 +101,11 @@ class Table(object):
     time_column = None
     _columns = []
 
-    def _infer_columns(self, data):
+    @abstractmethod
+    def _generate_columns(self, data, infer):
         pass
 
+    @abstractmethod
     def _import_function(self, function_name):
         pass
 
@@ -117,28 +121,35 @@ class PandasTable(Table):
     data_source = "pandas"
     time_column = None
     ignore = []
+    types = {}
 
     _INFER_TYPES = {
         "float64": pFloatType,
         "int64": pIntType,
         "object": pObjectType,
         "bool": pBoolType,
+        "datetime64[ns]": pDateTimeType,
     }
     _columns = []
 
-    def _infer_columns(self, data: pd.DataFrame):
-        self.columns = [
-            col
-            for col in data.columns
-            if col != self.time_column and col not in self.ignore
-        ]
+    def _generate_columns(self, data: pd.DataFrame, infer: bool = True) -> None:
+        if self.columns == "all" and infer:
+            self.columns = [
+                col
+                for col in data.columns
+                if col != self.time_column and col not in self.ignore
+            ]
         for col in self.columns:
-            is_cat = True if data[col].dtype.name == "object" else False
+            if infer:
+                col_type = self._INFER_TYPES[data[col].dtype.name]()
+            else:
+                col_type = self.types[col]
+            is_cat = True if isinstance(col_type, pObjectType) else False
             column = Column()
             column._from_dict(
                 {
                     "name": col,
-                    "column_type": self._INFER_TYPES[data[col].dtype.name](),
+                    "column_type": col_type,
                     "force_type": False,
                     "null": True,
                     "force_null": False,
@@ -158,7 +169,7 @@ class PandasTable(Table):
         return function
 
 
-class SQLTable(object):
+class SQLTable(Table):
 
     columns = "all"
     infer_schema = True
@@ -168,21 +179,5 @@ class SQLTable(object):
     _INFER_TYPES = {"float64": pFloatType, "int64": pIntType, "object": pObjectType}
     _columns = []
 
-    def _infer_columns(self, engine) -> Dict[str, Any]:
-        sql = SQL[self.db]
-        row = sql.get_top_row(engine, self.columns, self.table_name)
-        all_columns = {}
-        for col in row.columns:
-            is_cat = True if row[col].dtype.name == "object" else False
-            all_columns[col] = {
-                "name": col,
-                "type": self._INFER_TYPES[row[col].dtype.name](),
-                "force_type": False,
-                "null": True,
-                "force_null": False,
-                "unique": False,
-                "is_category": is_cat,
-                "functions": DEFAULT_CAT_FUNCTIONS if is_cat else DEFAULT_NUM_FUNCTIONS,
-            }
-        self.columns_to_select = list(all_columns.keys())
-        return all_columns
+    def _generate_columns(self, data: pd.DataFrame, infer: bool = True) -> None:
+        pass

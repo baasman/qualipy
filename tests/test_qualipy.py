@@ -1,4 +1,4 @@
-from qualipy import DataSet, Project, Column, function
+from qualipy import DataSet, Project, Column, function, PandasTable
 from qualipy.backends.pandas_backend.pandas_types import (
     IntType,
     FloatType,
@@ -19,6 +19,7 @@ from sqlalchemy import create_engine
 
 import os
 import json
+import shutil
 
 
 @pytest.fixture
@@ -35,24 +36,13 @@ def data():
 
 
 @pytest.fixture
-def db():
-    path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "test.db")
-    engine = create_engine("sqlite:///".format(path))
-    yield engine
+def project():
+    config_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), ".qualipy")
+    yield Project(project_name="test", config_dir=config_dir)
     try:
-        os.remove(path)
-    except:
-        pass
-
-
-@pytest.fixture
-def project(db):
-    path = os.path.join(os.path.dirname(os.path.realpath(__file__)))
-    yield Project(project_name="test", engine=db, config_dir=path)
-    try:
-        os.remove(os.path.join(path, "projects.json"))
-    except:
-        pass
+        shutil.rmtree(config_dir)
+    except Exception as e:
+        print(str(e))
 
 
 ####### project checks ##########
@@ -158,6 +148,39 @@ def test_delete_data(data, project):
 
     hist_data = project.get_project_table()
     assert hist_data.shape[0] == 0
+
+
+######## Tables and chunking ######
+
+
+def test_read_table(data, project):
+    class Table(PandasTable):
+        columns = ["integer_col", "float_col", "date_col"]
+        infer_schema = False
+        table_name = "test"
+        types = {
+            "integer_col": IntType(),
+            "float_col": FloatType(),
+            "date_col": DateTimeType(),
+        }
+
+    project.add_table(Table())
+
+    assert len(project.columns) == 3
+
+
+def test_read_table_infer_schema(data, project):
+    class Table(PandasTable):
+        columns = "all"
+        infer_schema = True
+        table_name = "test"
+
+        def extract_sample_row(self):
+            return data
+
+    project.add_table(Table())
+
+    assert len(project.columns) == 3
 
 
 ######## type checking #########

@@ -1,8 +1,10 @@
 from functools import reduce
+from collections import Counter
 
 import dash_core_components as dcc
 import numpy as np
 import pandas as pd
+import plotly.graph_objs as go
 
 from qualipy.anomaly_detection import AnomalyModel
 
@@ -75,5 +77,21 @@ def create_prop_change_list(data, var):
                 "title": {"text": "Difference in proportion over time (top 5) "}
             },
         },
+    )
+    return plot
+
+
+def barchart_top_cats(data):
+    counter = Counter(data.value.values[0])
+    for vc in data.value.values[1:]:
+        counter += Counter(vc)
+    items = counter.items()
+    x = [i[0] for i in items]
+    y = [i[1] for i in items]
+    plot = dcc.Graph(
+        figure=go.Figure(
+            data=[go.Bar(x=x, y=y)], layout=go.Layout(title="All Categories")
+        ),
+        id="barchart-all-categories",
     )
     return plot
