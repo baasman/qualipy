@@ -122,6 +122,7 @@ class PandasTable(Table):
     time_column = None
     ignore = []
     types = {}
+    bool_as_cat = False
 
     _INFER_TYPES = {
         "float64": pFloatType,
@@ -141,10 +142,16 @@ class PandasTable(Table):
             ]
         for col in self.columns:
             if infer:
-                col_type = self._INFER_TYPES[data[col].dtype.name]()
+                if col in self.types:
+                    col_type = self.types[col]
+                else:
+                    col_type = self._INFER_TYPES[data[col].dtype.name]()
             else:
                 col_type = self.types[col]
-            is_cat = True if isinstance(col_type, pObjectType) else False
+            bool_and_cat = (
+                True if isinstance(col_type, pBoolType) and self.bool_as_cat else False
+            )
+            is_cat = True if isinstance(col_type, pObjectType) | bool_and_cat else False
             column = Column()
             column._from_dict(
                 {

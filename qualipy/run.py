@@ -97,13 +97,12 @@ class DataSet(object):
         self.train_anomaly = train_anomaly
         self.chunk = False
 
-        self._locate_history_data()
-
     def run(self) -> None:
         if not self.chunk:
             self._generate_metrics()
         else:
             for chunk in self.time_chunks:
+                print(f"Running on chunk: {chunk['batch_name']}")
                 self.current_data = chunk["chunk"]
                 self.batch_name = str(chunk["batch_name"])
                 self.time_of_run = chunk["batch_name"].date()
@@ -120,12 +119,6 @@ class DataSet(object):
         self.time_chunks = self.generator.get_chunks(
             df, time_freq, self.project.time_column
         )
-
-    def _locate_history_data(self) -> pd.DataFrame:
-        hist_data = get_table(
-            engine=self.project.engine, table_name=self.project.project_name
-        )
-        return hist_data
 
     def _generate_metrics(self) -> None:
         measures = []
