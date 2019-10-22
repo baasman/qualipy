@@ -7,7 +7,6 @@ from typing import Any, Dict, Optional, Union, Dict, List, Callable
 import warnings
 
 from qualipy.backends.pandas_backend.generator import BackendPandas
-from qualipy.database import create_table, get_table
 from qualipy.exceptions import FailException, NullableError
 from qualipy.config import STANDARD_VIZ_STATIC, STANDARD_VIZ_DYNAMIC
 from qualipy.backends.pandas_backend.pandas_types import (

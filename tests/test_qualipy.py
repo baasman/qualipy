@@ -7,6 +7,8 @@ from qualipy.backends.pandas_backend.pandas_types import (
 )
 from qualipy.backends.pandas_backend.functions import (
     mean,
+    std,
+    percentage_missing,
     number_of_outliers,
     correlation_two_columns,
 )
@@ -15,7 +17,6 @@ from qualipy.exceptions import InvalidType, NullableError
 import pytest
 import pandas as pd
 import numpy as np
-from sqlalchemy import create_engine
 
 import os
 import json
@@ -181,6 +182,45 @@ def test_read_table_infer_schema(data, project):
     project.add_table(Table())
 
     assert len(project.columns) == 3
+
+
+def test_table_equals_columns(data, project):
+    class Table(PandasTable):
+        columns = ["integer_col"]
+        infer_schema = False
+        table_name = "test"
+        types = {"integer_col": IntType()}
+
+    project.add_table(Table())
+
+    ds = DataSet(project=project, batch_name="test")
+    ds.set_dataset(data)
+    ds.run()
+
+    hist_data = project.get_project_table()
+    assert hist_data.shape[0] == 7
+
+    project.columns = {}
+    project.delete_from_project_config()
+    project.delete_data()
+
+    class TestCol(Column):
+        column_name = "integer_col"
+        column_type = IntType()
+        force_type = True
+        functions = [mean, std, percentage_missing]
+
+    project.add_column(TestCol())
+
+    ds = DataSet(project=project, batch_name="test")
+    ds.set_dataset(data)
+    ds.run()
+
+    hist_data = project.get_project_table()
+    assert hist_data.shape[0] == 7
+
+    hist_data = project.get_project_table()
+    assert hist_data.shape[0] > 0
 
 
 ######## type checking #########
@@ -355,3 +395,6 @@ def test_other_column(data, project):
     ds.run()
 
     assert 1
+
+
+####### Test anomaly detection ############

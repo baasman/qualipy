@@ -91,13 +91,15 @@ class Project(object):
             self.columns[column.column_name] = column._as_dict(name=column.column_name)
 
     def get_project_table(self) -> pd.DataFrame:
-        return get_project_table(self.engine, self.project_name)
+        return SQLite.get_project_table(self.engine, self.project_name)
 
     def delete_data(self):
         with self.engine.begin() as conn:
-            delete_data(conn, self.project_name, SQLite.create_table)
-            delete_data(conn, self.value_table, SQLite.create_value_table)
-            delete_data(conn, self.value_custom_table, SQLite.create_custom_value_table)
+            SQLite.delete_data(conn, self.project_name, SQLite.create_table)
+            SQLite.delete_data(conn, self.value_table, SQLite.create_value_table)
+            SQLite.delete_data(
+                conn, self.value_custom_table, SQLite.create_custom_value_table
+            )
 
     def delete_from_project_config(self):
         project_file_path = os.path.join(self.config_dir, "projects.json")
