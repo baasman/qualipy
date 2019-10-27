@@ -7,7 +7,6 @@ from qualipy.anomaly_detection import RunModels
 
 import os
 import json
-import sys
 
 
 HOME = os.path.expanduser("~")
@@ -27,7 +26,10 @@ def qualipy():
     default=os.path.join(HOME, ".qualipy"),
     help="The path of the config file located in your respective .qualipy folder",
 )
-def run(port, debug, ip, config_dir):
+@click.option(
+    "--with_anomaly", default=False, help="Run anomaly models if not preloaded"
+)
+def run(port, debug, ip, config_dir, anomaly):
     config_file = os.path.join(config_dir, "config.json")
     project_file = os.path.join(config_dir, "projects.json")
     os.environ["QUALIPY_CONFIG_FILE"] = config_file

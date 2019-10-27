@@ -61,6 +61,7 @@ class Column(object):
     unique = False
     is_category = False
     functions = []
+    extra_functions = []
 
     def _as_dict(self, name: str, read_functions: bool = True) -> Dict[str, Any]:
         dict_ = {
@@ -72,6 +73,7 @@ class Column(object):
             "unique": self.unique,
             "is_category": self.is_category,
             "functions": self._get_functions() if read_functions else self.functions,
+            "extra_functions": self._get_functions("extra_functions"),
         }
         return dict_
 
@@ -79,13 +81,13 @@ class Column(object):
         for key, val in args.items():
             setattr(self, key, val)
 
-    def _get_functions(self) -> Dict[str, Callable]:
+    def _get_functions(self, fun_attribute: str = "functions") -> Dict[str, Callable]:
         methods = {}
         for fun in dir(self):
             function = getattr(self, fun, None)
             if getattr(function, "has_decorator", False):
                 methods[fun] = function
-        given_methods = getattr(self, "functions", None)
+        given_methods = getattr(self, fun_attribute, None)
         if given_methods:
             for func in given_methods:
                 copied_function = copy_function_spec(func)
@@ -112,6 +114,21 @@ class Table(ABC):
     def extract_sample_row(self):
         pass
 
+    def _get_functions(
+        self, fun_attribute: str = "functions", column_name: str = None
+    ) -> Dict[str, Callable]:
+        methods = {}
+        for fun in dir(self):
+            function = getattr(self, fun, None)
+            if getattr(function, "has_decorator", False):
+                methods[fun] = function
+        given_methods = getattr(self, fun_attribute, {})
+        if column_name in given_methods:
+            for func in given_methods[column_name]:
+                copied_function = copy_function_spec(func)
+                methods[copied_function.__name__] = copied_function
+        return methods
+
 
 class PandasTable(Table):
 
@@ -123,6 +140,7 @@ class PandasTable(Table):
     ignore = []
     types = {}
     bool_as_cat = False
+    extra_functions = []
 
     _INFER_TYPES = {
         "float64": pFloatType,
@@ -165,6 +183,9 @@ class PandasTable(Table):
                     "functions": DEFAULT_CAT_FUNCTIONS
                     if is_cat
                     else DEFAULT_NUM_FUNCTIONS,
+                    "extra_functions": super(PandasTable, self)._get_functions(
+                        "extra_functions", col
+                    ),
                 }
             )
             self._columns.append(column)

@@ -1,7 +1,7 @@
 import pandas as pd
 from sqlalchemy import engine
 
-from typing import Callable
+from typing import Callable, List, Union
 import pickle
 import datetime
 
@@ -14,7 +14,7 @@ def _unpickle(row):
 
 class SQL:
     @staticmethod
-    def create_table(conn: engine.base.Connection, table_name: str) -> None:
+    def create_table(engine: engine.base.Engine, table_name: str) -> None:
         create_table_query = """
             create table {} (
                 "column_name" CHARACTER(20) not null,
@@ -33,10 +33,13 @@ class SQL:
         """.format(
             table_name
         )
-        conn.execute(create_table_query)
+        exists = SQL.does_table_exist(engine, table_name)
+        if not exists:
+            with engine.connect() as conn:
+                conn.execute(create_table_query)
 
     @staticmethod
-    def create_value_table(conn: engine.base.Connection, table_name: str) -> None:
+    def create_value_table(engine: engine.base.Engine, table_name: str) -> None:
         create_table_query = """
             create table {} (
                 value varchar,
@@ -46,12 +49,13 @@ class SQL:
         """.format(
             table_name, table_name.replace("_values", "")
         )
-        conn.execute(create_table_query)
+        exists = SQL.does_table_exist(engine, table_name)
+        if not exists:
+            with engine.connect() as conn:
+                conn.execute(create_table_query)
 
     @staticmethod
-    def create_custom_value_table(
-        conn: engine.base.Connection, table_name: str
-    ) -> None:
+    def create_custom_value_table(engine: engine.base.Engine, table_name: str) -> None:
         create_table_query = """
             create table {} (
                 value BLOB,
@@ -61,7 +65,10 @@ class SQL:
         """.format(
             table_name, table_name.replace("_values_custom", "")
         )
-        conn.execute(create_table_query)
+        exists = SQL.does_table_exist(engine, table_name)
+        if not exists:
+            with engine.connect() as conn:
+                conn.execute(create_table_query)
 
     @staticmethod
     def get_table(engine: engine.base.Engine, table_name: str) -> pd.DataFrame:
@@ -127,7 +134,19 @@ class SQL:
         return time
 
     @staticmethod
-    def get_top_row(engine, variables, table_name):
+    def does_table_exist(engine: engine.base.Engine, table_name: str) -> bool:
+        with engine.connect() as conn:
+            exists = conn.execute(
+                "select name from sqlite_master "
+                'where type="table" '
+                'and name="{}"'.format(table_name)
+            ).fetchone()
+        return exists
+
+    @staticmethod
+    def get_top_row(
+        engine: engine.base.Engine, variables: Union[str, List[str]], table_name: str
+    ):
         if variables == "all":
             var_selection = "*"
         else:

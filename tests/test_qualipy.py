@@ -223,6 +223,29 @@ def test_table_equals_columns(data, project):
     assert hist_data.shape[0] > 0
 
 
+def test_table_extra_functions(data, project):
+    @function(return_format=float)
+    def test_fun(data, column):
+        return 0
+
+    class Table(PandasTable):
+        columns = ["integer_col"]
+        infer_schema = False
+        table_name = "test"
+        types = {"integer_col": IntType()}
+
+        extra_functions = {"integer_col": [{"function": test_fun}]}
+
+    project.add_table(Table())
+
+    ds = DataSet(project=project, batch_name="test")
+    ds.set_dataset(data)
+    ds.run()
+
+    hist_data = project.get_project_table()
+    assert "test_fun" in hist_data.metric.values
+
+
 ######## type checking #########
 
 

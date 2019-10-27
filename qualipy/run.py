@@ -136,7 +136,11 @@ class DataSet(object):
             measures = self._get_column_specific_general_info(specs, measures)
 
             # run through functions for column, if any
-            for function_name, function in specs["functions"].items():
+            # TODO: this breaks if same function name diff arguments
+            for function_name, function in {
+                **specs["functions"],
+                **specs["extra_functions"],
+            }.items():
 
                 standard_viz, is_static = set_standard_viz_params(
                     function_name, STANDARD_VIZ_STATIC, STANDARD_VIZ_DYNAMIC

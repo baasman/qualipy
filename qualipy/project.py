@@ -1,5 +1,4 @@
-from qualipy.util import HOME, import_function_by_name
-from qualipy.database import delete_data, get_project_table
+from qualipy.util import HOME
 from qualipy._sql import SQLite
 from qualipy.column import Column, Table
 
@@ -7,7 +6,7 @@ import json
 import os
 import datetime
 import pandas as pd
-from typing import List, Optional, Union, Dict, Callable
+from typing import List, Optional, Union, Dict
 
 from sqlalchemy import engine, create_engine
 
@@ -46,9 +45,10 @@ class Project(object):
         else:
             self.engine = engine
         create_qualipy_folder(self.config_dir, db_url=str(self.engine.url))
-        self._create_table(self.project_name, SQLite.create_table)
-        self._create_table(self.value_table, SQLite.create_value_table)
-        self._create_table(self.value_custom_table, SQLite.create_custom_value_table)
+
+        SQLite.create_table(self.engine, self.project_name)
+        SQLite.create_value_table(self.engine, self.value_table)
+        SQLite.create_custom_value_table(self.engine, self.value_custom_table)
 
     def add_column(self, column: Column) -> None:
         if isinstance(column, list):
@@ -72,16 +72,6 @@ class Project(object):
             self.columns[column.name] = column._as_dict(
                 column.name, read_functions=False
             )
-
-    def _create_table(self, name: str, create_function: Callable):
-        with self.engine.connect() as conn:
-            exists = conn.execute(
-                "select name from sqlite_master "
-                'where type="table" '
-                'and name="{}"'.format(name)
-            ).fetchone()
-            if not exists:
-                create_function(conn, name)
 
     def _add_column(self, column: Union[Column, List[Column]]) -> None:
         if isinstance(column.column_name, list):
