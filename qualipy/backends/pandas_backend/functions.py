@@ -37,7 +37,10 @@ def number_of_duplicates(data, column):
 @function(return_format=float)
 def percentage_missing(data, column):
     missing_data = data[(data[column].isnull()) | (data[column] == "")]
-    return missing_data.shape[0] / data.shape[0]
+    try:
+        return missing_data.shape[0] / data.shape[0]
+    except ZeroDivisionError:
+        return 0
 
 
 @function(return_format=int)

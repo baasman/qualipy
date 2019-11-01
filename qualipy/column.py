@@ -72,8 +72,10 @@ class Column(object):
             "force_null": self.force_null,
             "unique": self.unique,
             "is_category": self.is_category,
-            "functions": self._get_functions() if read_functions else self.functions,
-            "extra_functions": self._get_functions("extra_functions"),
+            "functions": self._get_functions(column_name=name)
+            if read_functions
+            else self.functions,
+            "extra_functions": self._get_functions("extra_functions", column_name=name),
         }
         return dict_
 
@@ -81,13 +83,20 @@ class Column(object):
         for key, val in args.items():
             setattr(self, key, val)
 
-    def _get_functions(self, fun_attribute: str = "functions") -> Dict[str, Callable]:
+    def _get_functions(
+        self, fun_attribute: str = "functions", column_name: str = None
+    ) -> Dict[str, Callable]:
         methods = {}
         for fun in dir(self):
             function = getattr(self, fun, None)
             if getattr(function, "has_decorator", False):
                 methods[fun] = function
         given_methods = getattr(self, fun_attribute, None)
+        if fun_attribute == "extra_functions":
+            if column_name in given_methods:
+                given_methods = given_methods[column_name]
+            else:
+                given_methods = []
         if given_methods:
             for func in given_methods:
                 copied_function = copy_function_spec(func)

@@ -29,7 +29,7 @@ def qualipy():
 @click.option(
     "--with_anomaly", default=False, help="Run anomaly models if not preloaded"
 )
-def run(port, debug, ip, config_dir, anomaly):
+def run(port, debug, ip, config_dir, with_anomaly):
     config_file = os.path.join(config_dir, "config.json")
     project_file = os.path.join(config_dir, "projects.json")
     os.environ["QUALIPY_CONFIG_FILE"] = config_file

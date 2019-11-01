@@ -103,9 +103,12 @@ class DataSet(object):
             for chunk in self.time_chunks:
                 print(f"Running on chunk: {chunk['batch_name']}")
                 self.current_data = chunk["chunk"]
-                self.batch_name = str(chunk["batch_name"])
-                self.time_of_run = chunk["batch_name"].date()
-                self._generate_metrics()
+                if self.current_data.shape[0] > 0:
+                    self.batch_name = str(chunk["batch_name"])
+                    self.time_of_run = chunk["batch_name"].date()
+                    self._generate_metrics()
+                else:
+                    print(f"No data found for {chunk['batch_name']}")
 
     def set_dataset(self, df) -> None:
         self.current_data = df
