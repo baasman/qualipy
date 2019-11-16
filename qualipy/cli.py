@@ -1,8 +1,7 @@
 import click
-from werkzeug.serving import run_simple
 from sqlalchemy import create_engine
 
-from qualipy_web.app import app
+from qualipy.web.deploy import FlaskDeploy
 from qualipy.anomaly_detection import RunModels
 
 import os
@@ -19,22 +18,19 @@ def qualipy():
 
 @qualipy.command()
 @click.option("--port", default=5005)
-@click.option("--debug", default=False)
-@click.option("--ip", default="localhost")
+@click.option("--host", default="127.0.0.1")
+@click.option("--config_dir", default=None)
 @click.option(
-    "--config_dir",
-    default=os.path.join(HOME, ".qualipy"),
-    help="The path of the config file located in your respective .qualipy folder",
+    "--train_anomaly", default=False, help="Run anomaly models if not preloaded"
 )
-@click.option(
-    "--with_anomaly", default=False, help="Run anomaly models if not preloaded"
-)
-def run(port, debug, ip, config_dir, anomaly):
-    config_file = os.path.join(config_dir, "config.json")
-    project_file = os.path.join(config_dir, "projects.json")
-    os.environ["QUALIPY_CONFIG_FILE"] = config_file
-    os.environ["QUALIPY_PROJECT_FILE"] = project_file
-    run_simple(ip, port, app, use_reloader=False, use_debugger=debug)
+def run(port, host, config_dir, train_anomaly):
+    if config_dir is None:
+        config_dir = os.environ["CONFIG_DIR"]
+    deployer = FlaskDeploy(
+        config_dir=config_dir, host=host, port=port, train_anomaly=train_anomaly
+    )
+    run_fun = deployer.run()
+    run_fun()
 
 
 @qualipy.command()
