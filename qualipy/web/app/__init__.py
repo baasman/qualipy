@@ -1,17 +1,21 @@
 import os
-import dash
+import logging
 
+import dash
 from flask import Flask
 from flask.helpers import get_root_path
 from flask_login import login_required
 import flask_migrate
 from alembic import command
-from alembic.config import Config as AlembicConfig
 from alembic.runtime.migration import MigrationContext
 from sqlalchemy_utils import database_exists
 
-from web.config import BaseConfig, read_project_config
+from qualipy.web.config import BaseConfig, read_project_config
 from qualipy.web.app.models import User
+
+
+logging.basicConfig(level="INFO")
+logger = logging.getLogger(__name__)
 
 
 def create_app():
@@ -47,7 +51,7 @@ def register_dashapps(app):
     with app.app_context():
 
         # metric tracker
-        metric_tracker_layout = generate_layout(["None"], ["None"], [], 1000000)
+        metric_tracker_layout = generate_layout([], [], [], 1000000)
         metric_tracker_app.title = "Metric Tracker"
         metric_tracker_app.layout = metric_tracker_layout
         metric_tracker_app.config["suppress_callback_exceptions"] = True

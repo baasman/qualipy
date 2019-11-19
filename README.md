@@ -29,7 +29,6 @@ from qualipy.backends.pandas_backend.pandas_types import FloatType
 
 import pandas as pd
 import numpy as np
-from sqlalchemy import create_engine
 
 
 @function(return_format=float)
@@ -57,11 +56,7 @@ class MyCol(Column):
     ]
 
 
-engine = create_engine("sqlite:////tmp/example.db")
-
-project = Project(project_name="iris", engine=engine, config_dir="/tmp/.qualipy")
-project.delete_data()
-project.get_project_table()
+project = Project(project_name="example", config_dir="/tmp/.qualipy")
 project.add_column(MyCol())
 
 dt_range = pd.date_range("2019-01-01", "2019-02-01", freq="1D")
@@ -88,12 +83,11 @@ Within that mapping, we specify:
   - unique: Should uniqueness of column be enforced?
   - functions: The arbitrary functions we'd like to call on the 
   
-Third, we establish a Project. This project will be the overarching chapter to contain and store each batch's info.
-Additionally, it allows us to specify where to store the resulting metadata and configuration, such as where to store the
-data, and where our configuration lies. By default, it will create a directory called .qualipy in your home.
+Third, we establish a Project. A project in Qualipy's case is a representation of the dataset we want to track.
+It tracks all columns and tables that belong to the data itself, and connects it to a specific configuration.
 
-Lastly, we specify a specific batch to the project. In this case, we'll be performing data quality measures on Iris, 
-and give it a batch name to identify it in the dashboard.
+Lastly, we specify a specific batch to the project. In this case, we'll be performing data quality measures on our randomly
+generated dataset, and give it a batch name to identify it in the dashboard.
 
 ## Running the webapp
 ```bash
@@ -106,7 +100,7 @@ Qualipy will train anomaly models for each numerical aggregate you are tracking.
 Qualipy will only train a simplistic Isolation Forest, though more models
 are planned for improved anomaly catching.
 ```bash
-qualipy train-anomaly --project_name iris
+qualipy train-anomaly --project_name example --config_dir /tmp/.qualipy
 ```
 See `qualipy train-anomaly --help` for help
 

@@ -22,6 +22,7 @@ def create_file_name(model_dir, project_name, col_name, metric_name, arguments):
     return file_name
 
 
+# TODO: this and LoadedModel should be one class
 class AnomalyModel(object):
     def __init__(
         self, model="IsolationForest", args=None, config_loc=default_config_path
@@ -39,6 +40,9 @@ class AnomalyModel(object):
     def train(self, train_data):
         self.anom_model.fit(train_data)
 
+    def predict(self, test_data):
+        return self.anom_model.predict(test_data)
+
     def train_predict(self, train_data):
         return self.anom_model.fit_predict(train_data)
 
@@ -46,7 +50,8 @@ class AnomalyModel(object):
         file_name = create_file_name(
             self.model_dir, project_name, col_name, metric_name, arguments
         )
-        print(f"Writing anomaly model to {file_name}")
+        # todo: should be logged instead of printed
+        # print(f"Writing anomaly model to {file_name}")
         joblib.dump(self.anom_model, file_name)
 
 
@@ -58,11 +63,14 @@ class LoadedModel(object):
         file_name = create_file_name(
             self.model_dir, project_name, col_name, metric_name, arguments
         )
-        print(f"Loading model from {file_name}")
+        # print(f"Loading model from {file_name}")
         self.anom_model = joblib.load(file_name)
 
     def predict(self, test_data):
         return self.anom_model.predict(test_data)
+
+    def train_predict(self, train_data):
+        return self.anom_model.fit_predict(train_data)
 
 
 class RunModels(object):
@@ -84,7 +92,6 @@ class RunModels(object):
             + np.where(df.arguments.isnull(), "", df.arguments)
         )
         for metric_name, data in df.groupby("metric_name"):
-            print(metric_name)
             mod = AnomalyModel(config_loc=self.config_dir)
             try:
                 mod.train(data.value.values.reshape((-1, 1)))
@@ -118,7 +125,6 @@ class GenerateAnomalies(object):
         )
         all_rows = []
         for metric_name, data in df.groupby("metric_name"):
-            print(metric_name)
             try:
                 mod = LoadedModel(config_loc=self.config_dir)
                 mod.load(
@@ -134,7 +140,20 @@ class GenerateAnomalies(object):
             except ValueError:
                 warnings.warn(f"Unable to load anomaly model for {metric_name}")
             except FileNotFoundError:
-                warnings.warn(f"Unable to load anomaly model for {metric_name}")
+                mod = AnomalyModel(config_loc=self.config_dir)
+                mod.train(data.value.values.reshape((-1, 1)))
+                mod.save(
+                    self.project.project_name,
+                    data.column_name.values[0],
+                    data.metric.values[0],
+                    data.arguments.values[0],
+                )
+
+            preds = mod.predict(data.value.values.reshape((-1, 1)))
+            outlier_rows = data[preds == -1]
+            if outlier_rows.shape[0] > 0:
+                all_rows.append(outlier_rows)
+
         data = pd.concat(all_rows).sort_values("date", ascending=False)
         data = data[
             ["column_name", "date", "metric", "arguments", "value", "batch_name"]
@@ -153,7 +172,6 @@ class GenerateAnomalies(object):
         )
         all_rows = []
         for metric_name, data in df.groupby("metric_name"):
-            print(metric_name)
             try:
                 data_values = [
                     (pd.Series(c) / pd.Series(c).sum()).to_dict() for c in data["value"]
@@ -189,12 +207,3 @@ class GenerateAnomalies(object):
         except:
             data = pd.DataFrame([], columns=columns)
         return data
-
-
-if __name__ == "__main__":
-    from sqlalchemy import create_engine
-
-    engine = create_engine("sqlite:////data/baasman/qualipy_dbs/test.db")
-    g = GenerateAnomalies("pat_enc", engine, config_dir="/home/baasman/.qualipy")
-    rows = g.create_anom_cat_table()
-    print(rows)

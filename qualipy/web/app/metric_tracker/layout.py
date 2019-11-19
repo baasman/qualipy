@@ -1,6 +1,10 @@
 import dash_html_components as html
 import dash_core_components as dcc
-from qualipy_web.dash_components import column_choice, batch_choice, view_style
+from qualipy.web.app.metric_tracker.util_components import (
+    column_choice,
+    batch_choice,
+    view_style,
+)
 
 from typing import List
 import uuid

@@ -3,6 +3,8 @@ import sys
 
 from qualipy.web.app import create_app
 
+from gunicorn.app.base import BaseApplication
+
 
 class QualipyDeployer(abc.ABC):
     def __init__(
@@ -22,6 +24,20 @@ class QualipyDeployer(abc.ABC):
 
 class FlaskDeploy(QualipyDeployer):
     def run(self, **kwargs):
-        return self.app.run(
+        self.app.run(
             debug=self.app.config["DEBUG"], port=self.port, host=self.host, **kwargs
         )
+
+
+class GUnicornDeploy(BaseApplication, QualipyDeployer):
+    def __init__(self, *args, **kwargs):
+        QualipyDeployer.__init__(self, *args, **kwargs)
+        BaseApplication.__init__(self)
+
+    def load_config(self):
+        options = {"bind": f"{self.host}:{self.port}", "workers": self.workers}
+        for k, v in options.items():
+            self.cfg.set(k.lower(), v)
+
+    def load(self):
+        return self.app

@@ -16,24 +16,27 @@ from qualipy.web.app.caching import (
 )
 from qualipy._sql import SQLite
 from qualipy.util import set_value_type
-from qualipy_web.components.overview_page import (
+from qualipy.web.app.metric_tracker.components.overview_page import (
     overview_table,
     schema_table,
     anomaly_num_data,
     anomaly_num_table,
 )
-from qualipy_web.components.numerical_page import (
+from qualipy.web.app.metric_tracker.components.numerical_page import (
     histogram,
     create_trend_line,
     all_trends,
 )
-from qualipy_web.components.standard_viz_dynamic_page import (
+from qualipy.web.app.metric_tracker.components.standard_viz_dynamic_page import (
     create_value_count_area_chart,
     create_prop_change_list,
     barchart_top_cats,
 )
-from qualipy_web.components.boolean_page import error_check_table, boolean_plot
-from qualipy_web.components.data_characteristic_page import (
+from qualipy.web.app.metric_tracker.components.boolean_page import (
+    error_check_table,
+    boolean_plot,
+)
+from qualipy.web.app.metric_tracker.components.data_characteristic_page import (
     create_type_plots,
     create_simple_line_plot_subplots,
     create_unique_columns_plot,
@@ -109,7 +112,7 @@ def register_callbacks(dashapp):
             session["project_name"],
             batch="all",
             column=None,
-            url=capp.config["SQLALCHEMY_URL"],
+            url=capp.config["QUALIPY_DB"],
             live_update=False,
             n_intervals=0,
             session_id=session_id,
@@ -130,7 +133,7 @@ def register_callbacks(dashapp):
             session["project_name"],
             batch="all",
             column=None,
-            url=capp.config["SQLALCHEMY_URL"],
+            url=capp.config["QUALIPY_DB"],
             live_update=False,
             n_intervals=0,
             session_id=session_id,
@@ -151,7 +154,7 @@ def register_callbacks(dashapp):
             session["project_name"],
             batch="all",
             column=None,
-            url=capp.config["SQLALCHEMY_URL"],
+            url=capp.config["QUALIPY_DB"],
             live_update=True,
             n_intervals=n_intervals,
             session_id=session_id,
@@ -201,7 +204,7 @@ def register_callbacks(dashapp):
         if anom_data is None:
             anom_data = anomaly_num_data(
                 project_name=session["project_name"],
-                db_url=capp.config["SQLALCHEMY_URL"],
+                db_url=capp.config["QUALIPY_DB"],
                 config_dir=os.environ["CONFIG_DIR"],
             ).head(50)
             cache_dataframe(anom_data, anom_data_session)
@@ -233,7 +236,7 @@ def register_callbacks(dashapp):
             data = select_data(
                 session["project_name"],
                 column=column,
-                url=capp.config["SQLALCHEMY_URL"],
+                url=capp.config["QUALIPY_DB"],
                 live_update=True,
                 n_intervals=n_intervals,
                 session_id=session_id,
@@ -247,7 +250,7 @@ def register_callbacks(dashapp):
                 plot_data = data[
                     (data["column_name"] == column) & (data["metric"] == metric)
                 ]
-                plot_data = set_value_type(plot_data)
+                plot_data = set_value_type(plot_data.copy())
                 plots.append(
                     html.Div(
                         id="trend-plots-{}".format(idx),
@@ -270,7 +273,7 @@ def register_callbacks(dashapp):
             data = select_data(
                 session["project_name"],
                 column=column,
-                url=capp.config["SQLALCHEMY_URL"],
+                url=capp.config["QUALIPY_DB"],
                 live_update=True,
                 n_intervals=n_intervals,
                 session_id=session_id,
@@ -282,7 +285,7 @@ def register_callbacks(dashapp):
             data = select_data(
                 session["project_name"],
                 column=None,
-                url=capp.config["SQLALCHEMY_URL"],
+                url=capp.config["QUALIPY_DB"],
                 live_update=True,
                 n_intervals=n_intervals,
                 session_id=session_id,
@@ -306,7 +309,7 @@ def register_callbacks(dashapp):
         data = select_data(
             session["project_name"],
             column=column,
-            url=capp.config["SQLALCHEMY_URL"],
+            url=capp.config["QUALIPY_DB"],
             session_id=session_id,
         )
 
@@ -338,7 +341,7 @@ def register_callbacks(dashapp):
             session["project_name"],
             batch="all",
             column=None,
-            url=capp.config["SQLALCHEMY_URL"],
+            url=capp.config["QUALIPY_DB"],
             live_update=True,
             n_intervals=n_intervals,
             session_id=session_id,
@@ -383,7 +386,7 @@ def register_callbacks(dashapp):
             session["project_name"],
             batch="all",
             column=column,
-            url=capp.config["SQLALCHEMY_URL"],
+            url=capp.config["QUALIPY_DB"],
             live_update=True,
             n_intervals=n_intervals,
             session_id=session_id,
@@ -392,7 +395,7 @@ def register_callbacks(dashapp):
             session["project_name"],
             batch="all",
             column=None,
-            url=capp.config["SQLALCHEMY_URL"],
+            url=capp.config["QUALIPY_DB"],
             live_update=True,
             n_intervals=n_intervals,
             session_id=session_id,
