@@ -9,3 +9,8 @@ scikit-learn
 flask_caching
 pyarrow
 redis
+flask_login
+flask_migrate
+flask_wtf
+sqlalchemy_utils
+gunicorn

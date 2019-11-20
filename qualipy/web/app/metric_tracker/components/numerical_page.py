@@ -28,7 +28,7 @@ def all_trends(data, show_column_in_name=False):
     )
     for row, (name, group) in enumerate(df.groupby("metric_name"), start=1):
         x = group.date
-        group = set_value_type(group)
+        group = set_value_type(group.copy())
         fig.append_trace(go.Scatter(x=x, y=group.value.values), row=row, col=1)
 
     fig["layout"].update(

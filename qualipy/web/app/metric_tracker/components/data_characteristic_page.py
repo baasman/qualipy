@@ -1,6 +1,6 @@
 import dash_core_components as dcc
 import plotly.graph_objs as go
-from plotly import tools
+from plotly.subplots import make_subplots
 import numpy as np
 
 
@@ -11,7 +11,7 @@ def create_simple_line_plot_subplots(data):
     data_values2 = data2["value"].values
     x = data1["date"]
 
-    fig = tools.make_subplots(
+    fig = make_subplots(
         rows=2, cols=1, shared_xaxes=True, shared_yaxes=False, vertical_spacing=0.01
     )
 
@@ -86,7 +86,7 @@ def create_type_plots(data):
 
     try:
         if uniques.shape[0] > 0:
-            fig = tools.make_subplots(
+            fig = make_subplots(
                 rows=len(uniques),
                 cols=1,
                 shared_xaxes=True,

@@ -40,28 +40,3 @@ def batch_choice(batches, id, include_all=True, multi=True):
         multi=multi,
         style={"width": "300px", "marginTop": "30px"},
     )
-
-
-def alerts_markdown(data):
-    lines = []
-    for idx, row in data.iterrows():
-        lines.append(
-            "Column {} has an anomaly in batch {}".format(row["column"], row["date"])
-        )
-
-    warning_lines = "\n\n".join(lines)
-    print(warning_lines)
-
-    markdown = dcc.Markdown(
-        """
-        Alerts
-        =======
-        
-        
-        {}
-        
-    """.format(
-            warning_lines
-        )
-    )
-    return markdown

@@ -1,8 +1,7 @@
 import click
-from werkzeug.serving import run_simple
 from sqlalchemy import create_engine
 
-from qualipy_web.app import app
+from qualipy.web.deploy import FlaskDeploy, GUnicornDeploy
 from qualipy.anomaly_detection import RunModels
 
 import os
@@ -10,6 +9,8 @@ import json
 
 
 HOME = os.path.expanduser("~")
+
+DEPLOYMENT_OPTIONS = {"flask": FlaskDeploy, "gunicorn": GUnicornDeploy}
 
 
 @click.group()
@@ -19,35 +20,28 @@ def qualipy():
 
 @qualipy.command()
 @click.option("--port", default=5005)
-@click.option("--debug", default=False)
-@click.option("--ip", default="localhost")
+@click.option("--host", default="127.0.0.1")
+@click.option("--config_dir", default=None)
+@click.option("--engine", default="flask")
 @click.option(
-    "--config_dir",
-    default=os.path.join(HOME, ".qualipy"),
-    help="The path of the config file located in your respective .qualipy folder",
+    "--train_anomaly", default=False, help="Run anomaly models if not preloaded"
 )
-@click.option(
-    "--with_anomaly", default=False, help="Run anomaly models if not preloaded"
-)
-def run(port, debug, ip, config_dir, with_anomaly):
-    config_file = os.path.join(config_dir, "config.json")
-    project_file = os.path.join(config_dir, "projects.json")
-    os.environ["QUALIPY_CONFIG_FILE"] = config_file
-    os.environ["QUALIPY_PROJECT_FILE"] = project_file
-    run_simple(ip, port, app, use_reloader=False, use_debugger=debug)
+def run(port, host, config_dir, train_anomaly, engine):
+    if config_dir is None:
+        config_dir = os.environ["CONFIG_DIR"]
+    deployer = DEPLOYMENT_OPTIONS[engine](
+        config_dir=config_dir, host=host, port=port, train_anomaly=train_anomaly
+    )
+    deployer.run()
 
 
 @qualipy.command()
-@click.option("--project_name", default=False)
-@click.option("--config_dir", default=os.path.join(HOME, ".qualipy"))
+@click.option("--project_name", default=None)
+@click.option("--config_dir", default=None)
 def train_anomaly(project_name, config_dir):
     with open(os.path.join(config_dir, "config.json"), "r") as file:
         loaded_config = json.load(file)
-    try:
-        db = loaded_config["db_url"]
-    except KeyError("No db specified in config"):
-        sys.exit(1)
-    engine = create_engine(db)
+    engine = create_engine(loaded_config["QUALIPY_DB"])
     run_mods = RunModels(project_name, engine, config_dir)
     run_mods.train_all()
 

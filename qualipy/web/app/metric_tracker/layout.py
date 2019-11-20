@@ -1,15 +1,16 @@
 import dash_html_components as html
 import dash_core_components as dcc
-from qualipy_web.dash_components import column_choice, batch_choice, view_style
-
-import pandas as pd
+from qualipy.web.app.metric_tracker.util_components import (
+    column_choice,
+    batch_choice,
+    view_style,
+)
 
 from typing import List
 import uuid
 
 
 def generate_layout(
-    data: pd.DataFrame,
     numerical_column_options: List[str],
     categorical_column_options: List[str],
     boolean_options: List[str],
@@ -25,7 +26,7 @@ def generate_layout(
     overview_html.append(
         html.Div(session_id, id="session-id", style={"display": "none"})
     )
-    overview_html.append(html.Br(id="placeholder"))
+    overview_html.append(html.Div(id="none", children=[], style={"display": "none"}))
     overview_html.append(html.Div(id="overview-page-results"))
     overview_html.append(html.Br())
     overview_html.append(html.A("Home", href="/index", target="_blank"))
@@ -57,7 +58,7 @@ def generate_layout(
             html.P("There are no numerical aggregates tracked for this dataset")
         )
     children.append(dcc.Tab(label="Numerical", value="tab-2", children=numerical_html))
-
+    #
     # Categorical column built-ins
     categorical_html = []
     if len(categorical_column_options) > 0:
@@ -80,12 +81,10 @@ def generate_layout(
     children.append(
         dcc.Tab(label="Categorical", value="tab-3", children=categorical_html)
     )
-
-    # General built in data quality checks
+    #
+    # # General built in data quality checks
     tab4_html = []
-    tab4_html.append(
-        batch_choice(data["date"].unique(), id="batch-choice-4", include_all=True)
-    )
+    tab4_html.append(batch_choice([], id="batch-choice-4", include_all=True))
     tab4_html.append(html.Br(id="placeholder-2"))
     tab4_html.append(html.Div(id="tab-4-results"))
     tab4_html.append(html.Br())
@@ -96,8 +95,8 @@ def generate_layout(
     children.append(
         dcc.Tab(label="Data Characteristics", value="tab-4", children=tab4_html)
     )
-
-    # Boolean variables
+    #
+    # # Boolean variables
     boolean_tab = []
     if len(boolean_options) > 0:
         boolean_tab.append(
@@ -115,4 +114,6 @@ def generate_layout(
         dcc.Tab(label="Boolean Metrics", value="tab-6", children=boolean_tab)
     )
 
-    return [dcc.Tabs(id="tabs", value="tab-1", children=children)]
+    return html.Div(
+        id="total-div", children=[dcc.Tabs(id="tabs", value="tab-1", children=children)]
+    )
