@@ -1,8 +1,6 @@
 ## Qualipy
 
-Qualipy is a data monitoring and quality library. Most data quality tools out
-there focus on monitoring the input and/or the output. Qualipy, on the other hand,
-is completely focused on understanding your data during a pipeline or data workflow.
+Qualipy is a data monitoring and quality library.
 
 ## Install
 
@@ -81,7 +79,7 @@ Within that mapping, we specify:
   - null: Can column be null
   - force_null: if null is False, process fails if null values found in column
   - unique: Should uniqueness of column be enforced?
-  - functions: The arbitrary functions we'd like to call on the 
+  - functions: The arbitrary functions we'd like to call on the column
   
 Third, we establish a Project. A project in Qualipy's case is a representation of the dataset we want to track.
 It tracks all columns and tables that belong to the data itself, and connects it to a specific configuration.

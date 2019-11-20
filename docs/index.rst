@@ -3,16 +3,18 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to qualipy's documentation!
+Qualipy (v0.1.0)
 ===================================
+
+Qualipy is a data monitoring and quality library.
 
 Contents:
 
 .. toctree::
    :maxdepth: 2
 
-   overview.rst
-   installation
+   installation.rst
+   quickstart.rst
 
 
 

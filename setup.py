@@ -22,7 +22,7 @@ except FileExistsError:
 setup(
     name="qualipy",
     version="0.1.0",
-    description="A data quality tool for batch ml pipelines",
+    description="A data quality tool for batch ml pipelines and longitudinal data",
     long_description_content_type="text/markdown",
     url="https://github.com/baasman/qualipy",
     author="Boudewijn Aasman",
@@ -42,4 +42,5 @@ setup(
             qualipy=qualipy.cli:qualipy
         """,
     include_package_data=True,
+    python_requires=">=3.6",
 )
