@@ -140,19 +140,21 @@ class GenerateAnomalies(object):
             except ValueError:
                 warnings.warn(f"Unable to load anomaly model for {metric_name}")
             except FileNotFoundError:
-                mod = AnomalyModel(config_loc=self.config_dir)
-                mod.train(data.value.values.reshape((-1, 1)))
-                mod.save(
-                    self.project.project_name,
-                    data.column_name.values[0],
-                    data.metric.values[0],
-                    data.arguments.values[0],
-                )
-
-            preds = mod.predict(data.value.values.reshape((-1, 1)))
-            outlier_rows = data[preds == -1]
-            if outlier_rows.shape[0] > 0:
-                all_rows.append(outlier_rows)
+                try:
+                    mod = AnomalyModel(config_loc=self.config_dir)
+                    mod.train(data.value.values.reshape((-1, 1)))
+                    mod.save(
+                        self.project.project_name,
+                        data.column_name.values[0],
+                        data.metric.values[0],
+                        data.arguments.values[0],
+                    )
+                    preds = mod.predict(data.value.values.reshape((-1, 1)))
+                    outlier_rows = data[preds == -1]
+                    if outlier_rows.shape[0] > 0:
+                        all_rows.append(outlier_rows)
+                except:
+                    warnings.warn(f"Unable to create anomaly model for {metric_name}")
 
         data = pd.concat(all_rows).sort_values("date", ascending=False)
         data = data[

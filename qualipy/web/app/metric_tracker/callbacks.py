@@ -315,18 +315,22 @@ def register_callbacks(dashapp):
 
         data = data[(data["type"] == "categorical")]
 
-        cat_plots = []
-        plot = create_value_count_area_chart(data, column)
-        cat_plots.append(plot)
-        bar_chart = barchart_top_cats(data)
-        cat_plots.append(bar_chart)
-        prop_change_plot = create_prop_change_list(data, column)
-        cat_plots.append(prop_change_plot)
-        cat_plots_div = html.Div(id="c-plots", children=cat_plots)
+        if data.shape[0] > 0:
+            cat_plots = []
+            plot = create_value_count_area_chart(data, column)
+            cat_plots.append(plot)
+            bar_chart = barchart_top_cats(data)
+            cat_plots.append(bar_chart)
+            prop_change_plot = create_prop_change_list(data, column)
+            cat_plots.append(prop_change_plot)
+            cat_plots_div = html.Div(id="c-plots", children=cat_plots)
 
-        plot_div = html.Div(
-            id="cat-plots-section", children=[html.H3("Plots"), cat_plots_div]
-        )
+            plot_div = html.Div(
+                id="cat-plots-section", children=[html.H3("Plots"), cat_plots_div]
+            )
+        else:
+            plot_div = html.Div(id="cat-plots-section", children=[])
+
         return plot_div
 
     @dashapp.callback(

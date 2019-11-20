@@ -51,7 +51,7 @@ def register_dashapps(app):
     with app.app_context():
 
         # metric tracker
-        metric_tracker_layout = generate_layout([], [], [], 1000000)
+        metric_tracker_layout = generate_layout(["None"], ["None"], [], 1000000)
         metric_tracker_app.title = "Metric Tracker"
         metric_tracker_app.layout = metric_tracker_layout
         metric_tracker_app.config["suppress_callback_exceptions"] = True
