@@ -65,7 +65,7 @@ def is_unique(data, column):
     return data[column].unique().shape[0] == data.shape[0]
 
 
-@function(allowed_arguments="column_two", return_format=float)
+@function(allowed_arguments=["column_two"], return_format=float)
 def correlation_two_columns(data, column, column_two):
     return data[column].corr(data[column_two])
 

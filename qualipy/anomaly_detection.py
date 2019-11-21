@@ -156,10 +156,13 @@ class GenerateAnomalies(object):
                 except:
                     warnings.warn(f"Unable to create anomaly model for {metric_name}")
 
-        data = pd.concat(all_rows).sort_values("date", ascending=False)
-        data = data[
-            ["column_name", "date", "metric", "arguments", "value", "batch_name"]
-        ]
+        columns = ["column_name", "date", "metric", "arguments", "value", "batch_name"]
+        try:
+            data = pd.concat(all_rows).sort_values("date", ascending=False)
+            data = data[columns]
+            data.value = data.value.astype(str)
+        except:
+            data = pd.DataFrame([], columns=columns)
         return data
 
     def create_anom_cat_table(self):

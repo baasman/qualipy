@@ -90,7 +90,8 @@ def barchart_top_cats(data):
     y = [i[1] for i in items]
     plot = dcc.Graph(
         figure=go.Figure(
-            data=[go.Bar(x=x, y=y)], layout=go.Layout(title="All Categories")
+            data=[go.Bar(x=x, y=y)],
+            layout=go.Layout(title="All Categories", xaxis={"type": "category"}),
         ),
         id="barchart-all-categories",
     )

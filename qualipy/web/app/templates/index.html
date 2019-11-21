@@ -2,7 +2,7 @@
 
 {% block content %}
 {% if current_user.is_anonymous %}
-  <h1>Hello, stranger!</h1>
+  <h1>Hello!</h1>
 {% else  %}
   <h1>Hi, {{ current_user.username }}!</h1>
 {% endif %}

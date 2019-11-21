@@ -143,6 +143,24 @@ def register_callbacks(dashapp):
         return options
 
     @dashapp.callback(
+        Output(component_id="bool-tab-col-choice", component_property="options"),
+        [Input("session-id", "children")],
+    )
+    def bool_columns(session_id):
+        data = select_data(
+            session["project_name"],
+            batch="all",
+            column=None,
+            url=capp.config["QUALIPY_DB"],
+            live_update=False,
+            n_intervals=0,
+            session_id=session_id,
+        )
+        columns = data[data.type == "boolean"].column_name.unique()
+        options = [{"label": i, "value": i} for i in columns]
+        return options
+
+    @dashapp.callback(
         Output(component_id="overview-page-results", component_property="children"),
         [
             Input(component_id="live-refresh", component_property="n_intervals"),
@@ -306,14 +324,16 @@ def register_callbacks(dashapp):
         ],
     )
     def update_tab_3(column, session_id):
-        data = select_data(
-            session["project_name"],
-            column=column,
-            url=capp.config["QUALIPY_DB"],
-            session_id=session_id,
-        )
-
-        data = data[(data["type"] == "categorical")]
+        if column != "None":
+            data = select_data(
+                session["project_name"],
+                column=column,
+                url=capp.config["QUALIPY_DB"],
+                session_id=session_id,
+            )
+            data = data[(data["type"] == "categorical")]
+        else:
+            data = pd.DataFrame({})
 
         if data.shape[0] > 0:
             cat_plots = []

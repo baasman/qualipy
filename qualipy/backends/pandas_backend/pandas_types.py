@@ -10,12 +10,16 @@ class BaseType(object):
         return class_name
 
 
+# TODO: should have a convert method?
 class DateTimeType(BaseType):
     def check_approximate_type(self, given_dtype):
         return eq(given_dtype.type, np.datetime64)
 
 
 class FloatType(BaseType):
+
+    str_name = "float64"
+
     def check_approximate_type(self, given_dtype):
         types = [
             eq(given_dtype, numpy_float_type)
@@ -31,6 +35,9 @@ class FloatType(BaseType):
 
 
 class IntType(BaseType):
+
+    str_name = "int16"
+
     def check_approximate_type(self, given_dtype):
         types = [
             eq(given_dtype, numpy_float_type)
@@ -47,15 +54,24 @@ class IntType(BaseType):
 
 
 class ObjectType(BaseType):
+
+    str_name = "str"
+
     def check_approximate_type(self, given_dtype):
         return eq(given_dtype, object)
 
 
 class NumericType(BaseType):
+
+    str_name = "float64"
+
     def check_approximate_type(self, given_dtype):
         return np.issubdtype(given_dtype, np.number)
 
 
 class BoolType(BaseType):
+
+    str_name = "bool"
+
     def check_approximate_type(self, given_dtype):
         return eq(given_dtype, bool)

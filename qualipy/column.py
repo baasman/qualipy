@@ -52,6 +52,7 @@ class Column(object):
     column_name = None
     column_type = None
     force_type = False
+    overwrite_type = False
     null = True
     force_null = False
     unique = False
@@ -64,6 +65,7 @@ class Column(object):
             "name": name,
             "type": self.column_type,
             "force_type": self.force_type,
+            "overwrite_type": self.overwrite_type,
             "null": self.null,
             "force_null": self.force_null,
             "unique": self.unique,
@@ -181,6 +183,7 @@ class PandasTable(Table):
                     "name": col,
                     "column_type": col_type,
                     "force_type": False,
+                    "overwrite_type": False,
                     "null": True,
                     "force_null": False,
                     "unique": False,

@@ -194,3 +194,8 @@ class BackendPandas(BackendBase):
             for d in list(data.groupby(pd.Grouper(key=time_column, freq=time_freq)))
         ]
         return groups
+
+    @staticmethod
+    def overwrite_type(data, col, type):
+        data[col] = data[col].astype(type.str_name)
+        return data

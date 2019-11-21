@@ -17,18 +17,18 @@ from qualipy.backends.pandas_backend.pandas_types import (
 )
 from qualipy.project import Project
 
-try:
-    from qualipy.backends.spark_backend.generator import BackendSpark
-except Exception as e:
-    print(e)
-    warnings.warn("Unable to import pyspark")
-    BackendSpark = None
+# try:
+#     from qualipy.backends.spark_backend.generator import BackendSpark
+# except Exception as e:
+#     print(e)
+#     warnings.warn("Unable to import pyspark")
+#     BackendSpark = None
 
 
 HOME = os.path.expanduser("~")
 
 
-GENERATORS = {"pandas": BackendPandas, "spark": BackendSpark}
+GENERATORS = {"pandas": BackendPandas}
 
 # types
 AllowedTypes = Union[DateTimeType, FloatType, IntType, ObjectType]
@@ -134,6 +134,11 @@ class DataSet(object):
                 desired_type=specs["type"],
                 force=specs["force_type"],
             )
+            overwrite_type = specs["overwrite_type"]
+            if overwrite_type:
+                self.current_data = self.generator.overwrite_type(
+                    self.current_data, col, specs["type"]
+                )
 
             # get default column info
             measures = self._get_column_specific_general_info(specs, measures)
