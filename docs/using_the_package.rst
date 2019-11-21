@@ -33,6 +33,11 @@ There are several parameters one can use when defining a ``function``.
 `allowed_arguments`    An optional list of strings that specify what arguments can
                        be passed to the function, in addition to ``data`` and
                        ``function``
-`fail`                 If using return format of bool, should the process stop if
-                       the function returns ``False``
+`fail`                 Can be True or False. If using return format of bool, should the process stop if
+                       the function returns ``False``?
 ====================== ============================================================
+
+Creating a mapping
+-------------------
+
+The easiest way to apply rules to a column is to create a class that inherits from qualipy.Column.

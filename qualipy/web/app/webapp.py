@@ -5,7 +5,6 @@ from werkzeug.urls import url_parse
 
 from qualipy.web.app.extensions import db
 from qualipy.web.app.forms import LoginForm
-from qualipy.web.app.forms import RegistrationForm
 from qualipy.web.app.models import User
 
 import os
@@ -62,20 +61,3 @@ def logout():
     logout_user()
 
     return redirect(url_for("main.index"))
-
-
-@main.route("/register/", methods=["GET", "POST"])
-def register():
-    if current_user.is_authenticated:
-        return redirect(url_for("main.index"))
-
-    form = RegistrationForm()
-    if form.validate_on_submit():
-        user = User(username=form.username.data)
-        user.set_password(form.password.data)
-        db.session.add(user)
-        db.session.commit()
-
-        return redirect(url_for("main.login"))
-
-    return render_template("register.html", title="Register", form=form)

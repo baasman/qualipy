@@ -29,7 +29,7 @@ def generate_layout(
     overview_html.append(html.Div(id="none", children=[], style={"display": "none"}))
     overview_html.append(html.Div(id="overview-page-results"))
     overview_html.append(html.Br())
-    overview_html.append(html.A("Home", href="/index", target="_blank"))
+    overview_html.append(html.A("Home", href="/", target="_blank"))
     overview_html.append(
         dcc.Interval(id="live-refresh", interval=interval_time, n_intervals=0)
     )
@@ -49,7 +49,7 @@ def generate_layout(
         numerical_html.append(html.Br())
         numerical_html.append(html.Div(id="numerical-page-results"))
         numerical_html.append(html.Br())
-        numerical_html.append(html.A("Home", href="/index", target="_blank"))
+        numerical_html.append(html.A("Home", href="/", target="_blank"))
         numerical_html.append(
             dcc.Interval(id="live-refresh-num", interval=interval_time, n_intervals=0)
         )
@@ -73,7 +73,7 @@ def generate_layout(
         categorical_html.append(html.Br())
         categorical_html.append(html.Div(id="categorical-page-results"))
         categorical_html.append(html.Br())
-        categorical_html.append(html.A("Home", href="/index", target="_blank"))
+        categorical_html.append(html.A("Home", href="/", target="_blank"))
     else:
         categorical_html.append(
             html.P("There are no categorical aggregates tracked for this dataset")
@@ -88,7 +88,7 @@ def generate_layout(
     tab4_html.append(html.Br(id="placeholder-2"))
     tab4_html.append(html.Div(id="tab-4-results"))
     tab4_html.append(html.Br())
-    tab4_html.append(html.A("Home", href="/index", target="_blank"))
+    tab4_html.append(html.A("Home", href="/", target="_blank"))
     tab4_html.append(
         dcc.Interval(id="live-refresh-cat", interval=interval_time, n_intervals=0)
     )
@@ -105,7 +105,7 @@ def generate_layout(
         boolean_tab.append(html.Br())
         boolean_tab.append(html.Div(id="bool-tab-results"))
         boolean_tab.append(html.Br())
-        boolean_tab.append(html.A("Home", href="/index", target="_blank"))
+        boolean_tab.append(html.A("Home", href="/", target="_blank"))
     else:
         boolean_tab.append(
             html.P("There are no boolean checks chosen for this dataset")

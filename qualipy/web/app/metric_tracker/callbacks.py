@@ -425,20 +425,23 @@ def register_callbacks(dashapp):
             session_id=session_id,
         )
         error_data = error_data[error_data.type == "boolean"]
-        error_data = set_value_type(error_data)
-        error_data = error_data[error_data.value == False]
+        if error_data.shape[0] > 0:
+            error_data = set_value_type(error_data)
+            error_data = error_data[error_data.value == False]
 
-        error_data = error_data.sort_values("date", ascending=False)
+            error_data = error_data.sort_values("date", ascending=False)
 
-        data = data[(data["type"] == "boolean")]
-        plot = boolean_plot(data)
-        error_table = error_check_table(
-            error_data[["column_name", "metric", "arguments", "batch_name"]]
-        )
+            data = data[(data["type"] == "boolean")]
+            plot = boolean_plot(data)
+            error_table = error_check_table(
+                error_data[["column_name", "metric", "arguments", "batch_name"]]
+            )
 
-        table_header = html.H3("All Failed Checks")
+            table_header = html.H3("All Failed Checks")
 
-        row1 = html.Div(id="row1", children=[plot, table_header, error_table])
+            row1 = html.Div(id="row1", children=[plot, table_header, error_table])
 
-        page = html.Div(id="tab-6-page", children=row1)
+            page = html.Div(id="tab-6-page", children=row1)
+        else:
+            page = html.Div(id="tab-6-page", children=[])
         return page
