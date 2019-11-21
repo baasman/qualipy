@@ -65,9 +65,9 @@ def is_unique(data, column):
     return data[column].unique().shape[0] == data.shape[0]
 
 
-@function(other_column="column_two", return_format=float)
+@function(allowed_arguments="column_two", return_format=float)
 def correlation_two_columns(data, column, column_two):
-    return data[column].corr(column_two)
+    return data[column].corr(data[column_two])
 
 
 @function(allowed_arguments=["std_away"], return_format=int)
@@ -90,13 +90,11 @@ def value_counts(data, column):
     )
 
 
-@function(
-    other_column="column_two", allowed_arguments=["include_nan"], return_format=dict
-)
+@function(allowed_arguments=["include_nan", "column_two"], return_format=dict)
 def heatmap(data, column, column_two=None, include_nan=True):
     if include_nan:
-        data = data[(data[column] != "nan") & (column_two != "nan")]
-    cross = pd.crosstab(data[column], column_two)
+        data = data[(data[column] != "nan") & (data[column_two] != "nan")]
+    cross = pd.crosstab(data[column], data[column_two])
     cross_data = {
         "z": cross.values.tolist(),
         "y": cross.index.values.tolist(),
@@ -105,9 +103,11 @@ def heatmap(data, column, column_two=None, include_nan=True):
     return cross_data
 
 
-@function(other_column="y", return_format=dict)
-def correlation(data, column, y):
-    corrs = pd.DataFrame({column: data[column].values, "other_col": y.values})
+@function(return_format=dict, allowed_arguments=["column_two"])
+def correlation(data, column, column_two):
+    corrs = pd.DataFrame(
+        {column: data[column].values, "other_col": data[column_two].values}
+    )
     corrs_data = {
         "z": corrs.values.tolist(),
         "y": corrs.index.values.tolist(),

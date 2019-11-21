@@ -27,19 +27,15 @@ def function(
     allowed_arguments: Optional[List[str]] = None,
     return_format: type = float,
     arguments: Dict[str, Any] = None,
-    anomaly: bool = False,
-    other_column: Union[Optional[List[str]], Optional[str]] = None,
     fail: bool = False,
 ) -> Callable:
     def inner_fun(method: Callable):
-        method.anomaly = anomaly
         method.allowed_arguments = (
             [] if allowed_arguments is None else allowed_arguments
         )
         method.arguments = {} if arguments is None else arguments
         method.has_decorator = True
         method.return_format = return_format
-        method.other_column = other_column
         method.fail = fail
 
         @wraps(method)

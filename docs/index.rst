@@ -15,6 +15,7 @@ Contents:
 
    installation.rst
    quickstart.rst
+   using_the_package.rst
 
 
 

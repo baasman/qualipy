@@ -154,11 +154,6 @@ class DataSet(object):
                 return_format = function.return_format
                 is_key_function = function.key_function
                 return_format_repr = types[return_format]
-                other_columns = self.generator.get_other_columns(
-                    other_column=function.other_column,
-                    arguments=arguments,
-                    data=self.current_data,
-                )
                 viz_type = self._set_viz_type(function, function_name)
 
                 # generate result row
@@ -169,7 +164,6 @@ class DataSet(object):
                     standard_viz=standard_viz,
                     function_name=function_name,
                     date=self.time_of_run,
-                    other_columns=other_columns,
                     is_static=is_static,
                     viz_type=viz_type,
                     return_format=return_format_repr,

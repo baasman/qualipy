@@ -21,47 +21,13 @@ import pandas as pd
 Column = Dict[str, Union[str, bool, Dict[str, Callable]]]
 
 
-def _create_arg_string(
-    keyword_arguments: Dict[str, Any], other_columns: Optional[List[str]] = None
-) -> str:
+def _create_arg_string(keyword_arguments: Dict[str, Any]) -> str:
     if keyword_arguments:
-        if other_columns is not None:
-            col_arguments = {
-                "col_{}".format(idx): k for idx, k in enumerate(other_columns)
-            }
-            for col in other_columns:
-                keyword_arguments.pop(col)
-            keyword_arguments = {**keyword_arguments, **col_arguments}
         return str(keyword_arguments)
     return NaN
 
 
-def _set_columns(other_column, other_columns, arguments, data):
-    if other_column in arguments:
-        other_columns[other_column] = data[arguments[other_column]]
-    else:
-        other_columns[other_column] = data[other_column]
-    return other_columns
-
-
 class BackendPandas(BackendBase):
-    @staticmethod
-    def get_other_columns(
-        other_column: Optional[Union[List[str], str]],
-        arguments: Dict[str, Any],
-        data: pd.DataFrame,
-    ):
-
-        if other_column is not None:
-            other_columns = {}
-            if not isinstance(other_column, list):
-                other_column = [other_column]
-            for col in other_column:
-                other_columns = _set_columns(col, other_columns, arguments, data)
-        else:
-            other_columns = None
-        return other_columns
-
     @staticmethod
     def set_return_value_type(value: type, return_format: type):
         if return_format in [int, float, str, dict, bool]:
@@ -112,20 +78,17 @@ class BackendPandas(BackendBase):
         function_name: str,
         standard_viz: bool,
         is_static: bool = True,
-        other_columns: Optional[Dict[str, Any]] = None,
         viz_type: str = "numerical",
         return_format: str = "float",
         key_function: bool = False,
         kwargs: Dict[str, Any] = None,
     ):
         kwargs = {} if kwargs is None else kwargs
-        if other_columns is not None:
-            kwargs = {**kwargs, **other_columns}
         value = function(data, column, **kwargs)
         return {
             "value": value,
             "metric": function_name,
-            "arguments": _create_arg_string(kwargs, other_columns),
+            "arguments": _create_arg_string(kwargs),
             "date": date,
             "column_name": column,
             "standard_viz": standard_viz,
