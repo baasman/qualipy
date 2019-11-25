@@ -1,5 +1,20 @@
 {% extends "base.html" %}
 
+{% block style %}
+    <style>
+        #anom-table-main {
+            margin-top: 50px;
+            margin-left: 50px;
+        }
+
+
+    </style>
+
+
+{% endblock %}
+
 {% block content %}
-    {{ anom_table }}
+    {% if current_user.is_authenticated %}
+        {{ anom_table }}
+    {% endif %}
 {% endblock %}

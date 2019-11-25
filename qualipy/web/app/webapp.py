@@ -17,6 +17,7 @@ from qualipy.web.app.caching import (
 
 import os
 import json
+from uuid import uuid4
 
 
 main = Blueprint("main", __name__)
@@ -26,19 +27,25 @@ main = Blueprint("main", __name__)
 @main.route("/index", methods=["GET"])
 def index():
     config_dir = os.environ["CONFIG_DIR"]
-    with open(os.path.join(config_dir, "projects.json"), "r") as f:
-        projects = json.loads(f.read())
-    anom_data_session = set_session_anom_data_name(session["_id"])
-    anom_data = get_cached_dataframe(anom_data_session)
-    if anom_data is None:
-        anom_data = anomaly_data_all_projects(
-            project_names=list(projects.keys()),
-            db_url=capp.config["QUALIPY_DB"],
-            config_dir=config_dir,
+    if current_user.is_authenticated:
+        with open(os.path.join(config_dir, "projects.json"), "r") as f:
+            projects = json.loads(f.read())
+        anom_data_session = set_session_anom_data_name(session["_id"])
+        anom_data = get_cached_dataframe(anom_data_session)
+        if anom_data is None:
+            anom_data = anomaly_data_all_projects(
+                project_names=list(projects.keys()),
+                db_url=capp.config["QUALIPY_DB"],
+                config_dir=config_dir,
+            )
+            cache_dataframe(anom_data, anom_data_session)
+        rows = anom_data.to_dict(orient="records")
+        anom_table = AnomalyTable(
+            rows, classes=["table", "table-striped"], table_id="anom-table-main"
         )
-        cache_dataframe(anom_data, anom_data_session)
-    rows = anom_data.to_dict(orient="records")
-    anom_table = AnomalyTable(rows)
+    else:
+        projects = {}
+        anom_table = None
 
     return render_template(
         "index.html", title="Home Page", projects=projects, anom_table=anom_table
@@ -63,6 +70,8 @@ def render_dashboard():
 @main.route("/login/", methods=["GET", "POST"])
 def login():
     if current_user.is_authenticated:
+        if "_id" not in session:
+            session["_id"] = str(uuid4())
         return redirect(url_for("main.index"))
 
     form = LoginForm()
@@ -76,9 +85,10 @@ def login():
         next_page = request.args.get("next")
         if not next_page or url_parse(next_page).netloc != "":
             next_page = url_for("main.index")
+        session["_id"] = str(uuid4())
         return redirect(next_page)
 
-    return render_template("login.html", title="Sign In", form=form)
+    return render_template("login.html", title="Sign In", form=form, projects={})
 
 
 @main.route("/logout/")
