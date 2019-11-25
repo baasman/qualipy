@@ -4,6 +4,7 @@ from sklearn.ensemble import IsolationForest
 import joblib
 import numpy as np
 import pandas as pd
+from sqlalchemy import create_engine
 
 import os
 import warnings
@@ -212,3 +213,39 @@ class GenerateAnomalies(object):
         except:
             data = pd.DataFrame([], columns=columns)
         return data
+
+
+def anomaly_data_project(project_name, db_url, config_dir):
+    engine = create_engine(db_url)
+    generator = GenerateAnomalies(project_name, engine, config_dir)
+    try:
+        num_anomalies = generator.create_anom_num_table()
+        cat_anomalies = generator.create_anom_cat_table()
+        anomalies = pd.concat([num_anomalies, cat_anomalies]).sort_values(
+            "date", ascending=False
+        )
+    except ValueError:
+        anomalies = pd.DataFrame(
+            [],
+            columns=[
+                "column_name",
+                "date",
+                "metric",
+                "arguments",
+                "value",
+                "batch_name",
+            ],
+        )
+    return anomalies
+
+
+def anomaly_data_all_projects(project_names, db_url, config_dir):
+    data = []
+    for project in project_names:
+        adata = anomaly_data_project(project, db_url, config_dir)
+        adata["project"] = project
+        adata = adata[["project"] + [col for col in adata.columns if col != "project"]]
+        data.append(adata)
+    data = pd.concat(data)
+    data = data.sort_values("date")
+    return data

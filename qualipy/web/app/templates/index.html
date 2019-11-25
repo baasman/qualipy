@@ -1,19 +1,5 @@
 {% extends "base.html" %}
 
 {% block content %}
-{% if current_user.is_anonymous %}
-  <h1>Hello!</h1>
-{% else  %}
-  <h1>Hi, {{ current_user.username }}!</h1>
-{% endif %}
-
-<h2>Projects</h2>
-<div class="btn-group">
-    <form method="post" role="form">
-        {% for project, values in projects.items() %}
-            <button name="{{ project }}" type="submit">{{ project }}</button>
-            <p>{{ "Last executed on {}".format(values['executions'][-1]) }}</p>
-        {% endfor %}
-    </form>
-</div>
+    {{ anom_table }}
 {% endblock %}
