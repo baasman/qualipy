@@ -4,10 +4,9 @@ from flask import current_app as capp
 from flask import current_app as app
 from werkzeug.urls import url_parse
 
-from qualipy.web.app.extensions import db
 from qualipy.web.app.forms import LoginForm
 from qualipy.web.app.models import User
-from qualipy.web.app.tables import AnomalyTable, Anomaly
+from qualipy.web.app.tables import AnomalyTable
 from qualipy.anomaly_detection import anomaly_data_all_projects
 from qualipy.web.app.caching import (
     cache_dataframe,
