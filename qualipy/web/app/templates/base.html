@@ -38,10 +38,15 @@
       <li class="nav-item dropdown">
         <a class="nav-link dropdown-toggle" data-toggle="dropdown" href="#" role="button" aria-haspopup="true" aria-expanded="false">Metric Tracker</a>
         <div class="dropdown-menu">
-            {% for project, values in projects.items() %}
-               <a class="dropdown-item"
-                  href="{{ url_for('main.handle_project_request', project_name=project) }}">{{ project }}</a>
-            {% endfor %}
+            {% if projects %}
+                {% for project, values in projects.items() %}
+                   <a class="dropdown-item"
+                      href="{{ url_for('main.handle_project_request', project_name=project) }}">{{ project }}</a>
+                {% endfor %}
+            {% else %}
+                <a class="dropdown-item"
+                   href="#">No projects defined</a>
+            {% endif %}
         </div>
       </li>
       {% if not current_user.is_authenticated %}
@@ -53,6 +58,13 @@
             <a class="nav-link" href="{{ url_for('main.logout') }}">Logout</a>
         </li>
       {%  endif %}
+        <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" data-toggle="dropdown" href="#" role="button" aria-haspopup="true" aria-expanded="false">Docs</a>
+            <div class="dropdown-menu">
+                <a class="dropdown-item"
+                   href="https://github.com/baasman/qualipy">github</a>
+            </div>
+        </li>
     </ul>
 
     <div class="'container">

@@ -223,7 +223,7 @@ def register_callbacks(dashapp):
             anom_data = anomaly_num_data(
                 project_name=session["project_name"],
                 db_url=capp.config["QUALIPY_DB"],
-                config_dir=os.environ["CONFIG_DIR"],
+                config_dir=capp.config["CONFIG_DIR"],
             ).head(50)
             cache_dataframe(anom_data, anom_data_session)
         anom_table = anomaly_num_table(anom_data)
@@ -281,7 +281,7 @@ def register_callbacks(dashapp):
                                 column,
                                 metric,
                                 project_name=session["project_name"],
-                                config_dir=os.environ["CONFIG_DIR"],
+                                config_dir=capp.config["CONFIG_DIR"],
                             ),
                             histogram(plot_data, column, metric),
                         ],

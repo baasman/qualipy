@@ -41,3 +41,28 @@ Creating a mapping
 -------------------
 
 The easiest way to apply rules to a column is to create a class that inherits from qualipy.Column.
+
+There are several attributes one can set on this class.
+
+====================== ====== ============================================================
+`column_name`          str    The name of the column in the pandas or Spark DataFrame
+
+`column_type`                 Instance of the type the column should adhere too. See *** for more info
+
+`force_type`           bool   If column does not adhere to the above type, should the process fail?
+
+`null`                 bool   Can the column contain missing values?
+
+`force_null`           bool   If `null` is set to False, and this to `True`, the process will fail
+                              if it encounters missing values
+
+`unique`               bool   Should uniqueness in the column be enforced?
+
+`is_category`          bool   Should this column be encoded as a categorical variable?
+
+`is_category`          bool   Should this column be encoded as a categorical variable?
+
+====================== ====== ============================================================
+
+
+

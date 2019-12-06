@@ -1,8 +1,8 @@
 import click
 from sqlalchemy import create_engine
-
-from qualipy.web.deploy import FlaskDeploy, GUnicornDeploy
 from qualipy.anomaly_detection import RunModels
+from qualipy.web.deploy import FlaskDeploy, GUnicornDeploy
+from qualipy.web._config import _Config
 
 import os
 import json
@@ -29,6 +29,8 @@ def qualipy():
 def run(port, host, config_dir, train_anomaly, engine):
     if config_dir is None:
         config_dir = os.environ["CONFIG_DIR"]
+    _Config.config_dir = config_dir
+
     deployer = DEPLOYMENT_OPTIONS[engine](
         config_dir=config_dir, host=host, port=port, train_anomaly=train_anomaly
     )

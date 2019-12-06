@@ -246,6 +246,19 @@ def anomaly_data_all_projects(project_names, db_url, config_dir):
         adata["project"] = project
         adata = adata[["project"] + [col for col in adata.columns if col != "project"]]
         data.append(adata)
-    data = pd.concat(data)
+    if len(project_names) == 0:
+        data = pd.DataFrame(
+            [],
+            columns=[
+                "column_name",
+                "date",
+                "metric",
+                "arguments",
+                "value",
+                "batch_name",
+            ],
+        )
+    else:
+        data = pd.concat(data)
     data = data.sort_values("date")
     return data

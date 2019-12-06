@@ -12,6 +12,7 @@ from sqlalchemy_utils import database_exists
 
 from qualipy.web.config import BaseConfig, read_project_config
 from qualipy.web.app.models import User
+from qualipy.web._config import _Config
 
 
 logging.basicConfig(level="INFO")
@@ -20,8 +21,8 @@ logger = logging.getLogger(__name__)
 
 def create_app():
     server = Flask(__name__)
-    server.config.from_object(BaseConfig)
-    server.config.update(**read_project_config(os.environ["CONFIG_DIR"]))
+
+    set_config(server, _Config.config_dir)
 
     register_dashapps(server)
     register_extensions(server)
@@ -29,6 +30,12 @@ def create_app():
     register_cache(server)
 
     return server
+
+
+def set_config(server, config_dir):
+    server.config.from_object(BaseConfig(config_dir))
+    server.config.update(**read_project_config(config_dir))
+    server.config["CONFIG_DIR"] = config_dir
 
 
 def register_dashapps(app):

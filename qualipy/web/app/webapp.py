@@ -25,7 +25,7 @@ main = Blueprint("main", __name__)
 @main.route("/", methods=["GET"])
 @main.route("/index", methods=["GET"])
 def index():
-    config_dir = os.environ["CONFIG_DIR"]
+    config_dir = capp.config["CONFIG_DIR"]
     if current_user.is_authenticated:
         with open(os.path.join(config_dir, "projects.json"), "r") as f:
             projects = json.loads(f.read())
@@ -53,7 +53,7 @@ def index():
 
 @main.route("/project_request/<project_name>")
 def handle_project_request(project_name):
-    config_dir = os.environ["CONFIG_DIR"]
+    config_dir = capp.config["CONFIG_DIR"]
     with open(os.path.join(config_dir, "projects.json"), "r") as f:
         projects = json.loads(f.read())
     session["project_name"] = project_name

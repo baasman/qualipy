@@ -14,3 +14,4 @@ flask_migrate
 flask_wtf
 sqlalchemy_utils
 gunicorn
+flask_table
