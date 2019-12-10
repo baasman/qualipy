@@ -114,13 +114,14 @@ class DataSet(object):
         self.current_data = df
         self.schema = self.generator.set_schema(df, self.project.columns)
 
-    def set_chunked_dataset(self, df, time_freq: str = "1D"):
+    def set_chunked_dataset(self, df, time_freq: str = "1D", time_column=None):
         self.current_data = df
         self.schema = self.generator.set_schema(df, self.project.columns)
         self.chunk = True
-        self.time_chunks = self.generator.get_chunks(
-            df, time_freq, self.project.time_column
+        time_column = (
+            time_column if time_column is not None else self.project.time_column
         )
+        self.time_chunks = self.generator.get_chunks(df, time_freq, time_column)
 
     def _generate_metrics(self) -> None:
         measures = []

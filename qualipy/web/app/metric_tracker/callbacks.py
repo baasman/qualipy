@@ -6,6 +6,7 @@ import pandas as pd
 from sqlalchemy import create_engine
 from flask import request, url_for, render_template, redirect, session
 from flask import current_app as capp
+from flask_login import current_user
 
 from qualipy.web.app.caching import (
     cache,
@@ -216,8 +217,7 @@ def register_callbacks(dashapp):
             id="schema-table", children=[schema_title, schema_table(schema)]
         )
         anomaly_title = html.H4("Anomalies")
-        print(f"session id: {session_id}")
-        anom_data_session = set_session_anom_data_name(session_id)
+        anom_data_session = set_session_anom_data_name(current_user.username)
         anom_data = get_cached_dataframe(anom_data_session)
         if anom_data is None:
             anom_data = anomaly_num_data(
@@ -335,9 +335,13 @@ def register_callbacks(dashapp):
         else:
             data = pd.DataFrame({})
 
+        anom_data_session = set_session_anom_data_name(current_user.username)
+        anom_data = get_cached_dataframe(anom_data_session)
+        anom_data = anom_data[anom_data.column_name == column]
+
         if data.shape[0] > 0:
             cat_plots = []
-            plot = create_value_count_area_chart(data, column)
+            plot = create_value_count_area_chart(data, column, anom_data)
             cat_plots.append(plot)
             bar_chart = barchart_top_cats(data)
             cat_plots.append(bar_chart)

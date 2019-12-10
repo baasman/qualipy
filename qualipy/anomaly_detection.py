@@ -5,14 +5,15 @@ import joblib
 import numpy as np
 import pandas as pd
 from sqlalchemy import create_engine
+from fbprophet import Prophet
 
 import os
+import json
 import warnings
 import traceback
 from functools import reduce
 
 
-mods = {"IsolationForest": IsolationForest}
 default_config_path = os.path.join(os.path.expanduser("~"), ".qualipy")
 
 
@@ -23,17 +24,90 @@ def create_file_name(model_dir, project_name, col_name, metric_name, arguments):
     return file_name
 
 
-# TODO: this and LoadedModel should be one class
-class AnomalyModel(object):
-    def __init__(
-        self, model="IsolationForest", args=None, config_loc=default_config_path
-    ):
-        self.args = (
-            {"behaviour": "new", "contamination": 0.01, "n_estimators": 50}
-            if args is None
-            else args
+class ProphetModel(object):
+    def __init__(self, kwargs):
+        self.model = Prophet(**kwargs)
+
+    def fit(self, train_data):
+        train_data = train_data[["date", "value"]].rename(
+            columns={"date": "ds", "value": "y"}
         )
-        self.anom_model = mods[model](**self.args)
+        self.model.fit(train_data)
+
+    def predict(self, test_data):
+        test_data = test_data[["date", "value"]].rename(
+            columns={"date": "ds", "value": "y"}
+        )
+        predicted = self.model.predict(test_data)
+        predicted = predicted.set_index(test_data.index)
+        predicted["y"] = test_data["y"]
+
+        predicted.loc[predicted.y > predicted.yhat, "importance"] = (
+            predicted.y - predicted.yhat_upper
+        ) / predicted.y
+        predicted.loc[predicted.y < predicted.yhat, "importance"] = (
+            predicted.yhat_lower - predicted.y
+        ) / predicted.y
+        predicted["outlier"] = np.where(
+            (
+                (predicted.y > predicted.yhat_upper)
+                | (predicted.y < predicted.yhat_lower)
+            )
+            & (predicted.importance > 0.1),
+            -1,
+            1,
+        )
+        return predicted.outlier
+
+    def train_predict(self, train_data):
+        train_data = train_data[["date", "value"]].rename(
+            columns={"date": "ds", "value": "y"}
+        )
+        predicted = self.model.fit(train_data).predict(train_data)
+        predicted = predicted.set_index(train_data.index)
+        predicted["y"] = train_data["y"]
+        predicted["outlier"] = np.where(
+            (predicted.y > predicted.yhat_upper) | (predicted.y < predicted.yhat_lower),
+            -1,
+            1,
+        )
+        return predicted.outlier
+
+
+class IsolationForestModel(object):
+    def __init__(self, kwargs):
+        self.model = IsolationForest(**kwargs)
+
+    def fit(self, train_data):
+        if isinstance(train_data, pd.DataFrame):
+            self.model.fit(train_data)
+        else:
+            self.model.fit(train_data.value.values.reshape((-1, 1)))
+
+    def predict(self, test_data):
+        return self.model.predict(test_data)
+
+    def train_predict(self, train_data):
+        if isinstance(train_data, pd.DataFrame):
+            self.model.fit(train_data)
+            return self.predict(train_data)
+        else:
+            self.model.fit(train_data.value.values.reshape((-1, 1)))
+            return self.predict(train_data.value.values.reshape((-1, 1)))
+
+
+class AnomalyModel(object):
+
+    mods = {"IsolationForest": IsolationForestModel, "prophet": ProphetModel}
+
+    def __init__(self, config_loc, model=None, arguments=None):
+        with open(os.path.join(config_loc, "config.json"), "r") as c:
+            config = json.load(c)
+
+        if model is None and arguments is None:
+            model = config.get("ANOMALY_MODEL", "prophet")
+            arguments = config.get("ANOMALY_ARGS", {})
+        self.anom_model = self.mods[model](arguments)
         self.model_dir = os.path.join(config_loc, "models")
         if not os.path.isdir(self.model_dir):
             os.mkdir(self.model_dir)
@@ -45,7 +119,7 @@ class AnomalyModel(object):
         return self.anom_model.predict(test_data)
 
     def train_predict(self, train_data):
-        return self.anom_model.fit_predict(train_data)
+        return self.anom_model.train_predict(train_data)
 
     def save(self, project_name, col_name, metric_name, arguments=None):
         file_name = create_file_name(
@@ -57,7 +131,7 @@ class AnomalyModel(object):
 
 
 class LoadedModel(object):
-    def __init__(self, config_loc=default_config_path):
+    def __init__(self, config_loc):
         self.model_dir = os.path.join(config_loc, "models")
 
     def load(self, project_name, col_name, metric_name, arguments=None):
@@ -134,7 +208,8 @@ class GenerateAnomalies(object):
                     data.metric.values[0],
                     data.arguments.values[0],
                 )
-                preds = mod.predict(data.value.values.reshape((-1, 1)))
+                # preds = mod.predict(data.value.values.reshape((-1, 1)))
+                preds = mod.predict(data)
                 outlier_rows = data[preds == -1]
                 if outlier_rows.shape[0] > 0:
                     all_rows.append(outlier_rows)
@@ -143,14 +218,16 @@ class GenerateAnomalies(object):
             except FileNotFoundError:
                 try:
                     mod = AnomalyModel(config_loc=self.config_dir)
-                    mod.train(data.value.values.reshape((-1, 1)))
+                    # mod.train(data.value.values.reshape((-1, 1)))
+                    mod.train(data)
                     mod.save(
                         self.project.project_name,
                         data.column_name.values[0],
                         data.metric.values[0],
                         data.arguments.values[0],
                     )
-                    preds = mod.predict(data.value.values.reshape((-1, 1)))
+                    # preds = mod.predict(data.value.values.reshape((-1, 1)))
+                    preds = mod.predict(data)
                     outlier_rows = data[preds == -1]
                     if outlier_rows.shape[0] > 0:
                         all_rows.append(outlier_rows)
@@ -185,6 +262,7 @@ class GenerateAnomalies(object):
                 unique_vals = reduce(
                     lambda x, y: x.union(y), [set(i.keys()) for i in data_values]
                 )
+                non_diff_lines = []
                 potential_lines = []
                 for cat in unique_vals:
                     values = pd.Series([i.get(cat, 0) for i in data_values])
@@ -192,13 +270,25 @@ class GenerateAnomalies(object):
                     differences = values - running_means
                     sum_abs = np.abs(differences).sum()
                     potential_lines.append((cat, differences, sum_abs))
+                    non_diff_lines.append((cat, values))
                 potential_lines = sorted(
                     potential_lines, key=lambda v: v[2], reverse=True
                 )
                 all_lines = pd.DataFrame({i[0]: i[1] for i in potential_lines})
-                mod = AnomalyModel()
-                outliers = mod.train_predict(all_lines.values[4:])
-                outliers = np.concatenate([np.array([1, 1, 1, 1]), outliers])
+                all_non_diff_lines = pd.DataFrame({i[0]: i[1] for i in non_diff_lines})
+                mod = AnomalyModel(
+                    config_loc=self.config_dir,
+                    model="IsolationForest",
+                    arguments={
+                        "behaviour": "new",
+                        "contamination": 0.01,
+                        "n_estimators": 50,
+                    },
+                )
+                # outliers = mod.train_predict(all_lines.values[4:])
+                # outliers = np.concatenate([np.array([1, 1, 1, 1]), outliers])
+                outliers = mod.train_predict(all_non_diff_lines)
+
                 outlier_rows = data[outliers == -1]
                 if outlier_rows.shape[0] > 0:
                     all_rows.append(outlier_rows)

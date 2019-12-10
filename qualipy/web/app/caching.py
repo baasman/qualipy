@@ -2,7 +2,7 @@ from flask_caching import Cache
 import pyarrow as pa
 
 
-cache = Cache(config={"CACHE_TYPE": "simple"})
+cache = Cache(config={"CACHE_TYPE": "redis", "CACHE_DEFAULT_TIMEOUT": 1000})
 
 
 context = pa.default_serialization_context()

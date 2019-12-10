@@ -60,7 +60,7 @@ def create_trend_line(data, var, metric, project_name=None, config_dir=None):
             data.metric.values[0],
             data.arguments.values[0],
         )
-        preds = mod.predict(data.value.values.reshape((-1, 1)))  # + np.finfo(float).eps
+        preds = mod.predict(data)  # + np.finfo(float).eps
         outlier_points = [
             j if i == -1 else np.NaN for i, j in zip(preds, data.value.values)
         ]

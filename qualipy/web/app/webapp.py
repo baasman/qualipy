@@ -29,7 +29,7 @@ def index():
     if current_user.is_authenticated:
         with open(os.path.join(config_dir, "projects.json"), "r") as f:
             projects = json.loads(f.read())
-        anom_data_session = set_session_anom_data_name(session["_id"])
+        anom_data_session = set_session_anom_data_name(current_user.username)
         anom_data = get_cached_dataframe(anom_data_session)
         if anom_data is None:
             anom_data = anomaly_data_all_projects(

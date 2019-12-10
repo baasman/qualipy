@@ -9,12 +9,12 @@ import plotly.graph_objs as go
 from qualipy.anomaly_detection import AnomalyModel
 
 
-def create_value_count_area_chart(data, var):
+def create_value_count_area_chart(data, var, anom_data):
     # data_values = data["value"].tolist()
     data_values = [(pd.Series(c) / pd.Series(c).sum()).to_dict() for c in data["value"]]
     traces = []
     unique_vals = reduce(lambda x, y: x.union(y), [set(i.keys()) for i in data_values])
-    x = data["date"]
+
     for value in unique_vals:
         traces.append(
             dict(
@@ -28,9 +28,21 @@ def create_value_count_area_chart(data, var):
             )
         )
 
+    shapes = []
+    for idx, row in anom_data.iterrows():
+        shapes.append(
+            {
+                "type": "line",
+                "x0": row["date"],
+                "x1": row["date"],
+                "y0": 0,
+                "y1": 1,
+                "line": {"color": "red", "width": 4},
+            }
+        )
     plot = dcc.Graph(
         id="value-count-graph-{}".format(var),
-        figure={"data": traces, "layout": {"title": {"text": var}}},
+        figure={"data": traces, "layout": {"title": {"text": var}, "shapes": shapes}},
     )
     return plot
 
