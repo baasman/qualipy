@@ -114,6 +114,31 @@ def generate_layout(
         dcc.Tab(label="Boolean Metrics", value="tab-6", children=boolean_tab)
     )
 
+    # compare numerical
+    numerical_html_compare = []
+    if len(numerical_column_options) > 0:
+        numerical_html_compare.append(html.H5("Column To Compare"))
+        numerical_html_compare.append(
+            column_choice(
+                numerical_column_options,
+                "numerical-page-col-choice-compare",
+                multi=True,
+            )
+        )
+        numerical_html_compare.append(html.Br())
+        numerical_html_compare.append(html.Div(id="numerical-page-results-compare"))
+        numerical_html_compare.append(html.Br())
+        numerical_html_compare.append(html.A("Home", href="/", target="_blank"))
+    else:
+        numerical_html_compare.append(
+            html.P("There are no numerical aggregates tracked for this dataset")
+        )
+    children.append(
+        dcc.Tab(
+            label="Numerical Comparison", value="tab-7", children=numerical_html_compare
+        )
+    )
+
     return html.Div(
         id="total-div", children=[dcc.Tabs(id="tabs", value="tab-1", children=children)]
     )

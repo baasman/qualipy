@@ -24,7 +24,10 @@ def qualipy():
 @click.option("--config_dir", default=None)
 @click.option("--engine", default="flask")
 @click.option(
-    "--train_anomaly", default=False, help="Run anomaly models if not preloaded"
+    "--train_anomaly",
+    default=False,
+    type=bool,
+    help="Run anomaly models if not preloaded",
 )
 def run(port, host, config_dir, train_anomaly, engine):
     if config_dir is None:

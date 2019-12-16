@@ -1,5 +1,6 @@
 import abc
-import sys
+import os
+import shutil
 
 from qualipy.web.app import create_app
 
@@ -14,12 +15,19 @@ class QualipyDeployer(abc.ABC):
         self.host = host
         self.port = port
         self.workers = workers
-        self.train_anomaly = train_anomaly
         self.app = create_app()
+
+        if train_anomaly:
+            self.remove_model_dir()
 
     @abc.abstractmethod
     def run(self):
         raise NotImplementedError
+
+    def remove_model_dir(self):
+        models_path = os.path.join(self.config_dir, "models")
+        if os.path.isdir(models_path):
+            shutil.rmtree(models_path)
 
 
 class FlaskDeploy(QualipyDeployer):

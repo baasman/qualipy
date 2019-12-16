@@ -124,6 +124,28 @@ def register_callbacks(dashapp):
 
     @dashapp.callback(
         Output(
+            component_id="numerical-page-col-choice-compare",
+            component_property="options",
+        ),
+        [Input("session-id", "children")],
+    )
+    def numerical_columns_compare(session_id):
+        # TODO: some logic about which columns can be compared
+        data = select_data(
+            session["project_name"],
+            batch="all",
+            column=None,
+            url=capp.config["QUALIPY_DB"],
+            live_update=False,
+            n_intervals=0,
+            session_id=session_id,
+        )
+        columns = data[data.type == "numerical"].column_name.unique()
+        options = [{"label": i, "value": i} for i in columns]
+        return options
+
+    @dashapp.callback(
+        Output(
             component_id="categorical-page-col-choice-multi",
             component_property="options",
         ),
@@ -224,11 +246,11 @@ def register_callbacks(dashapp):
                 project_name=session["project_name"],
                 db_url=capp.config["QUALIPY_DB"],
                 config_dir=capp.config["CONFIG_DIR"],
-            ).head(50)
+            )
             cache_dataframe(anom_data, anom_data_session)
         anom_table = anomaly_num_table(anom_data)
         anom_table = html.Div(id="anom-num-table", children=[anomaly_title, anom_table])
-        schema_anom_div = html.Div(id="schema-anom", children=[schema, anom_table])
+        schema_anom_div = html.Div(id="schema-anom", children=[anom_table, schema])
 
         overview_div = html.Div(
             id="overview-home", children=[title_data, data_char, schema_anom_div]
@@ -449,3 +471,43 @@ def register_callbacks(dashapp):
         else:
             page = html.Div(id="tab-6-page", children=[])
         return page
+
+    @dashapp.callback(
+        Output(
+            component_id="numerical-page-results-compare", component_property="children"
+        ),
+        [
+            Input(
+                component_id="numerical-page-col-choice-compare",
+                component_property="value",
+            ),
+            Input(component_id="session-id", component_property="children"),
+        ],
+    )
+    def update_tab_7(column, session_id):
+        plots = []
+
+        data = select_data(
+            session["project_name"],
+            column=column,
+            url=capp.config["QUALIPY_DB"],
+            session_id=session_id,
+        )
+        if len(column) > 0 and str(column) != "None":
+            counts = data.drop_duplicates(
+                ["column_name", "metric"]
+            ).metric.value_counts()
+            counts = counts[counts >= 2]
+            data = data[
+                (data["type"] == "numerical") & (data["metric"].isin(counts.index))
+            ]
+            if data.shape[0] > 0:
+                all_trends_view = all_trends(data)
+                plots.append(html.Div(children=[all_trends_view]))
+            else:
+                plots.append(
+                    html.P("There are no common metrics between these columns")
+                )
+        else:
+            plots.append(html.P("Select columns to start the comparison"))
+        return plots

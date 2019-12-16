@@ -10,7 +10,6 @@ from fbprophet import Prophet
 import os
 import json
 import warnings
-import traceback
 from functools import reduce
 
 
