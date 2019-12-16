@@ -33,6 +33,7 @@ def run(port, host, config_dir, train_anomaly, engine):
     if config_dir is None:
         config_dir = os.environ["CONFIG_DIR"]
     _Config.config_dir = config_dir
+    _Config.train_anomaly = train_anomaly
 
     deployer = DEPLOYMENT_OPTIONS[engine](
         config_dir=config_dir, host=host, port=port, train_anomaly=train_anomaly

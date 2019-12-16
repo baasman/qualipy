@@ -275,6 +275,24 @@ class GenerateAnomalies(object):
                 )
                 all_lines = pd.DataFrame({i[0]: i[1] for i in potential_lines})
                 all_non_diff_lines = pd.DataFrame({i[0]: i[1] for i in non_diff_lines})
+
+                for col in all_non_diff_lines.columns:
+                    mean = all_non_diff_lines[col].mean()
+                    std = all_non_diff_lines[col].std()
+                    all_non_diff_lines[f"{col}_below"] = np.where(
+                        all_non_diff_lines[col] < (mean - (2 * std)), 1, 0
+                    )
+                    all_non_diff_lines[f"{col}_above"] = np.where(
+                        all_non_diff_lines[col] > (mean + (2 * std)), 1, 0
+                    )
+                std_sums = all_non_diff_lines[
+                    [
+                        col
+                        for col in all_non_diff_lines.columns
+                        if "_below" in str(col) or "_above" in str(col)
+                    ]
+                ].sum(axis=1)
+
                 mod = AnomalyModel(
                     config_loc=self.config_dir,
                     model="IsolationForest",
@@ -284,11 +302,8 @@ class GenerateAnomalies(object):
                         "n_estimators": 50,
                     },
                 )
-                # outliers = mod.train_predict(all_lines.values[4:])
-                # outliers = np.concatenate([np.array([1, 1, 1, 1]), outliers])
                 outliers = mod.train_predict(all_non_diff_lines)
-
-                outlier_rows = data[outliers == -1]
+                outlier_rows = data[(outliers == -1) & (std_sums.values > 0)]
                 if outlier_rows.shape[0] > 0:
                     all_rows.append(outlier_rows)
             except ValueError:
@@ -308,8 +323,8 @@ def anomaly_data_project(project_name, db_url, config_dir):
     engine = create_engine(db_url)
     generator = GenerateAnomalies(project_name, engine, config_dir)
     try:
-        num_anomalies = generator.create_anom_num_table()
         cat_anomalies = generator.create_anom_cat_table()
+        num_anomalies = generator.create_anom_num_table()
         anomalies = pd.concat([num_anomalies, cat_anomalies]).sort_values(
             "date", ascending=False
         )

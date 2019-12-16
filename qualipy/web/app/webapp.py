@@ -43,8 +43,7 @@ def index():
             rows, classes=["table", "table-striped"], table_id="anom-table-main"
         )
     else:
-        projects = {}
-        anom_table = None
+        return redirect(url_for("main.login"))
 
     return render_template(
         "index.html", title="Home Page", projects=projects, anom_table=anom_table

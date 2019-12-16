@@ -9,3 +9,4 @@ class Singleton(type):
 
 class _Config(metaclass=Singleton):
     config_dir = None
+    train_anomaly = False

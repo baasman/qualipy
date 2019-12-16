@@ -23,6 +23,7 @@ def create_app():
     server = Flask(__name__)
 
     set_config(server, _Config.config_dir)
+    # set_logging(server)
 
     register_dashapps(server)
     register_extensions(server)
@@ -101,6 +102,9 @@ def register_cache(server):
 
     cache.init_app(server)
 
+    if _Config.train_anomaly:
+        cache.clear()
+
 
 def register_db_migrations(server, migrate, db):
     with server.app_context():
@@ -128,3 +132,8 @@ def add_admin(db):
     admin.set_password("admin")
     db.session.add(admin)
     db.session.commit()
+
+
+def set_logging(server):
+    root = logging.getLogger()
+    root.setLevel("DEBUG")
