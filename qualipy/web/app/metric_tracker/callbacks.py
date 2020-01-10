@@ -1,6 +1,6 @@
 import os
 
-from dash.dependencies import Input, Output
+from dash.dependencies import Input, Output, State
 import dash_html_components as html
 import pandas as pd
 from sqlalchemy import create_engine
@@ -27,6 +27,7 @@ from qualipy.web.app.metric_tracker.components.numerical_page import (
     histogram,
     create_trend_line,
     all_trends,
+    comparison_trends,
 )
 from qualipy.web.app.metric_tracker.components.standard_viz_dynamic_page import (
     create_value_count_area_chart,
@@ -124,12 +125,34 @@ def register_callbacks(dashapp):
 
     @dashapp.callback(
         Output(
-            component_id="numerical-page-col-choice-compare",
+            component_id="numerical-page-col-choice-compare-1",
             component_property="options",
         ),
         [Input("session-id", "children")],
     )
-    def numerical_columns_compare(session_id):
+    def numerical_columns_compare1(session_id):
+        # TODO: some logic about which columns can be compared
+        data = select_data(
+            session["project_name"],
+            batch="all",
+            column=None,
+            url=capp.config["QUALIPY_DB"],
+            live_update=False,
+            n_intervals=0,
+            session_id=session_id,
+        )
+        columns = data[data.type == "numerical"].column_name.unique()
+        options = [{"label": i, "value": i} for i in columns]
+        return options
+
+    @dashapp.callback(
+        Output(
+            component_id="numerical-page-col-choice-compare-2",
+            component_property="options",
+        ),
+        [Input("session-id", "children")],
+    )
+    def numerical_columns_compare2(session_id):
         # TODO: some logic about which columns can be compared
         data = select_data(
             session["project_name"],
@@ -477,15 +500,24 @@ def register_callbacks(dashapp):
             component_id="numerical-page-results-compare", component_property="children"
         ),
         [
-            Input(
-                component_id="numerical-page-col-choice-compare",
+            Input(component_id="session-id", component_property="children"),
+            Input(component_id="column-compare-button", component_property="n_clicks"),
+        ],
+        [
+            State(
+                component_id="numerical-page-col-choice-compare-1",
                 component_property="value",
             ),
-            Input(component_id="session-id", component_property="children"),
+            State(
+                component_id="numerical-page-col-choice-compare-2",
+                component_property="value",
+            ),
         ],
     )
-    def update_tab_7(column, session_id):
-        plots = []
+    def update_tab_7(session_id, n_clicks, column1, column2):
+        html = []
+
+        column = [column1, column2]
 
         data = select_data(
             session["project_name"],
@@ -493,7 +525,7 @@ def register_callbacks(dashapp):
             url=capp.config["QUALIPY_DB"],
             session_id=session_id,
         )
-        if len(column) > 0 and str(column) != "None":
+        if str(column1) != "None" and str(column2) != "None":
             counts = data.drop_duplicates(
                 ["column_name", "metric"]
             ).metric.value_counts()
@@ -502,12 +534,10 @@ def register_callbacks(dashapp):
                 (data["type"] == "numerical") & (data["metric"].isin(counts.index))
             ]
             if data.shape[0] > 0:
-                all_trends_view = all_trends(data)
-                plots.append(html.Div(children=[all_trends_view]))
+                all_trends_view = comparison_trends(data)
+                html.append(html.Div(children=[all_trends_view]))
             else:
-                plots.append(
-                    html.P("There are no common metrics between these columns")
-                )
+                html.append(html.P("There are no common metrics between these columns"))
         else:
-            plots.append(html.P("Select columns to start the comparison"))
-        return plots
+            html.append(html.P("Select columns to start the comparison"))
+        return html

@@ -121,9 +121,19 @@ def generate_layout(
         numerical_html_compare.append(
             column_choice(
                 numerical_column_options,
-                "numerical-page-col-choice-compare",
-                multi=True,
+                "numerical-page-col-choice-compare-1",
+                multi=False,
             )
+        )
+        numerical_html_compare.append(
+            column_choice(
+                numerical_column_options,
+                "numerical-page-col-choice-compare-2",
+                multi=False,
+            )
+        )
+        numerical_html_compare.append(
+            html.Button("compare", id="column-compare-button")
         )
         numerical_html_compare.append(html.Br())
         numerical_html_compare.append(html.Div(id="numerical-page-results-compare"))
