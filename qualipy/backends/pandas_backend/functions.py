@@ -114,3 +114,13 @@ def correlation(data, column, column_two):
         "x": corrs.columns.tolist(),
     }
     return corrs_data
+
+
+@function(return_format=dict, allowed_arguments=["time_freq"])
+def events_per_time_period(data, column, time_freq="1D"):
+    d = data.copy()
+    counts = d.groupby(pd.Grouper(key=column, freq=time_freq)).apply(
+        lambda g: g.shape[0]
+    )
+    counts = {str(k): v for k, v in counts.items()}
+    return counts

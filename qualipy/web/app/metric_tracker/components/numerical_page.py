@@ -61,10 +61,11 @@ def comparison_trends(data, show_column_in_name=False):
         group = set_value_type(group.copy())
         for col in group.column_name.unique():
             fig.append_trace(
-                go.Scatter(x=x, y=group[group.column_name == col].value.values),
+                go.Scatter(
+                    x=x, y=group[group.column_name == col].value.values, name=col
+                ),
                 row=row,
                 col=1,
-                name=col,
             )
 
     fig["layout"].update(

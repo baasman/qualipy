@@ -515,7 +515,7 @@ def register_callbacks(dashapp):
         ],
     )
     def update_tab_7(session_id, n_clicks, column1, column2):
-        html = []
+        html_page = []
 
         column = [column1, column2]
 
@@ -535,9 +535,11 @@ def register_callbacks(dashapp):
             ]
             if data.shape[0] > 0:
                 all_trends_view = comparison_trends(data)
-                html.append(html.Div(children=[all_trends_view]))
+                html_page.append(html.Div(children=[all_trends_view]))
             else:
-                html.append(html.P("There are no common metrics between these columns"))
+                html_page.append(
+                    html.P("There are no common metrics between these columns")
+                )
         else:
-            html.append(html.P("Select columns to start the comparison"))
-        return html
+            html_page.append(html.P("Select columns to start the comparison"))
+        return html_page
