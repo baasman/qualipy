@@ -97,7 +97,7 @@ def barchart_top_cats(data):
     counter = Counter(data.value.values[0])
     for vc in data.value.values[1:]:
         counter += Counter(vc)
-    items = counter.items()
+    items = counter.most_common()
     x = [i[0] for i in items]
     y = [i[1] for i in items]
     plot = dcc.Graph(

@@ -5,6 +5,40 @@ Using the package
 =================
 
 
+Creating a mapping
+-------------------
+
+The easiest way to apply rules to a column is to create a class that inherits from qualipy.Column.
+
+There are several attributes one can set on this class.
+
+====================== =============== ============================================================
+`column_name`          str              The name of the column in the pandas or Spark DataFrame
+
+`column_type`                           Instance of the type the column should adhere too. See *** for more info
+
+`force_type`           bool             If column does not adhere to the above type, should the process fail?
+
+`overwrite_type`       bool             This option will convert the datatype before calling a function with the supposed datatype
+
+`null`                 bool             Can the column contain missing values?
+
+`force_null`           bool             If `null` is set to False, and this to `True`, the process will fail
+                                        if it encounters missing values
+
+`unique`               bool             Should uniqueness in the column be enforced?
+
+`is_category`          bool             Should this column be encoded as a categorical variable?
+
+`functions`            List[callable]   This is a list of callable functions, or function specifications.
+                                        See the next section on how to call a function
+
+`extra_functions`      Dict[str,        This is a list of callable functions, or function specifications.
+                       List[callable]]  See the next section on how to call a function
+
+====================== =============== ============================================================
+
+
 Creating Functions
 -------------------
 
@@ -37,32 +71,42 @@ There are several parameters one can use when defining a ``function``.
                        the function returns ``False``?
 ====================== ============================================================
 
-Creating a mapping
--------------------
 
-The easiest way to apply rules to a column is to create a class that inherits from qualipy.Column.
+Calling functions in a mapping
+-------------------------------
 
-There are several attributes one can set on this class.
+For the `functions` attribute, there are two ways in which two call a function, depending
+on whether or not there are parameters
 
-====================== ====== ============================================================
-`column_name`          str    The name of the column in the pandas or Spark DataFrame
+If not parameters are needed, are the defaults suffice, you can simply list the callable functions (any function
+with the proper decorator)::
 
-`column_type`                 Instance of the type the column should adhere too. See *** for more info
+    ...
+    functions = [mean, std]
+    ...
 
-`force_type`           bool   If column does not adhere to the above type, should the process fail?
+If there are parameters, you can give them as such::
 
-`null`                 bool   Can the column contain missing values?
+    ...
+    functions = [{'function': mean, 'parameters': {'param1': 'some_value'}}]
+    ...
 
-`force_null`           bool   If `null` is set to False, and this to `True`, the process will fail
-                              if it encounters missing values
+In case you are specifying your mapping for multiple columns, but only want to call a function on one
+of them, you can use the `extra_functions` attribute to specify a list of functions just for that column::
 
-`unique`               bool   Should uniqueness in the column be enforced?
-
-`is_category`          bool   Should this column be encoded as a categorical variable?
-
-`is_category`          bool   Should this column be encoded as a categorical variable?
-
-====================== ====== ============================================================
+    ...
+    extra_functions = {'my_col': [{'function': mean, 'parameters': {'param1': 'some_value'}}]}
+    ...
 
 
+Data types
+-----------
 
+There are several data types one can check for, depending on the backend.
+For pandas, these include
+    * `DateTimeType`
+    * `FloatType` - will match against float16-128
+    * `IntType` - will match against int0-64
+    * `NumericTypeType` - will match with any numeric subtype
+    * `ObjectType`
+    * `BoolType`

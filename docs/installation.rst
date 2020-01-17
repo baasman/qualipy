@@ -14,3 +14,4 @@ To install using git::
     $ cd qualipy
     $ pip install .
 
+Docker and docker-compose is recommended for running the webapp, although not necessary.

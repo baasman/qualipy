@@ -53,3 +53,4 @@ class BaseConfig:
         self.DB_AUTO_CREATE = True
         self.DB_AUTO_UPGRADE = True
         self.USERS = {"admin": "admin"}
+        self.CACHE_REDIS_URL = os.getenv("CACHE_REDIS_URL", "redis://localhost:6379")

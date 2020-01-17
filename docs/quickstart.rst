@@ -60,11 +60,6 @@ It tracks all columns and tables that belong to the data itself, and connects it
     project = Project(project_name="example", config_dir="/tmp/.qualipy")
     project.add_column(MyCol())
 
-Now we can start the web app using qualipy run. The only thing we need to set to run the basic configuration
-of the web app is an environment variable specifying the configuration directory.::
+Now we can start the web app using qualipy run.
 
-    $ export CONFIG_DIR=/tmp/.qualipy
-
-Now we can use the qualipy cli to start the app::
-
-    $ qualipy run
+    $ qualipy run --config_dir /tmp/.qualipy

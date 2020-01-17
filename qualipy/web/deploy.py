@@ -44,7 +44,7 @@ class GUnicornDeploy(BaseApplication, QualipyDeployer):
         options = {
             "bind": f"{self.host}:{self.port}",
             "workers": self.workers,
-            "timeout": 300,
+            "timeout": 3000,
         }
         for k, v in options.items():
             self.cfg.set(k.lower(), v)

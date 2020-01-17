@@ -1,0 +1,16 @@
+version: "3.3"
+services:
+    web:
+        build: .
+        ports:
+          - "5009:5009"
+        volumes:
+          - type: bind
+            source:
+            target: /root/.qualipy
+        depends_on:
+          - redis
+        environment:
+          - CACHE_REDIS_URL=redis://redis:6379
+    redis:
+        image: redis

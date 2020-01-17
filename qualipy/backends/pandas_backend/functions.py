@@ -116,11 +116,23 @@ def correlation(data, column, column_two):
     return corrs_data
 
 
-@function(return_format=dict, allowed_arguments=["time_freq"])
-def events_per_time_period(data, column, time_freq="1D"):
+@function(return_format=dict, allowed_arguments=["time_freq", "epoch_datetime"])
+def events_per_time_period(data, column, epoch_datetime="max", time_freq="1D"):
     d = data.copy()
+    d[column] = pd.to_datetime(d[column])
+    d = d[d[column].notnull()]
     counts = d.groupby(pd.Grouper(key=column, freq=time_freq)).apply(
         lambda g: g.shape[0]
     )
-    counts = {str(k): v for k, v in counts.items()}
+    if epoch_datetime == "max":
+        epoch_datetime = pd.to_datetime(d[column]).max()
+    else:
+        epoch_datetime = pd.to_datetime(epoch_datetime)
+    if "D" in time_freq:
+        fun = lambda k: abs(k - epoch_datetime).days
+    elif "W" in time_freq:
+        fun = lambda k: abs(k - epoch_datetime).days // 7
+    elif "Y" in time_freq:
+        fun = lambda k: abs(k - epoch_datetime).days // 365
+    counts = {fun(k): v for k, v in counts.items()}
     return counts

@@ -12,7 +12,6 @@ ENV LANG C.UTF-8
 COPY qualipy /python/qualipy
 WORKDIR /python/
 COPY requirements.txt setup.py MANIFEST.in ./
-COPY qualipy_web /python/qualipy_web
 RUN pip3 install /python
 
 WORKDIR /python

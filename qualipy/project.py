@@ -15,11 +15,15 @@ def _validate_project_name(project_name):
     assert "-" not in project_name
 
 
+def set_default_config():
+    return {}
+
+
 def create_qualipy_folder(config_dir, db_url):
     if not os.path.exists(config_dir):
         os.makedirs(config_dir, exist_ok=True)
         with open(os.path.join(config_dir, "config.json"), "w") as f:
-            json.dump({"QUALIPY_DB": db_url}, f)
+            json.dump(set_default_config(), f)
         with open(os.path.join(config_dir, "projects.json"), "w") as f:
             json.dump({}, f)
         os.makedirs(os.path.join(config_dir, "models"), exist_ok=True)

@@ -12,6 +12,7 @@ from qualipy.web.app.caching import (
     cache_dataframe,
     get_cached_dataframe,
     set_session_anom_data_name,
+    get_and_cache_anom_table,
 )
 
 import os
@@ -29,15 +30,8 @@ def index():
     if current_user.is_authenticated:
         with open(os.path.join(config_dir, "projects.json"), "r") as f:
             projects = json.loads(f.read())
-        anom_data_session = set_session_anom_data_name(current_user.username)
-        anom_data = get_cached_dataframe(anom_data_session)
-        if anom_data is None:
-            anom_data = anomaly_data_all_projects(
-                project_names=list(projects.keys()),
-                db_url=capp.config["QUALIPY_DB"],
-                config_dir=config_dir,
-            )
-            cache_dataframe(anom_data, anom_data_session)
+            session["all_projects"] = list(projects.keys())
+        anom_data = get_and_cache_anom_table(all_projects=True)
         rows = anom_data.to_dict(orient="records")
         anom_table = AnomalyTable(
             rows, classes=["table", "table-striped"], table_id="anom-table-main"
@@ -57,6 +51,7 @@ def handle_project_request(project_name):
         projects = json.loads(f.read())
     session["project_name"] = project_name
     session["schema"] = projects[project_name]["schema"]
+    session["all_projects"] = list(projects.keys())
     return redirect(url_for("main.render_dashboard"))
 
 

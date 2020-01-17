@@ -100,6 +100,7 @@ def register_blueprints(server):
 def register_cache(server):
     from qualipy.web.app.caching import cache
 
+    cache.config.update(**{k: v for k, v in server.config.items() if "CACHE" in k})
     cache.init_app(server)
 
     if _Config.train_anomaly:

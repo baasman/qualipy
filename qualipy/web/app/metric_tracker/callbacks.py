@@ -14,6 +14,7 @@ from qualipy.web.app.caching import (
     get_cached_dataframe,
     set_session_data_name,
     set_session_anom_data_name,
+    get_and_cache_anom_table,
 )
 from qualipy._sql import SQLite
 from qualipy.util import set_value_type
@@ -262,15 +263,7 @@ def register_callbacks(dashapp):
             id="schema-table", children=[schema_title, schema_table(schema)]
         )
         anomaly_title = html.H4("Anomalies")
-        anom_data_session = set_session_anom_data_name(current_user.username)
-        anom_data = get_cached_dataframe(anom_data_session)
-        if anom_data is None:
-            anom_data = anomaly_num_data(
-                project_name=session["project_name"],
-                db_url=capp.config["QUALIPY_DB"],
-                config_dir=capp.config["CONFIG_DIR"],
-            )
-            cache_dataframe(anom_data, anom_data_session)
+        anom_data = get_and_cache_anom_table()
         anom_table = anomaly_num_table(anom_data)
         anom_table = html.Div(id="anom-num-table", children=[anomaly_title, anom_table])
         schema_anom_div = html.Div(id="schema-anom", children=[anom_table, schema])
@@ -380,8 +373,7 @@ def register_callbacks(dashapp):
         else:
             data = pd.DataFrame({})
 
-        anom_data_session = set_session_anom_data_name(current_user.username)
-        anom_data = get_cached_dataframe(anom_data_session)
+        anom_data = get_and_cache_anom_table()
         anom_data = anom_data[anom_data.column_name == column]
 
         if data.shape[0] > 0:
@@ -531,7 +523,8 @@ def register_callbacks(dashapp):
             ).metric.value_counts()
             counts = counts[counts >= 2]
             data = data[
-                (data["type"] == "numerical") & (data["metric"].isin(counts.index))
+                ((data["type"] == "numerical") | (data["metric"] == "perc_missing"))
+                & (data["metric"].isin(counts.index))
             ]
             if data.shape[0] > 0:
                 all_trends_view = comparison_trends(data)

@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 from sqlalchemy import create_engine
 from fbprophet import Prophet
+from tqdm import tqdm
 
 import os
 import json
@@ -112,6 +113,8 @@ class AnomalyModel(object):
             os.mkdir(self.model_dir)
 
     def train(self, train_data):
+        # with suppress_stdout_stderr():
+        #     self.anom_model.fit(train_data)
         self.anom_model.fit(train_data)
 
     def predict(self, test_data):
@@ -198,7 +201,7 @@ class GenerateAnomalies(object):
             + np.where(df.arguments.isnull(), "", df.arguments)
         )
         all_rows = []
-        for metric_name, data in df.groupby("metric_name"):
+        for metric_name, data in tqdm(df.groupby("metric_name")):
             try:
                 mod = LoadedModel(config_loc=self.config_dir)
                 mod.load(
@@ -253,7 +256,7 @@ class GenerateAnomalies(object):
             + np.where(df.arguments.isnull(), "", df.arguments)
         )
         all_rows = []
-        for metric_name, data in df.groupby("metric_name"):
+        for metric_name, data in tqdm(df.groupby("metric_name")):
             try:
                 data_values = [
                     (pd.Series(c) / pd.Series(c).sum()).to_dict() for c in data["value"]
