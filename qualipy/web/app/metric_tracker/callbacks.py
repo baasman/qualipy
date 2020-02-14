@@ -59,7 +59,7 @@ def select_data(
     n_intervals=0,
     session_id=None,
 ):
-    session_data_name = set_session_data_name(session_id)
+    session_data_name = set_session_data_name(f"{session_id}-{project}")
     last_date = session.get("last_date", None)
     cached_data = get_cached_dataframe(session_data_name)
     if cached_data is None:

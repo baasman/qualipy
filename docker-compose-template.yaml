@@ -12,5 +12,10 @@ services:
           - redis
         environment:
           - CACHE_REDIS_URL=redis://redis:6379
+          - QUALIPY_CONFIG_DIR=/root/.qualipy
+          - QUALIPY_HOST=0.0.0.0
+          - QUALIPY_PORT=5009
+          - QUALIPY_ENGINE=gunicorn
+          - QUALIPY_TRAIN_ANOMALY=True
     redis:
         image: redis

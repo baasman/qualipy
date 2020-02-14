@@ -139,15 +139,15 @@ class Table(ABC):
 
 class PandasTable(Table):
 
-    columns = "all"
-    infer_schema = True
-    table_name = None
-    data_source = "pandas"
-    time_column = None
-    ignore = []
-    types = {}
-    bool_as_cat = False
-    extra_functions = []
+    columns: Union[str, List[str]] = "all"
+    infer_schema: bool = True
+    table_name: Optional[str] = None
+    data_source: str = "pandas"
+    time_column: Optional[str] = None
+    ignore: List[str] = []
+    types: Dict = {}
+    bool_as_cat: bool = False
+    extra_functions: List[Dict] = []
 
     _INFER_TYPES = {
         "float64": pFloatType,
@@ -157,6 +157,10 @@ class PandasTable(Table):
         "datetime64[ns]": pDateTimeType,
     }
     _columns = []
+
+    def from_dict(self, args: Dict):
+        for key, val in args.items():
+            setattr(self, key, val)
 
     def _generate_columns(self, data: pd.DataFrame, infer: bool = True) -> None:
         if self.columns == "all" and infer:

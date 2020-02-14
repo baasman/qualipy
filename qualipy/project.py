@@ -120,9 +120,7 @@ class Project(object):
 
         if self.project_name not in projects or reset_config:
             projects[self.project_name] = {
-                "columns": list(self.columns.keys()),
                 "executions": [datetime.datetime.now().strftime("%m/%d/%Y %H:%M")],
-                "db": str(self.engine.url),
                 "schema": schema,
             }
         else:

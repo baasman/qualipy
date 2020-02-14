@@ -10,8 +10,10 @@ class BaseType(object):
         return class_name
 
 
-# TODO: should have a convert method?
 class DateTimeType(BaseType):
+
+    str_name = "datetime64"
+
     def check_approximate_type(self, given_dtype):
         return eq(given_dtype.type, np.datetime64)
 

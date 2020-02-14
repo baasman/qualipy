@@ -31,9 +31,14 @@ def qualipy():
 )
 def run(port, host, config_dir, train_anomaly, engine):
     if config_dir is None:
-        config_dir = os.environ["CONFIG_DIR"]
+        config_dir = os.environ["QUALIPY_CONFIG_DIR"]
     _Config.config_dir = config_dir
     _Config.train_anomaly = train_anomaly
+
+    host = os.getenv("QUALIPY_HOST", host)
+    port = os.getenv("QUALIPY_PORT", port)
+    engine = os.getenv("QUALIPY_ENGINE", engine)
+    train_anomaly = os.getenv("QUALIPY_TRAIN_ANOMALY", train_anomaly)
 
     deployer = DEPLOYMENT_OPTIONS[engine](
         config_dir=config_dir, host=host, port=port, train_anomaly=train_anomaly

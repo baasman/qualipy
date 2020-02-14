@@ -15,5 +15,6 @@ flask_wtf
 sqlalchemy_utils
 gunicorn
 flask_table
+holidays==0.9.12
 fbprophet
 tqdm
