@@ -34,7 +34,7 @@ class ProphetModel(object):
         )
         self.model.fit(train_data)
 
-    def predict(self, test_data):
+    def predict(self, test_data, check_for_std=False, multivariate=False):
         test_data = test_data[["date", "value"]].rename(
             columns={"date": "ds", "value": "y"}
         )
@@ -79,18 +79,26 @@ class IsolationForestModel(object):
         self.model = IsolationForest(**kwargs)
 
     def fit(self, train_data):
-        if isinstance(train_data, pd.DataFrame):
-            self.model.fit(train_data)
+        self.model.fit(train_data.value.values.reshape((-1, 1)))
+
+    def predict(self, test_data, check_for_std=False, multivariate=False):
+        if multivariate:
+            preds = self.model.predict(test_data)
         else:
-            self.model.fit(train_data.value.values.reshape((-1, 1)))
+            preds = self.model.predict(test_data.value.values.reshape((-1, 1)))
 
-    def predict(self, test_data):
-        return self.model.predict(test_data)
+        if check_for_std and not multivariate:
+            std = test_data.value.std()
+            test_data["two_away_min"] = test_data.value - (1.5 * std)
+            test_data["two_away_max"] = test_data.value + (1.5 * std)
+            std_outliers = ((test_data.value < test_data.two_away_min) | (test_data.value > test_data.two_away_max))
+            preds = [-1 if mod_val == -1 and std else 1 for mod_val, std in zip(preds, std_outliers)]
+        return preds
 
-    def train_predict(self, train_data):
+    def train_predict(self, train_data, **kwargs):
         if isinstance(train_data, pd.DataFrame):
             self.model.fit(train_data)
-            return self.predict(train_data)
+            return self.predict(train_data, **kwargs)
         else:
             self.model.fit(train_data.value.values.reshape((-1, 1)))
             return self.predict(train_data.value.values.reshape((-1, 1)))
@@ -105,7 +113,7 @@ class AnomalyModel(object):
             config = json.load(c)
 
         if model is None and arguments is None:
-            model = config.get("ANOMALY_MODEL", "prophet")
+            model = config.get("ANOMALY_MODEL", "IsolationForest")
             arguments = config.get("ANOMALY_ARGS", {})
         self.anom_model = self.mods[model](arguments)
         self.model_dir = os.path.join(config_loc, "models")
@@ -113,15 +121,14 @@ class AnomalyModel(object):
             os.mkdir(self.model_dir)
 
     def train(self, train_data):
-        # with suppress_stdout_stderr():
-        #     self.anom_model.fit(train_data)
         self.anom_model.fit(train_data)
 
-    def predict(self, test_data):
-        return self.anom_model.predict(test_data)
+    def predict(self, test_data, check_for_std=False, multivariate=False):
+        return self.anom_model.predict(test_data, check_for_std=check_for_std,
+                                       multivariate=multivariate)
 
-    def train_predict(self, train_data):
-        return self.anom_model.train_predict(train_data)
+    def train_predict(self, train_data, **kwargs):
+        return self.anom_model.train_predict(train_data, **kwargs)
 
     def save(self, project_name, col_name, metric_name, arguments=None):
         file_name = create_file_name(
@@ -143,8 +150,8 @@ class LoadedModel(object):
         # print(f"Loading model from {file_name}")
         self.anom_model = joblib.load(file_name)
 
-    def predict(self, test_data):
-        return self.anom_model.predict(test_data)
+    def predict(self, test_data, check_for_std=False, multivariate=False):
+        return self.anom_model.predict(test_data, check_for_std=check_for_std, multivariate=multivariate)
 
     def train_predict(self, train_data):
         return self.anom_model.fit_predict(train_data)
@@ -202,6 +209,7 @@ class GenerateAnomalies(object):
         )
         all_rows = []
         for metric_name, data in tqdm(df.groupby("metric_name")):
+
             try:
                 mod = LoadedModel(config_loc=self.config_dir)
                 mod.load(
@@ -229,7 +237,7 @@ class GenerateAnomalies(object):
                         data.arguments.values[0],
                     )
                     # preds = mod.predict(data.value.values.reshape((-1, 1)))
-                    preds = mod.predict(data)
+                    preds = mod.predict(data, multivariate=False, check_for_std=True)
                     outlier_rows = data[preds == -1]
                     if outlier_rows.shape[0] > 0:
                         all_rows.append(outlier_rows)
@@ -305,7 +313,7 @@ class GenerateAnomalies(object):
                         "n_estimators": 50,
                     },
                 )
-                outliers = mod.train_predict(all_non_diff_lines)
+                outliers = mod.train_predict(all_non_diff_lines, check_for_std=False, multivariate=True)
                 outlier_rows = data[(outliers == -1) & (std_sums.values > 0)]
                 if outlier_rows.shape[0] > 0:
                     all_rows.append(outlier_rows)
