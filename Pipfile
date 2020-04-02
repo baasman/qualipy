@@ -1,0 +1,27 @@
+[[source]]
+name = "pypi"
+url = "https://pypi.org/simple"
+verify_ssl = true
+
+[dev-packages]
+pytest = "*"
+mypy = "*"
+tox = "*"
+
+[packages]
+pandas = "*"
+numpy = "*"
+scipy = "*"
+sqlalchemy = "*"
+flask = "*"
+dash = "*"
+qualipy = {path = "."}
+python-dotenv = "*"
+pyspark = "*"
+jupyter = "*"
+scikit-learn = "*"
+flask-caching = "*"
+pyarrow = "*"
+
+[requires]
+python_version = "3.6"
