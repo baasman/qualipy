@@ -62,7 +62,7 @@ class Column(object):
 
     def _as_dict(self, name: str, read_functions: bool = True) -> Dict[str, Any]:
         dict_ = {
-            "name": name,
+            "name": self.column_name,
             "type": self.column_type,
             "force_type": self.force_type,
             "overwrite_type": self.overwrite_type,

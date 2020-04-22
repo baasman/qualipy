@@ -3,6 +3,7 @@ import os
 from dash.dependencies import Input, Output, State
 import dash_html_components as html
 import pandas as pd
+import numpy as np
 from sqlalchemy import create_engine
 from flask import request, url_for, render_template, redirect, session
 from flask import current_app as capp
@@ -59,7 +60,7 @@ def select_data(
     n_intervals=0,
     session_id=None,
 ):
-    session_data_name = set_session_data_name(f'{session_id}-{project}')
+    session_data_name = set_session_data_name(f"{session_id}-{project}")
     last_date = session.get("last_date", None)
     cached_data = get_cached_dataframe(session_data_name)
     if cached_data is None:
@@ -69,6 +70,9 @@ def select_data(
     try:
         if data.shape[0] == 0:
             data = SQLite.get_project_table(engine, project)
+
+            # TODO: come up with solution to this
+            data['column_name'] = data.column_name + "_" + data.run_name
             cache_dataframe(data, session_data_name)
         else:
             data = cached_data.copy()
@@ -227,8 +231,10 @@ def register_callbacks(dashapp):
         data = data[data.type == "data-characteristic"]
         row = [
             session["project_name"],
-            data[data["column_name"] == "rows"].value.astype(int).sum(),
-            data[data["column_name"] == "columns"].value.astype(int).iloc[-1],
+            data[data["column_name"].str.contains("rows")].value.astype(int).sum(),
+            data[data["column_name"].str.contains("columns")]
+            .value.astype(int)
+            .iloc[-1],
             data["date"].min(),
             data["date"].nunique(),
         ]

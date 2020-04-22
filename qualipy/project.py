@@ -56,12 +56,12 @@ class Project(object):
         SQLite.create_value_table(self.engine, self.value_table)
         SQLite.create_custom_value_table(self.engine, self.value_custom_table)
 
-    def add_column(self, column: Column) -> None:
+    def add_column(self, column: Column, name: str = None) -> None:
         if isinstance(column, list):
             for col in column:
                 self._add_column(col)
         else:
-            self._add_column(column)
+            self._add_column(column, name)
 
     def add_table(self, table: Table) -> None:
         if table.infer_schema:
@@ -79,12 +79,10 @@ class Project(object):
                 column.name, read_functions=False
             )
 
-    def _add_column(self, column: Union[Column, List[Column]]) -> None:
-        if isinstance(column.column_name, list):
-            for col in column.column_name:
-                self.columns[col] = column._as_dict(col)
-        else:
-            self.columns[column.column_name] = column._as_dict(name=column.column_name)
+    def _add_column(self, column: Union[Column, List[Column]], name: str = None) -> None:
+        if name is None:
+            name = column.column_name
+        self.columns[name] = column._as_dict(name=name)
 
     def get_project_table(self) -> pd.DataFrame:
         return SQLite.get_project_table(self.engine, self.project_name)

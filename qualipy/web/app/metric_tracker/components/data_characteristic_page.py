@@ -5,20 +5,24 @@ import numpy as np
 
 
 def create_simple_line_plot_subplots(data):
-    data1 = data[(data["column_name"] == "rows") & (data["metric"] == "count")]
-    data2 = data[(data["column_name"] == "columns") & (data["metric"] == "count")]
-    data_values1 = data1["value"].values
-    data_values2 = data2["value"].values
-    x = data1["date"]
+    data = data[
+        (data["column_name"].str.contains("rows")) & (data["metric"] == "count")
+    ]
+    x = data["date"]
+
+    row_runs = data.column_name.unique()
 
     fig = make_subplots(
-        rows=2, cols=1, shared_xaxes=True, shared_yaxes=False, vertical_spacing=0.01
+        rows=row_runs.shape[0],
+        cols=1,
+        shared_xaxes=True,
+        shared_yaxes=False,
+        vertical_spacing=0.01,
     )
+    for row, (name, group) in enumerate(data.groupby("column_name"), start=1):
+        scat = go.Scatter(x=x, y=group.value.values, name=name)
+        fig.append_trace(scat, row=row, col=1)
 
-    trace1 = go.Scatter(x=x, y=data_values1, name="rows")
-    trace2 = go.Scatter(x=x, y=data_values2, name="columns")
-    fig.append_trace(trace1, row=1, col=1)
-    fig.append_trace(trace2, row=2, col=1)
     fig["layout"].update(height=600, width=800, title="Rows and Columns over time")
 
     plot = dcc.Graph(id="simple-line-plot-{}".format("rows-columns"), figure=fig)

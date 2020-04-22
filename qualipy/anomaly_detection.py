@@ -80,6 +80,8 @@ class ProphetModel(object):
 
 class IsolationForestModel(object):
     def __init__(self, kwargs):
+        defaults = {"contamination": 0.05}
+        kwargs = {**kwargs, **defaults}
         self.model = IsolationForest(**kwargs)
 
     def fit(self, train_data):
@@ -93,16 +95,15 @@ class IsolationForestModel(object):
 
         if check_for_std and not multivariate:
             std = test_data.value.std()
-            test_data["two_away_min"] = test_data.value - (1.5 * std)
-            test_data["two_away_max"] = test_data.value + (1.5 * std)
-            std_outliers = (test_data.value < test_data.two_away_min) | (
-                test_data.value > test_data.two_away_max
+            mean = test_data.value.mean()
+            std_outliers = (test_data.value < mean - (2 * std)) | (
+                test_data.value > mean + (2 * std)
             )
             preds = [
                 -1 if mod_val == -1 and std else 1
                 for mod_val, std in zip(preds, std_outliers)
             ]
-        return preds
+        return np.array(preds)
 
     def train_predict(self, train_data, **kwargs):
         if isinstance(train_data, pd.DataFrame):
@@ -212,6 +213,7 @@ class GenerateAnomalies(object):
             (df["type"] == "numerical") | (df["column_name"].isin(["rows", "columns"]))
         ]
         df.value = df.value.astype(float)
+        df.column_name = df.column_name + "_" + df.run_name
         df["metric_name"] = (
             df.column_name
             + "_"
@@ -231,7 +233,7 @@ class GenerateAnomalies(object):
                     data.arguments.values[0],
                 )
                 # preds = mod.predict(data.value.values.reshape((-1, 1)))
-                preds = mod.predict(data)
+                preds = mod.predict(data, check_for_std=True)
                 outlier_rows = data[preds == -1]
                 if outlier_rows.shape[0] > 0:
                     all_rows.append(outlier_rows)
@@ -268,6 +270,7 @@ class GenerateAnomalies(object):
     def create_anom_cat_table(self):
         df = self.project.get_project_table()
         df = df[df["metric"].isin(["value_counts"])]
+        df.column_name = df.column_name + "_" + df.run_name
         df["metric_name"] = (
             df.column_name
             + "_"
@@ -319,11 +322,7 @@ class GenerateAnomalies(object):
                 mod = AnomalyModel(
                     config_loc=self.config_dir,
                     model="IsolationForest",
-                    arguments={
-                        "behaviour": "new",
-                        "contamination": 0.01,
-                        "n_estimators": 50,
-                    },
+                    arguments={"contamination": 0.01, "n_estimators": 50,},
                 )
                 outliers = mod.train_predict(
                     all_non_diff_lines, check_for_std=False, multivariate=True
@@ -368,8 +367,11 @@ def anomaly_data_project(project_name, db_url, config_dir):
     return anomalies
 
 
+# TODO: why is db url a input when its already part of the config dir
 def anomaly_data_all_projects(project_names, db_url, config_dir):
     data = []
+    if isinstance(project_names, str):
+        project_names = [project_names]
     for project in project_names:
         adata = anomaly_data_project(project, db_url, config_dir)
         adata["project"] = project

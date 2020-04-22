@@ -51,10 +51,11 @@ class BackendPandas(BackendBase):
         data: pd.DataFrame, columns: Dict[str, Column]
     ) -> Dict[str, Dict[str, Union[bool, str]]]:
         schema = {
-            col: {
+            f"{info['name']}_{col}": {
                 "nullable": info["null"],
                 "unique": info["unique"],
-                "dtype": str(get_column(data, col).dtype),
+                "dtype": str(get_column(data, info["name"]).dtype),
+                "column_name": info["name"],
             }
             for col, info in columns.items()
         }
@@ -158,7 +159,7 @@ class BackendPandas(BackendBase):
         return unique, perc_missing, value_props
 
     @staticmethod
-    def write(measures, project, batch_name):
+    def write(conn, measures, project, batch_name):
         data = pd.DataFrame(measures)
         data["insert_time"] = datetime.datetime.now().replace(tzinfo=None)
         value_ids = [uuid.uuid4() for _ in range(data.shape[0])]
@@ -178,14 +179,13 @@ class BackendPandas(BackendBase):
 
         data = data.drop("value", axis=1)
 
-        with project.engine.begin() as conn:
-            data.to_sql(project.project_name, con=conn, if_exists="append", index=False)
-            value_data.to_sql(
-                project.value_table, con=conn, if_exists="append", index=False
-            )
-            value_data_custom.to_sql(
-                project.value_custom_table, con=conn, if_exists="append", index=False
-            )
+        data.to_sql(project.project_name, con=conn, if_exists="append", index=False)
+        value_data.to_sql(
+            project.value_table, con=conn, if_exists="append", index=False
+        )
+        value_data_custom.to_sql(
+            project.value_custom_table, con=conn, if_exists="append", index=False
+        )
 
     @staticmethod
     def get_chunks(data, time_freq, time_column):

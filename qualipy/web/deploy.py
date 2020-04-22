@@ -32,7 +32,14 @@ class QualipyDeployer(abc.ABC):
 
 class FlaskDeploy(QualipyDeployer):
     def run(self, **kwargs):
-        self.app.run(debug=True, port=self.port, host=self.host, **kwargs)
+        self.app.run(
+            debug=True,
+            port=self.port,
+            host=self.host,
+            use_reloader=False,
+            use_debugger=False,
+            **kwargs,
+        )
 
 
 class GUnicornDeploy(BaseApplication, QualipyDeployer):

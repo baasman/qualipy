@@ -90,15 +90,20 @@ class DataSet(object):
         self.batch_name = batch_name if batch_name is not None else self.time_of_run
 
         self.current_data = None
+        self.total_measures = []
         self.generator = GENERATORS[backend]()
 
         self.spark_context = spark_context
         self.train_anomaly = train_anomaly
         self.chunk = False
+        self.run_n = 0
+        self.schema = {}
+        self.from_step = None
 
-    def run(self) -> None:
+    def run(self, autocommit: bool = False) -> None:
         if not self.chunk:
-            self._generate_metrics()
+            self._generate_metrics(autocommit=autocommit)
+            self.run_n += 1
         else:
             for chunk in self.time_chunks:
                 print(f"Running on chunk: {chunk['batch_name']}")
@@ -106,39 +111,76 @@ class DataSet(object):
                 if self.current_data.shape[0] > 0:
                     self.batch_name = str(chunk["batch_name"])
                     self.time_of_run = chunk["batch_name"].date()
-                    self._generate_metrics()
+                    self._generate_metrics(autocommit=True)
                 else:
                     print(f"No data found for {chunk['batch_name']}")
 
-    def set_dataset(self, df) -> None:
+    def set_dataset(
+        self, df, columns: Optional[List[str]] = None, name: str = None
+    ) -> None:
         self.current_data = df
-        self.schema = self.generator.set_schema(df, self.project.columns)
+        self.current_name = name if name is not None else self.run_n
+        self.columns = self._set_columns(columns)
+        self._set_schema(df)
 
-    def set_chunked_dataset(self, df, time_freq: str = "1D", time_column=None):
+    def set_chunked_dataset(
+        self,
+        df,
+        columns: Optional[List[str]] = None,
+        name: str = None,
+        time_freq: str = "1D",
+        time_column=None,
+    ):
         self.current_data = df
-        self.schema = self.generator.set_schema(df, self.project.columns)
+        self.columns = self._set_columns(columns)
+        self._set_schema(df)
         self.chunk = True
         time_column = (
             time_column if time_column is not None else self.project.time_column
         )
         self.time_chunks = self.generator.get_chunks(df, time_freq, time_column)
 
-    def _generate_metrics(self) -> None:
+    def _set_schema(self, df):
+        schema = self.generator.set_schema(df, self.columns)
+        self.schema = {**self.schema, **schema}
+
+    def _set_columns(self, columns: Optional[List[str]]):
+        if columns is None:
+            columns = self.project.columns
+        else:
+            columns = {
+                col: items
+                for col, items in self.project.columns.items()
+                if col in columns
+            }
+        return columns
+
+    def commit(self):
+        with self.project.engine.begin() as conn:
+            self._write(conn=conn, measures=self.total_measures)
+
+    def _generate_metrics(self, autocommit: bool = True) -> None:
         measures = []
         types = {float: "float", int: "int", bool: "bool", dict: "dict", str: "str"}
         for col, specs in self.project.columns.items():
 
+            # TODO: cant be based on column name - should be on project column name
+            if col not in self.columns:
+                continue
+
+            column_name = specs["name"]
+
             # enforce type for function
             self.generator.check_type(
                 data=self.current_data,
-                column=col,
+                column=column_name,
                 desired_type=specs["type"],
                 force=specs["force_type"],
             )
             overwrite_type = specs["overwrite_type"]
             if overwrite_type:
                 self.current_data = self.generator.overwrite_type(
-                    self.current_data, col, specs["type"]
+                    self.current_data, column_name, specs["type"]
                 )
 
             # get default column info
@@ -166,7 +208,7 @@ class DataSet(object):
                 result = self.generator.generate_description(
                     function=function,
                     data=self.current_data,
-                    column=col,
+                    column=column_name,
                     standard_viz=standard_viz,
                     function_name=function_name,
                     date=self.time_of_run,
@@ -190,9 +232,14 @@ class DataSet(object):
 
                 measures.append(result)
 
-        self.current_run = pd.DataFrame(measures)
         measures = self._get_general_info(measures)
-        self._write(measures)
+        measures = [{**m, **{"run_name": self.current_name}} for m in measures]
+        self._add_to_total_measures(measures)
+        if autocommit:
+            self.commit()
+
+    def _add_to_total_measures(self, measures: List[Dict]):
+        self.total_measures.extend(measures)
 
     def _get_column_specific_general_info(self, specs, measures: Measure):
         col_name = specs["name"]
@@ -246,13 +293,10 @@ class DataSet(object):
             str: "not_sure",
         }
         viz_type = types[return_format]
-        # if viz_type == "custom":
-        #     if function_name in list(STANDARD_VIZ_STATIC.keys()):
-        #         viz_type = "standard_viz_static"
-        #     elif function_name in list(STANDARD_VIZ_DYNAMIC.keys()):
-        #         viz_type = "standard_viz_dynamic"
         return viz_type
 
-    def _write(self, measures: Measure) -> None:
-        self.generator.write(measures, self.project, self.batch_name)
+    def _write(self, conn, measures: Measure) -> None:
+        self.generator.write(
+            conn, measures, self.project, self.batch_name,
+        )
         self.project.add_to_project_list(self.schema)

@@ -3,6 +3,7 @@ from sqlalchemy import create_engine
 from qualipy.anomaly_detection import RunModels
 from qualipy.web.deploy import FlaskDeploy, GUnicornDeploy
 from qualipy.web._config import _Config
+from qualipy.anomaly_detection import anomaly_data_all_projects
 
 import os
 import json
@@ -49,12 +50,12 @@ def run(port, host, config_dir, train_anomaly, engine):
 @qualipy.command()
 @click.option("--project_name", default=None)
 @click.option("--config_dir", default=None)
-def train_anomaly(project_name, config_dir):
+@click.option("--out_file", default=None)
+def train_anomaly(project_name, config_dir, out_file):
     with open(os.path.join(config_dir, "config.json"), "r") as file:
         loaded_config = json.load(file)
-    engine = create_engine(loaded_config["QUALIPY_DB"])
-    run_mods = RunModels(project_name, engine, config_dir)
-    run_mods.train_all()
+    qualipy_db = loaded_config.get("QUALIPY_DB", f"sqlite:///{os.path.join(config_dir, 'qualipy.db')}")
+    anom_data = anomaly_data_all_projects(project_name, qualipy_db, config_dir)
 
 
 if __name__ == "__main__":
@@ -62,4 +63,4 @@ if __name__ == "__main__":
 
     sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
 
-    run(sys.argv[1:])
+    train_anomaly(sys.argv[1:])

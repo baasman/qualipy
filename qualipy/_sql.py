@@ -27,6 +27,7 @@ class SQL:
                 "is_static" BOOLEAN null DEFAULT true,
                 "key_function" BOOLEAN null DEFAULT FALSE,
                 "batch_name" CHARACTER null DEFAULT true,
+                "run_name" CHARACTER not null DEFAULT FALSE,
                 "valueID" CHARACTER(36) null,
                 "insert_time" DATETIME not null
             );
