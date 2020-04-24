@@ -141,7 +141,7 @@ class DataSet(object):
         self.time_chunks = self.generator.get_chunks(df, time_freq, time_column)
 
     def _set_schema(self, df):
-        schema = self.generator.set_schema(df, self.columns)
+        schema = self.generator.set_schema(df, self.columns, self.current_name)
         self.schema = {**self.schema, **schema}
 
     def _set_columns(self, columns: Optional[List[str]]):

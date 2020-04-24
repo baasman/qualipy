@@ -125,5 +125,6 @@ class Project(object):
             projects[self.project_name]["executions"].append(
                 str(datetime.datetime.now())
             )
+            projects[self.project_name]['schema'] = schema
         with open(project_file_path, "w") as f:
             json.dump(projects, f)

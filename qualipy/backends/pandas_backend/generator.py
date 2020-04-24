@@ -48,10 +48,10 @@ class BackendPandas(BackendBase):
 
     @staticmethod
     def set_schema(
-        data: pd.DataFrame, columns: Dict[str, Column]
+        data: pd.DataFrame, columns: Dict[str, Column], current_name: str
     ) -> Dict[str, Dict[str, Union[bool, str]]]:
         schema = {
-            f"{info['name']}_{col}": {
+            f"{info['name']}_{current_name}": {
                 "nullable": info["null"],
                 "unique": info["unique"],
                 "dtype": str(get_column(data, info["name"]).dtype),

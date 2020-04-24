@@ -212,6 +212,11 @@ class GenerateAnomalies(object):
         df = df[
             (df["type"] == "numerical") | (df["column_name"].isin(["rows", "columns"]))
         ]
+        df = (
+            df.groupby("batch_name", as_index=False)
+            .apply(lambda g: g[g.insert_time == g.insert_time.max()])
+            .reset_index(drop=True)
+        )
         df.value = df.value.astype(float)
         df.column_name = df.column_name + "_" + df.run_name
         df["metric_name"] = (
@@ -269,6 +274,11 @@ class GenerateAnomalies(object):
 
     def create_anom_cat_table(self):
         df = self.project.get_project_table()
+        df = (
+            df.groupby("batch_name", as_index=False)
+            .apply(lambda g: g[g.insert_time == g.insert_time.max()])
+            .reset_index(drop=True)
+        )
         df = df[df["metric"].isin(["value_counts"])]
         df.column_name = df.column_name + "_" + df.run_name
         df["metric_name"] = (
