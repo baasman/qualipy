@@ -199,3 +199,19 @@ class BackendPandas(BackendBase):
     def overwrite_type(data, col, type):
         data[col] = data[col].astype(type.str_name)
         return data
+
+    @staticmethod
+    def write_anomaly(conn, data, project_name, clear=False):
+        anomaly_table_name = f"{project_name}_anomaly"
+        if clear:
+            conn.execute(
+                f"delete from {anomaly_table_name} where project = '{project_name}'"
+            )
+        most_recent_one = conn.execute(
+            f"select date from {anomaly_table_name} order by date desc limit 1"
+        ).fetchone()
+        if most_recent_one is not None:
+            most_recent_one = most_recent_one[0]
+            data = data[pd.to_datetime(data.date) > pd.to_datetime(most_recent_one)]
+        if data.shape[0] > 0:
+            data.to_sql(anomaly_table_name, conn, if_exists="append", index=False)

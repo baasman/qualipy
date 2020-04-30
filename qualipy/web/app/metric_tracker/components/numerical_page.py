@@ -32,7 +32,7 @@ def all_trends(data, show_column_in_name=False):
         fig.append_trace(go.Scatter(x=x, y=group.value.values), row=row, col=1)
 
     fig["layout"].update(
-        title_text="All Numerical Trends".format(col_name), showlegend=False
+        title_text="All Numerical Trends - {}".format(col_name), showlegend=False
     )
 
     plot = dcc.Graph(id="all-num-aggs-{}".format(col_name), figure=fig)

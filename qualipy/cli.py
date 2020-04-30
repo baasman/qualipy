@@ -1,9 +1,11 @@
 import click
 from sqlalchemy import create_engine
-from qualipy.anomaly_detection import RunModels
+from qualipy.anomaly_detection import _run_anomaly
 from qualipy.web.deploy import FlaskDeploy, GUnicornDeploy
 from qualipy.web._config import _Config
 from qualipy.anomaly_detection import anomaly_data_all_projects
+from qualipy._sql import SQLite
+from qualipy.backends.pandas_backend.generator import BackendPandas
 
 import os
 import json
@@ -12,6 +14,8 @@ import json
 HOME = os.path.expanduser("~")
 
 DEPLOYMENT_OPTIONS = {"flask": FlaskDeploy, "gunicorn": GUnicornDeploy}
+
+backend = BackendPandas
 
 
 @click.group()
@@ -50,12 +54,9 @@ def run(port, host, config_dir, train_anomaly, engine):
 @qualipy.command()
 @click.option("--project_name", default=None)
 @click.option("--config_dir", default=None)
-@click.option("--out_file", default=None)
-def train_anomaly(project_name, config_dir, out_file):
-    with open(os.path.join(config_dir, "config.json"), "r") as file:
-        loaded_config = json.load(file)
-    qualipy_db = loaded_config.get("QUALIPY_DB", f"sqlite:///{os.path.join(config_dir, 'qualipy.db')}")
-    anom_data = anomaly_data_all_projects(project_name, qualipy_db, config_dir)
+@click.option("--retrain", default=False, type=bool)
+def run_anomaly(project_name, config_dir, retrain):
+    _run_anomaly(backend, project_name, config_dir, retrain)
 
 
 if __name__ == "__main__":
@@ -63,4 +64,4 @@ if __name__ == "__main__":
 
     sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
 
-    train_anomaly(sys.argv[1:])
+    run_anomaly(sys.argv[1:])

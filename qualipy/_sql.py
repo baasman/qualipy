@@ -40,6 +40,29 @@ class SQL:
                 conn.execute(create_table_query)
 
     @staticmethod
+    def create_anomaly_table(engine: engine.base.Engine, table_name: str) -> None:
+        create_table_query = """
+            create table {} (
+                "project" CHARACTER(30) not null,
+                "column_name" CHARACTER(30) not null,
+                "date" DATETIME not null,
+                "metric" CHARACTER(30) not null,
+                "arguments" CHARACTER(100) null,
+                "return_format" CHARACTER DEFAULT 'float',
+                "batch_name" CHARACTER null DEFAULT true,
+                "run_name" CHARACTER not null DEFAULT FALSE,
+                "value" CHARACTER(36) null,
+                "insert_time" DATETIME not null
+            );
+        """.format(
+            table_name
+        )
+        exists = SQL.does_table_exist(engine, table_name)
+        if not exists:
+            with engine.connect() as conn:
+                conn.execute(create_table_query)
+
+    @staticmethod
     def create_value_table(engine: engine.base.Engine, table_name: str) -> None:
         create_table_query = """
             create table {} (
@@ -126,6 +149,12 @@ class SQL:
         return data
 
     @staticmethod
+    def get_anomaly_table(engine, project_name: str) -> pd.DataFrame:
+        anom_table_name = f"{project_name}_anomaly"
+        data = pd.read_sql(f"select * from {anom_table_name}", con=engine)
+        return data
+
+    @staticmethod
     def get_last_time(engine, project_name: str):
         with engine.connect() as conn:
             time = conn.execute(
@@ -159,4 +188,8 @@ class SQL:
 
 
 class SQLite(SQL):
+    pass
+
+
+class Postgres(SQL):
     pass

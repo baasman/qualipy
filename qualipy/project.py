@@ -8,7 +8,7 @@ import datetime
 import pandas as pd
 from typing import List, Optional, Union, Dict
 
-from sqlalchemy import engine, create_engine
+from sqlalchemy import create_engine
 
 
 def _validate_project_name(project_name):
@@ -31,30 +31,48 @@ def create_qualipy_folder(config_dir, db_url):
 
 class Project(object):
     def __init__(
-        self,
-        project_name: str,
-        engine: Optional[engine.base.Engine] = None,
-        config_dir: str = None,
+        self, project_name: str, config_dir: str = None,
+    ):
+        self._initialize(project_name, config_dir, False)
+
+    def _initialize(
+        self, project_name: str, config_dir: str = None, re_init: bool = False,
     ):
         _validate_project_name(project_name)
         self.project_name = project_name
         self.value_table = "{}_values".format(self.project_name)
         self.value_custom_table = "{}_values_custom".format(self.project_name)
-        self.columns = {}
-        self.config_dir = (
-            os.path.join(HOME, ".qualipy") if config_dir is None else config_dir
-        )
+        self.anomaly_table = "{}_anomaly".format(self.project_name)
+        if not re_init:
+            self.columns = {}
+        if not re_init:
+            self.config_dir = (
+                os.path.join(HOME, ".qualipy") if config_dir is None else config_dir
+            )
+        else:
+            self.config_dir = config_dir
+        with open(os.path.join(self.config_dir, "config.json"), "rb") as f:
+            config = json.load(f)
+        engine = config.get("QUALIPY_DB")
         if engine is None:
             self.engine = create_engine(
                 "sqlite:///{}".format(os.path.join(self.config_dir, "qualipy.db"))
             )
         else:
-            self.engine = engine
-        create_qualipy_folder(self.config_dir, db_url=str(self.engine.url))
+            self.engine = create_engine(engine)
 
-        SQLite.create_table(self.engine, self.project_name)
-        SQLite.create_value_table(self.engine, self.value_table)
-        SQLite.create_custom_value_table(self.engine, self.value_custom_table)
+        if not re_init:
+            create_qualipy_folder(self.config_dir, db_url=str(self.engine.url))
+
+        if not re_init:
+            SQLite.create_table(self.engine, self.project_name)
+            SQLite.create_value_table(self.engine, self.value_table)
+            SQLite.create_custom_value_table(self.engine, self.value_custom_table)
+            SQLite.create_anomaly_table(self.engine, self.anomaly_table)
+
+    def change_config_dir(self, config_dir):
+        # TODO: engine should come from config - never given
+        self._initialize(self.project_name, None, config_dir, True)
 
     def add_column(self, column: Column, name: str = None) -> None:
         if isinstance(column, list):
@@ -79,13 +97,18 @@ class Project(object):
                 column.name, read_functions=False
             )
 
-    def _add_column(self, column: Union[Column, List[Column]], name: str = None) -> None:
+    def _add_column(
+        self, column: Union[Column, List[Column]], name: str = None
+    ) -> None:
         if name is None:
             name = column.column_name
         self.columns[name] = column._as_dict(name=name)
 
     def get_project_table(self) -> pd.DataFrame:
         return SQLite.get_project_table(self.engine, self.project_name)
+
+    def get_anomaly_table(self) -> pd.DataFrame:
+        return SQLite.get_anomaly_table(self.engine, self.project_name)
 
     def delete_data(self):
         with self.engine.begin() as conn:
@@ -125,6 +148,6 @@ class Project(object):
             projects[self.project_name]["executions"].append(
                 str(datetime.datetime.now())
             )
-            projects[self.project_name]['schema'] = schema
+            projects[self.project_name]["schema"] = schema
         with open(project_file_path, "w") as f:
             json.dump(projects, f)
