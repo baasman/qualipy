@@ -8,6 +8,7 @@ from plotly.subplots import make_subplots
 
 
 def value_count_chart(data, var, anom_data):
+    metric = data.metric.iloc[0]
     data_values = [(pd.Series(c) / pd.Series(c).sum()).to_dict() for c in data["value"]]
     traces = []
     unique_vals = reduce(lambda x, y: x.union(y), [set(i.keys()) for i in data_values])
@@ -37,7 +38,9 @@ def value_count_chart(data, var, anom_data):
                 "line": {"color": "red", "width": 4},
             }
         )
-    plot = go.Figure(data=traces, layout={"title_text": var, "shapes": shapes})
+    plot = go.Figure(
+        data=traces, layout={"title_text": f"{var}_{metric}", "shapes": shapes}
+    )
     plot.show()
 
 

@@ -52,3 +52,12 @@ def copy_function_spec(function: Union[Dict[str, Any], Callable]):
 def import_function_by_name(name: str, backend: str) -> Callable:
     module = importlib.import_module(f"qualipy.backends.{backend}_backend.functions")
     return getattr(module, name)
+
+
+def get_latest_insert_only(data):
+    return (
+        data.groupby("batch_name", as_index=False)
+        .apply(lambda g: g[g.insert_time == g.insert_time.max()])
+        .reset_index(drop=True)
+    )
+

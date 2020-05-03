@@ -214,10 +214,9 @@ class RunModels(object):
 
 
 class GenerateAnomalies(object):
-
     def __init__(self, project_name, engine, config_dir=default_config_path):
         self.config_dir = config_dir
-        self.project = Project(project_name, engine, config_dir=config_dir)
+        self.project = Project(project_name, config_dir=config_dir)
 
     def _num_train_and_save(self, data, all_rows, metric_name):
         try:
@@ -300,7 +299,7 @@ class GenerateAnomalies(object):
             .apply(lambda g: g[g.insert_time == g.insert_time.max()])
             .reset_index(drop=True)
         )
-        df = df[df["metric"].isin(["value_counts"])]
+        df = df[df["type"] == "categorical"]
         df.column_name = df.column_name + "_" + df.run_name
         df["metric_name"] = (
             df.column_name
@@ -408,10 +407,7 @@ def anomaly_data_all_projects(project_names, db_url, config_dir, retrain=False):
         adata = adata[["project"] + [col for col in adata.columns if col != "project"]]
         data.append(adata)
     if len(project_names) == 0:
-        data = pd.DataFrame(
-            [],
-            columns=anomaly_columns
-        )
+        data = pd.DataFrame([], columns=anomaly_columns)
     else:
         data = pd.concat(data)
     data = data.sort_values("date")

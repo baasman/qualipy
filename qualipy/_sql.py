@@ -13,8 +13,7 @@ def _unpickle(row):
 
 
 class SQL:
-    @staticmethod
-    def create_table(engine: engine.base.Engine, table_name: str) -> None:
+    def create_table(self, engine: engine.base.Engine, table_name: str) -> None:
         create_table_query = """
             create table {} (
                 "column_name" CHARACTER(20) not null,
@@ -28,19 +27,18 @@ class SQL:
                 "key_function" BOOLEAN null DEFAULT FALSE,
                 "batch_name" CHARACTER null DEFAULT true,
                 "run_name" CHARACTER not null DEFAULT FALSE,
-                "valueID" CHARACTER(36) null,
+                "value_id" CHARACTER(36) null,
                 "insert_time" DATETIME not null
             );
         """.format(
             table_name
         )
-        exists = SQL.does_table_exist(engine, table_name)
+        exists = self.does_table_exist(engine, table_name)
         if not exists:
             with engine.connect() as conn:
                 conn.execute(create_table_query)
 
-    @staticmethod
-    def create_anomaly_table(engine: engine.base.Engine, table_name: str) -> None:
+    def create_anomaly_table(self, engine: engine.base.Engine, table_name: str) -> None:
         create_table_query = """
             create table {} (
                 "project" CHARACTER(30) not null,
@@ -57,50 +55,48 @@ class SQL:
         """.format(
             table_name
         )
-        exists = SQL.does_table_exist(engine, table_name)
+        exists = self.does_table_exist(engine, table_name)
         if not exists:
             with engine.connect() as conn:
                 conn.execute(create_table_query)
 
-    @staticmethod
-    def create_value_table(engine: engine.base.Engine, table_name: str) -> None:
+    def create_value_table(self, engine: engine.base.Engine, table_name: str) -> None:
         create_table_query = """
             create table {} (
                 value varchar,
-                valueID CHARACTER(36),
-                    foreign key (valueID) references {}(valueID)
+                value_id CHARACTER(36),
+                    foreign key (value_id) references {}(value_id)
             );
         """.format(
             table_name, table_name.replace("_values", "")
         )
-        exists = SQL.does_table_exist(engine, table_name)
+        exists = self.does_table_exist(engine, table_name)
         if not exists:
             with engine.connect() as conn:
                 conn.execute(create_table_query)
 
-    @staticmethod
-    def create_custom_value_table(engine: engine.base.Engine, table_name: str) -> None:
+    def create_custom_value_table(
+        self, engine: engine.base.Engine, table_name: str
+    ) -> None:
         create_table_query = """
             create table {} (
                 value BLOB,
-                valueID CHARACTER(36),
-                    foreign key (valueID) references {}(valueID)
+                value_id CHARACTER(36),
+                    foreign key (value_id) references {}(value_id)
             );
         """.format(
             table_name, table_name.replace("_values_custom", "")
         )
-        exists = SQL.does_table_exist(engine, table_name)
+        exists = self.does_table_exist(engine, table_name)
         if not exists:
             with engine.connect() as conn:
                 conn.execute(create_table_query)
 
-    @staticmethod
-    def get_table(engine: engine.base.Engine, table_name: str) -> pd.DataFrame:
+    def get_table(self, engine: engine.base.Engine, table_name: str) -> pd.DataFrame:
         return pd.read_sql("select * from {}".format(table_name), engine)
 
-    @staticmethod
     def get_all_values(
-        engine: engine.base.Engine, table_name: str, last_date: str = None
+        self, engine: engine.base.Engine, table_name: str, last_date: str = None
     ) -> pd.DataFrame:
         value_table = table_name + "_values"
         if last_date is not None:
@@ -111,24 +107,22 @@ class SQL:
         select *
         from {table_name}
         join (select * from {value_table} UNION select * from {table_name + '_values_custom'}) as {value_table + '_all'}
-        on {table_name}.valueID = {value_table + '_all'}.valueID
+        on {table_name}.value_id = {value_table + '_all'}.value_id
         {where_stmt};
         """
         return pd.read_sql(query, engine)
 
-    @staticmethod
     def delete_data(
-        conn: engine.base.Connection, name: str, create_function: Callable
+        self, conn: engine.base.Connection, name: str, create_function: Callable
     ) -> None:
         try:
             conn.execute("drop table {}".format(name))
         except:
             pass
-        SQL.create_table_if_not_exists(conn, name, create_function)
+        self.create_table_if_not_exists(conn, name, create_function)
 
-    @staticmethod
     def create_table_if_not_exists(
-        conn: engine.base.Connection, name: str, create_function: Callable
+        self, conn: engine.base.Connection, name: str, create_function: Callable
     ) -> None:
         exists = conn.execute(
             "select name from sqlite_master "
@@ -138,24 +132,21 @@ class SQL:
         if not exists:
             create_function(conn, name)
 
-    @staticmethod
     def get_project_table(
-        engine, project_name: str, last_date: str = None
+        self, engine, project_name: str, last_date: str = None
     ) -> pd.DataFrame:
-        data = SQL.get_all_values(engine, project_name, last_date)
-        data = data.drop("valueID", axis=1)
+        data = self.get_all_values(engine, project_name, last_date)
+        data = data.drop("value_id", axis=1)
         if data.shape[0] > 0:
             data.value = data.apply(lambda r: _unpickle(r), axis=1)
         return data
 
-    @staticmethod
-    def get_anomaly_table(engine, project_name: str) -> pd.DataFrame:
+    def get_anomaly_table(self, engine, project_name: str) -> pd.DataFrame:
         anom_table_name = f"{project_name}_anomaly"
         data = pd.read_sql(f"select * from {anom_table_name}", con=engine)
         return data
 
-    @staticmethod
-    def get_last_time(engine, project_name: str):
+    def get_last_time(self, engine, project_name: str):
         with engine.connect() as conn:
             time = conn.execute(
                 f"select insert_time from {project_name} order by rowid desc limit 1"
@@ -163,8 +154,7 @@ class SQL:
             time = datetime.datetime.strptime(time.split(".")[0], "%Y-%m-%d %H:%M:%S")
         return time
 
-    @staticmethod
-    def does_table_exist(engine: engine.base.Engine, table_name: str) -> bool:
+    def does_table_exist(self, engine: engine.base.Engine, table_name: str) -> bool:
         with engine.connect() as conn:
             exists = conn.execute(
                 "select name from sqlite_master "
@@ -173,9 +163,11 @@ class SQL:
             ).fetchone()
         return exists
 
-    @staticmethod
     def get_top_row(
-        engine: engine.base.Engine, variables: Union[str, List[str]], table_name: str
+        self,
+        engine: engine.base.Engine,
+        variables: Union[str, List[str]],
+        table_name: str,
     ):
         if variables == "all":
             var_selection = "*"
@@ -188,8 +180,154 @@ class SQL:
 
 
 class SQLite(SQL):
-    pass
+    def __init__(self):
+        super(SQLite).__init__()
 
 
 class Postgres(SQL):
-    pass
+    def __init__(self):
+        super(Postgres).__init__()
+
+    def create_table(self, engine: engine.base.Engine, table_name: str) -> None:
+        create_table_query = """
+            create table {} (
+                "column_name" VARCHAR(20) not null,
+                "date" TIMESTAMPTZ not null,
+                "metric" VARCHAR(30) not null,
+                "arguments" VARCHAR(100) null,
+                "type" VARCHAR(50) not null DEFAULT 'custom',
+                "return_format" VARCHAR(10) DEFAULT 'float',
+                "standard_viz" VARCHAR(100) null,
+                "is_static" BOOLEAN null DEFAULT true,
+                "key_function" BOOLEAN null DEFAULT FALSE,
+                "batch_name" VARCHAR(100) null DEFAULT true,
+                "run_name" VARCHAR(100) not null DEFAULT FALSE,
+                "value_id" VARCHAR(36) null, 
+                "insert_time" TIMESTAMPTZ not null, 
+                PRIMARY KEY (value_id)
+            );
+        """.format(
+            table_name
+        )
+        exists = self.does_table_exist(engine, table_name)
+        if not exists:
+            with engine.connect() as conn:
+                conn.execute(create_table_query)
+
+    def create_value_table(self, engine: engine.base.Engine, table_name: str) -> None:
+        create_table_query = """
+            create table {} (
+                value varchar,
+                value_id VARCHAR(36),
+                    foreign key (value_id) references {}(value_id) on delete cascade
+            );
+        """.format(
+            table_name, table_name.replace("_values", "")
+        )
+        exists = self.does_table_exist(engine, table_name)
+        if not exists:
+            with engine.connect() as conn:
+                conn.execute(create_table_query)
+
+    def create_custom_value_table(
+        self, engine: engine.base.Engine, table_name: str
+    ) -> None:
+        create_table_query = """
+            create table {} (
+                value BYTEA,
+                value_id VARCHAR(36),
+                    foreign key (value_id) references {}(value_id) on delete cascade
+            );
+        """.format(
+            table_name, table_name.replace("_values_custom", "")
+        )
+        exists = self.does_table_exist(engine, table_name)
+        if not exists:
+            with engine.connect() as conn:
+                conn.execute(create_table_query)
+
+    def create_anomaly_table(self, engine: engine.base.Engine, table_name: str) -> None:
+        create_table_query = """
+            create table {} (
+                "project" VARCHAR(30) not null,
+                "column_name" VARCHAR(30) not null,
+                "date" TIMESTAMPTZ not null,
+                "metric" VARCHAR(30) not null,
+                "arguments" VARCHAR(100) null,
+                "return_format" VARCHAR(10) DEFAULT 'float',
+                "batch_name" VARCHAR(100) null DEFAULT true,
+                "run_name" VARCHAR(100) not null DEFAULT FALSE,
+                "value" VARCHAR(36) null,
+                "insert_time" TIMESTAMPTZ not null
+            );
+        """.format(
+            table_name
+        )
+        exists = self.does_table_exist(engine, table_name)
+        if not exists:
+            with engine.connect() as conn:
+                conn.execute(create_table_query)
+
+    def does_table_exist(self, engine: engine.base.Engine, table_name: str) -> bool:
+        with engine.connect() as conn:
+            exists = conn.execute(
+                f"SELECT to_regclass('public.{table_name}')"
+            ).fetchone()
+        return exists[0]
+
+    def delete_data(
+        self, conn: engine.base.Connection, name: str, create_function: Callable
+    ) -> None:
+        try:
+            conn.execute("drop table {} cascade".format(name))
+        except:
+            pass
+        self.create_table_if_not_exists(conn, name, create_function)
+
+    def create_table_if_not_exists(
+        self, conn: engine.base.Connection, name: str, create_function: Callable
+    ) -> None:
+        exists = conn.execute(f"SELECT to_regclass('public.{name}')").fetchone()[0]
+        if not exists:
+            create_function(conn, name)
+
+    def get_all_values(
+        self, engine: engine.base.Engine, table_name: str, last_date: str = None
+    ) -> pd.DataFrame:
+        value_table = table_name + "_values"
+        if last_date is not None:
+            where_stmt = f"where insert_time > '{last_date}'"
+        else:
+            where_stmt = ""
+        query_non_binary = f"""
+            select *
+            from {table_name}
+            join {value_table} on 
+                {table_name}.value_id = {value_table}.value_id
+        """
+        non_bin_data = pd.read_sql(query_non_binary, engine)
+        query_binary = f"""
+            select *
+            from {table_name}
+            join {value_table + '_custom'} on 
+                {table_name}.value_id = {value_table + '_custom'}.value_id
+        """
+        bin_data = pd.read_sql(query_binary, engine)
+        data = pd.concat([non_bin_data, bin_data]).reset_index(drop=True)
+        return data
+
+
+DB_ENGINES = {"sqlite": SQLite, "postgresql": Postgres}
+
+if __name__ == "__main__":
+    from sqlalchemy import create_engine
+
+    p = Postgres()
+    p.create_table(
+        create_engine("postgresql+psycopg2://postgres:docker@127.0.0.1:5433/postgres"),
+        "test_table",
+    )
+    p.create_value_table(
+        create_engine("postgresql+psycopg2://postgres:docker@127.0.0.1:5433/postgres"),
+        "test_table_values",
+    )

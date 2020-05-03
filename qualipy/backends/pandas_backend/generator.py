@@ -164,15 +164,15 @@ class BackendPandas(BackendBase):
         data["insert_time"] = datetime.datetime.now().replace(tzinfo=None)
         value_ids = [uuid.uuid4() for _ in range(data.shape[0])]
         data["batch_name"] = batch_name
-        data["valueID"] = value_ids
-        data.valueID = data.valueID.astype(str)
+        data["value_id"] = value_ids
+        data.value_id = data.value_id.astype(str)
 
         value_data = data[
             data.type.isin(["numerical", "boolean", "data-characteristic"])
-        ][["valueID", "value"]]
+        ][["value_id", "value"]]
         value_data.value = value_data.value.astype(str)
 
-        value_data_custom = data[data.type.isin(["categorical"])][["valueID", "value"]]
+        value_data_custom = data[data.type.isin(["categorical"])][["value_id", "value"]]
         value_data_custom.value = value_data_custom.value.apply(
             lambda v: pickle.dumps(v)
         )
@@ -210,7 +210,7 @@ class BackendPandas(BackendBase):
         most_recent_one = conn.execute(
             f"select date from {anomaly_table_name} order by date desc limit 1"
         ).fetchone()
-        if most_recent_one is not None:
+        if most_recent_one is not None and data.shape[0] > 0:
             most_recent_one = most_recent_one[0]
             data = data[pd.to_datetime(data.date) > pd.to_datetime(most_recent_one)]
         if data.shape[0] > 0:

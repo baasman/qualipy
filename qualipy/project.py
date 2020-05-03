@@ -1,5 +1,5 @@
 from qualipy.util import HOME
-from qualipy._sql import SQLite
+from qualipy._sql import DB_ENGINES
 from qualipy.column import Column, Table
 
 import json
@@ -15,18 +15,27 @@ def _validate_project_name(project_name):
     assert "-" not in project_name
 
 
-def set_default_config():
-    return {}
+def set_default_config(db_url=None):
+    conf = {}
+    if db_url is not None:
+        conf["QUALIPY_DB"] = db_url
+    return conf
 
 
-def create_qualipy_folder(config_dir, db_url):
+def create_qualipy_folder(config_dir, db_url=None):
     if not os.path.exists(config_dir):
         os.makedirs(config_dir, exist_ok=True)
         with open(os.path.join(config_dir, "config.json"), "w") as f:
-            json.dump(set_default_config(), f)
+            json.dump(set_default_config(db_url), f)
         with open(os.path.join(config_dir, "projects.json"), "w") as f:
             json.dump({}, f)
         os.makedirs(os.path.join(config_dir, "models"), exist_ok=True)
+
+
+def inspect_db_connection(url):
+    for backend in DB_ENGINES.keys():
+        if backend in url:
+            return backend
 
 
 class Project(object):
@@ -60,19 +69,21 @@ class Project(object):
             )
         else:
             self.engine = create_engine(engine)
+        self.sql_helper = DB_ENGINES[inspect_db_connection(str(self.engine.url))]()
 
         if not re_init:
             create_qualipy_folder(self.config_dir, db_url=str(self.engine.url))
 
         if not re_init:
-            SQLite.create_table(self.engine, self.project_name)
-            SQLite.create_value_table(self.engine, self.value_table)
-            SQLite.create_custom_value_table(self.engine, self.value_custom_table)
-            SQLite.create_anomaly_table(self.engine, self.anomaly_table)
+            self.sql_helper.create_table(self.engine, self.project_name)
+            self.sql_helper.create_value_table(self.engine, self.value_table)
+            self.sql_helper.create_custom_value_table(
+                self.engine, self.value_custom_table
+            )
+            self.sql_helper.create_anomaly_table(self.engine, self.anomaly_table)
 
     def change_config_dir(self, config_dir):
-        # TODO: engine should come from config - never given
-        self._initialize(self.project_name, None, config_dir, True)
+        self._initialize(self.project_name, config_dir, True)
 
     def add_column(self, column: Column, name: str = None) -> None:
         if isinstance(column, list):
@@ -105,17 +116,24 @@ class Project(object):
         self.columns[name] = column._as_dict(name=name)
 
     def get_project_table(self) -> pd.DataFrame:
-        return SQLite.get_project_table(self.engine, self.project_name)
+        return self.sql_helper.get_project_table(self.engine, self.project_name)
 
     def get_anomaly_table(self) -> pd.DataFrame:
-        return SQLite.get_anomaly_table(self.engine, self.project_name)
+        return self.sql_helper.get_anomaly_table(self.engine, self.project_name)
 
     def delete_data(self):
         with self.engine.begin() as conn:
-            SQLite.delete_data(conn, self.project_name, SQLite.create_table)
-            SQLite.delete_data(conn, self.value_table, SQLite.create_value_table)
-            SQLite.delete_data(
-                conn, self.value_custom_table, SQLite.create_custom_value_table
+            self.sql_helper.delete_data(
+                conn, self.project_name, self.sql_helper.create_table
+            )
+            self.sql_helper.delete_data(
+                conn, self.value_table, self.sql_helper.create_value_table
+            )
+            self.sql_helper.delete_data(
+                conn, self.value_custom_table, self.sql_helper.create_custom_value_table
+            )
+            self.sql_helper.delete_data(
+                conn, self.anomaly_table, self.sql_helper.create_anomaly_table
             )
 
     def delete_from_project_config(self):

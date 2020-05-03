@@ -4,7 +4,6 @@ from abc import abstractmethod, ABC
 
 import pandas as pd
 
-from qualipy._sql import SQLite
 from qualipy.util import copy_function_spec, import_function_by_name
 
 from qualipy.backends.pandas_backend.pandas_types import (
@@ -15,12 +14,6 @@ from qualipy.backends.pandas_backend.pandas_types import (
     DateTimeType as pDateTimeType,
 )
 from qualipy.config import DEFAULT_CAT_FUNCTIONS, DEFAULT_NUM_FUNCTIONS
-
-
-SQL = {"sqlite": SQLite}
-
-
-# TODO: make dataclass for column dict structure
 
 
 def function(

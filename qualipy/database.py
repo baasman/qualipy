@@ -20,7 +20,7 @@ def create_table(conn: engine.base.Connection, table_name: str) -> None:
             "is_static" BOOLEAN null DEFAULT true,
             "key_function" BOOLEAN null DEFAULT FALSE,
             "batch_name" CHARACTER null DEFAULT true,
-            "valueID" CHARACTER(36) null,
+            "value_id" CHARACTER(36) null,
             "insert_time" DATETIME not null
         );
     """.format(
@@ -33,8 +33,8 @@ def create_value_table(conn: engine.base.Connection, table_name: str) -> None:
     create_table_query = """
         create table {} (
             value varchar,
-            valueID CHARACTER(36),
-                foreign key (valueID) references {}(valueID)
+            value_id CHARACTER(36),
+                foreign key (value_id) references {}(value_id)
         );
     """.format(
         table_name, table_name.replace("_values", "")
@@ -46,8 +46,8 @@ def create_custom_value_table(conn: engine.base.Connection, table_name: str) -> 
     create_table_query = """
         create table {} (
             value BLOB,
-            valueID CHARACTER(36),
-                foreign key (valueID) references {}(valueID)
+            value_id CHARACTER(36),
+                foreign key (value_id) references {}(value_id)
         );
     """.format(
         table_name, table_name.replace("_values_custom", "")
@@ -71,7 +71,7 @@ def get_all_values(
     select *
     from {table_name}
     join (select * from {value_table} UNION select * from {table_name + '_values_custom'}) as {value_table + '_all'}
-    on {table_name}.valueID = {value_table + '_all'}.valueID
+    on {table_name}.value_id = {value_table + '_all'}.value_id
     {where_stmt};
     """
     return pd.read_sql(query, engine)
@@ -107,7 +107,7 @@ def _unpickle(row):
 
 def get_project_table(engine, project_name: str, last_date: str = None) -> pd.DataFrame:
     data = get_all_values(engine, project_name, last_date)
-    data = data.drop("valueID", axis=1)
+    data = data.drop("value_id", axis=1)
     if data.shape[0] > 0:
         data.value = data.apply(lambda r: _unpickle(r), axis=1)
     return data

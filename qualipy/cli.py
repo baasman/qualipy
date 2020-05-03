@@ -4,8 +4,8 @@ from qualipy.anomaly_detection import _run_anomaly
 from qualipy.web.deploy import FlaskDeploy, GUnicornDeploy
 from qualipy.web._config import _Config
 from qualipy.anomaly_detection import anomaly_data_all_projects
-from qualipy._sql import SQLite
 from qualipy.backends.pandas_backend.generator import BackendPandas
+from qualipy.project import create_qualipy_folder, Project
 
 import os
 import json
@@ -21,6 +21,22 @@ backend = BackendPandas
 @click.group()
 def qualipy():
     pass
+
+
+@qualipy.command()
+@click.argument("config_dir_path")
+@click.option("--db_url", default=None)
+def generate_config(config_dir_path, db_url):
+    create_qualipy_folder(config_dir=config_dir_path, db_url=db_url)
+
+
+@qualipy.command()
+@click.argument("config_dir")
+@click.argument("project_name")
+def clear_data(config_dir, project_name):
+    project = Project(config_dir=config_dir, project_name=project_name)
+    project.delete_data()
+    project.delete_from_project_config()
 
 
 @qualipy.command()
