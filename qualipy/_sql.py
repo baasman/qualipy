@@ -6,6 +6,10 @@ import pickle
 import datetime
 
 
+# back compatibility purposes
+value_id_name = "value_id"
+
+
 def _unpickle(row):
     if row["return_format"] == "dict":
         return pickle.loads(row["value"])
@@ -100,6 +104,7 @@ class SQL:
         self, engine: engine.base.Engine, table_name: str, last_date: str = None
     ) -> pd.DataFrame:
         value_table = table_name + "_values"
+        # for back compatibility purposes
         if last_date is not None:
             where_stmt = f"where insert_time > '{last_date}'"
         else:
@@ -108,7 +113,7 @@ class SQL:
         select *
         from {table_name}
         join (select * from {value_table} UNION select * from {table_name + '_values_custom'}) as {value_table + '_all'}
-        on {table_name}.value_id = {value_table + '_all'}.value_id
+        on {table_name}.{value_id_name} = {value_table + '_all'}.{value_id_name}
         {where_stmt};
         """
         return pd.read_sql(query, engine)
@@ -137,7 +142,7 @@ class SQL:
         self, engine, project_name: str, last_date: str = None
     ) -> pd.DataFrame:
         data = self.get_all_values(engine, project_name, last_date)
-        data = data.drop("value_id", axis=1)
+        data = data.drop(value_id_name, axis=1)
         if data.shape[0] > 0:
             data.value = data.apply(lambda r: _unpickle(r), axis=1)
         return data
