@@ -198,9 +198,9 @@ class Postgres(SQL):
         create_table_query = """
             create table {} (
                 "id" SERIAL,
-                "column_name" VARCHAR(20) not null,
+                "column_name" VARCHAR(100) not null,
                 "date" TIMESTAMPTZ not null,
-                "metric" VARCHAR(30) not null,
+                "metric" VARCHAR(100) not null,
                 "arguments" VARCHAR(100) null,
                 "type" VARCHAR(50) not null DEFAULT 'custom',
                 "return_format" VARCHAR(10) DEFAULT 'float',
@@ -257,10 +257,10 @@ class Postgres(SQL):
     def create_anomaly_table(self, engine: engine.base.Engine, table_name: str) -> None:
         create_table_query = """
             create table {} (
-                "project" VARCHAR(30) not null,
-                "column_name" VARCHAR(30) not null,
+                "project" VARCHAR(50) not null,
+                "column_name" VARCHAR(100) not null,
                 "date" TIMESTAMPTZ not null,
-                "metric" VARCHAR(30) not null,
+                "metric" VARCHAR(100) not null,
                 "arguments" VARCHAR(100) null,
                 "return_format" VARCHAR(10) DEFAULT 'float',
                 "batch_name" VARCHAR(100) null DEFAULT true,
