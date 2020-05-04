@@ -12,6 +12,7 @@ def _unpickle(row):
     return row["value"]
 
 
+# TODO: take as input schema
 class SQL:
     def create_table(self, engine: engine.base.Engine, table_name: str) -> None:
         create_table_query = """
@@ -191,6 +192,7 @@ class Postgres(SQL):
     def create_table(self, engine: engine.base.Engine, table_name: str) -> None:
         create_table_query = """
             create table {} (
+                "id" SERIAL,
                 "column_name" VARCHAR(20) not null,
                 "date" TIMESTAMPTZ not null,
                 "metric" VARCHAR(30) not null,
@@ -204,7 +206,8 @@ class Postgres(SQL):
                 "run_name" VARCHAR(100) not null DEFAULT FALSE,
                 "value_id" VARCHAR(36) null, 
                 "insert_time" TIMESTAMPTZ not null, 
-                PRIMARY KEY (value_id)
+                PRIMARY KEY (id, value_id),
+                UNIQUE (value_id) 
             );
         """.format(
             table_name
@@ -305,14 +308,14 @@ class Postgres(SQL):
             join {value_table} on 
                 {table_name}.value_id = {value_table}.value_id
         """
-        non_bin_data = pd.read_sql(query_non_binary, engine)
+        non_bin_data = pd.read_sql(query_non_binary, engine, index_col="id")
         query_binary = f"""
             select *
             from {table_name}
             join {value_table + '_custom'} on 
                 {table_name}.value_id = {value_table + '_custom'}.value_id
         """
-        bin_data = pd.read_sql(query_binary, engine)
+        bin_data = pd.read_sql(query_binary, engine, index_col="id")
         data = pd.concat([non_bin_data, bin_data]).reset_index(drop=True)
         return data
 
