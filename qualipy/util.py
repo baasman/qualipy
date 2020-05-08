@@ -1,6 +1,7 @@
 from qualipy.exceptions import InvalidColumn
 
 import pandas as pd
+import numpy as np
 
 import os
 import types
@@ -61,3 +62,15 @@ def get_latest_insert_only(data):
         .reset_index(drop=True)
     )
 
+
+def get_project_data(project, timezone):
+    timezone = "UTC" if timezone is None else timezone
+    data = project.get_project_table()
+    data.date = pd.to_datetime(data.date).dt.tz_convert(timezone)
+    data.insert_time = pd.to_datetime(data.insert_time)
+    data["column_name"] = data["column_name"] + "_" + data["run_name"]
+    data.batch_name = np.where(
+        data.batch_name == "from_chunked", data.date.astype(str), data.batch_name
+    )
+    data = data.sort_values("batch_name")
+    return data

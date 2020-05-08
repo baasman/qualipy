@@ -46,14 +46,14 @@ def trend_line(data, var, metric, config_dir, project_name, anom_data):
         go.Scatter(
             x=x_axis,
             y=main_line,
-            name=title,
+            name=title[:30],
             mode="lines+markers",
             marker=dict(line=dict(color="blue", width=2)),
         ),
         go.Scatter(
             x=x_axis,
             y=mean_line,
-            name="mean-{}".format(title),
+            name="mean",
             mode="lines",
             marker=dict(line=dict(width=1)),
             opacity=0.5,
@@ -61,14 +61,14 @@ def trend_line(data, var, metric, config_dir, project_name, anom_data):
         go.Scatter(
             x=x_axis,
             y=data.anom_val,
-            name="Outliers-{}".format(title),
+            name="Outliers",
             mode="markers",
             marker=dict(color="red", size=10),
         ),
         go.Scatter(
             x=x_axis,
             y=median_line,
-            name="median-{}".format(title),
+            name="median",
             mode="lines",
             marker=dict(line=dict(width=1)),
             opacity=0.5,
@@ -76,7 +76,7 @@ def trend_line(data, var, metric, config_dir, project_name, anom_data):
         go.Scatter(
             x=x_axis,
             y=std_line_lower,
-            name="-2 std - {}".format(title),
+            name="-2 std",
             mode="lines",
             marker=dict(line=dict(width=1)),
             opacity=0.5,
@@ -84,7 +84,7 @@ def trend_line(data, var, metric, config_dir, project_name, anom_data):
         go.Scatter(
             x=x_axis,
             y=std_line_higher,
-            name="+2 std - {}".format(title),
+            name="+2 std",
             mode="lines",
             marker=dict(line=dict(width=1)),
             opacity=0.5,

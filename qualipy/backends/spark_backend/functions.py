@@ -15,3 +15,8 @@ def is_unique(data, column):
 def percentage_missing(data, column):
     total_count = data.count()
     return (total_count - data.na.drop(subset=column).count()) / total_count
+
+
+@function(return_format=bool)
+def mean(data, column):
+    return data.select(column).groupBy().mean().collect()[0]

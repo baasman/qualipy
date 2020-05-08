@@ -424,5 +424,9 @@ def _run_anomaly(backend, project_name, config_dir, retrain):
         project_name, qualipy_db, config_dir, retrain=retrain
     )
     engine = create_engine(qualipy_db)
+    db_schema = loaded_config.get("SCHEMA")
     with engine.connect() as conn:
-        backend.write_anomaly(conn, anom_data, project_name, clear=retrain)
+        backend.write_anomaly(
+            conn, anom_data, project_name, clear=retrain, schema=db_schema
+        )
+

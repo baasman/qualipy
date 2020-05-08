@@ -69,12 +69,16 @@ class Project(object):
             )
         else:
             self.engine = create_engine(engine)
-        self.sql_helper = DB_ENGINES[inspect_db_connection(str(self.engine.url))]()
+        self.db_schema = config.get("SCHEMA")
+        self.sql_helper = DB_ENGINES[inspect_db_connection(str(self.engine.url))](
+            self.db_schema
+        )
 
         if not re_init:
             create_qualipy_folder(self.config_dir, db_url=str(self.engine.url))
 
         if not re_init:
+            self.sql_helper.create_schema_if_not_exists(self.engine)
             self.sql_helper.create_table(self.engine, self.project_name)
             self.sql_helper.create_value_table(self.engine, self.value_table)
             self.sql_helper.create_custom_value_table(
@@ -113,7 +117,11 @@ class Project(object):
     ) -> None:
         if name is None:
             name = column.column_name
-        self.columns[name] = column._as_dict(name=name)
+        if isinstance(name, list):
+            for n in name:
+                self.columns[n] = column._as_dict(name=n)
+        else:
+            self.columns[name] = column._as_dict(name=name)
 
     def get_project_table(self) -> pd.DataFrame:
         return self.sql_helper.get_project_table(self.engine, self.project_name)

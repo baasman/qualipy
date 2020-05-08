@@ -9,12 +9,6 @@ import warnings
 from qualipy.backends.pandas_backend.generator import BackendPandas
 from qualipy.exceptions import FailException, NullableError
 from qualipy.config import STANDARD_VIZ_STATIC, STANDARD_VIZ_DYNAMIC
-from qualipy.backends.pandas_backend.pandas_types import (
-    DateTimeType,
-    FloatType,
-    IntType,
-    ObjectType,
-)
 from qualipy.project import Project
 
 # try:
@@ -31,7 +25,6 @@ HOME = os.path.expanduser("~")
 GENERATORS = {"pandas": BackendPandas}
 
 # types
-AllowedTypes = Union[DateTimeType, FloatType, IntType, ObjectType]
 Measure = List[Dict[str, Any]]
 
 
@@ -110,8 +103,8 @@ class DataSet(object):
                 self.current_data = chunk["chunk"]
                 if self.current_data.shape[0] > 0:
                     self.batch_name = str(chunk["batch_name"])
-                    self.time_of_run = chunk["batch_name"].date()
-                    self._generate_metrics(autocommit=True)
+                    self.time_of_run = chunk["batch_name"]
+                    self._generate_metrics(autocommit=autocommit)
                 else:
                     print(f"No data found for {chunk['batch_name']}")
 
@@ -132,6 +125,7 @@ class DataSet(object):
         time_column=None,
     ):
         self.current_data = df
+        self.current_name = name if name is not None else self.run_n
         self.columns = self._set_columns(columns)
         self._set_schema(df)
         self.chunk = True
@@ -296,7 +290,11 @@ class DataSet(object):
         return viz_type
 
     def _write(self, conn, measures: Measure) -> None:
+        if self.chunk:
+            batch_name = 'from_chunked'
+        else:
+            batch_name = self.batch_name
         self.generator.write(
-            conn, measures, self.project, self.batch_name,
+            conn, measures, self.project, batch_name, schema=self.project.db_schema
         )
         self.project.add_to_project_list(self.schema)
