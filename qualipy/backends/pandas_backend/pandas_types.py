@@ -3,11 +3,7 @@ from operator import eq
 import numpy as np
 
 
-class BaseType(object):
-    def __repr__(self):
-        class_name = str(self.__class__).split(".")[-1]
-        class_name = class_name.replace("'>", "")
-        return class_name
+from qualipy.backends.base import BaseType
 
 
 class DateTimeType(BaseType):

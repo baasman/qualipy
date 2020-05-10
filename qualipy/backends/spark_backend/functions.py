@@ -11,6 +11,13 @@ def is_unique(data, column):
     )
 
 
+@function(return_format=dict)
+def value_counts(data, column):
+    vc = data.groupBy(column).count().orderBy('count').toPandas()
+    vc = {row[column]: row['count'] for idx, row in vc.iterrows()}
+    return vc
+
+
 @function(return_format=float)
 def percentage_missing(data, column):
     total_count = data.count()

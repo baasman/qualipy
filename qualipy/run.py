@@ -11,18 +11,18 @@ from qualipy.exceptions import FailException, NullableError
 from qualipy.config import STANDARD_VIZ_STATIC, STANDARD_VIZ_DYNAMIC
 from qualipy.project import Project
 
-# try:
-#     from qualipy.backends.spark_backend.generator import BackendSpark
-# except Exception as e:
-#     print(e)
-#     warnings.warn("Unable to import pyspark")
-#     BackendSpark = None
+try:
+    from qualipy.backends.spark_backend.generator import BackendSpark
+except Exception as e:
+    print(e)
+    warnings.warn("Unable to import pyspark")
+    BackendSpark = None
 
 
 HOME = os.path.expanduser("~")
 
 
-GENERATORS = {"pandas": BackendPandas}
+GENERATORS = {"pandas": BackendPandas, 'spark': BackendSpark}
 
 # types
 Measure = List[Dict[str, Any]]
@@ -73,7 +73,6 @@ class DataSet(object):
         backend: str = "pandas",
         time_of_run: Optional[datetime.datetime] = None,
         batch_name: str = None,
-        spark_context=None,
         train_anomaly: bool = False,
     ):
         self.project = project
@@ -84,9 +83,8 @@ class DataSet(object):
 
         self.current_data = None
         self.total_measures = []
-        self.generator = GENERATORS[backend]()
+        self.generator = GENERATORS[backend](project.config_dir)
 
-        self.spark_context = spark_context
         self.train_anomaly = train_anomaly
         self.chunk = False
         self.run_n = 0

@@ -66,7 +66,10 @@ def get_latest_insert_only(data):
 def get_project_data(project, timezone):
     timezone = "UTC" if timezone is None else timezone
     data = project.get_project_table()
-    data.date = pd.to_datetime(data.date).dt.tz_convert(timezone)
+    try:
+        data.date = pd.to_datetime(data.date).dt.tz_convert(timezone)
+    except TypeError:
+        data.date = pd.to_datetime(data.date)
     data.insert_time = pd.to_datetime(data.insert_time)
     data["column_name"] = data["column_name"] + "_" + data["run_name"]
     data.batch_name = np.where(

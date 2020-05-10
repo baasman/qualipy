@@ -103,6 +103,9 @@ class SQL:
     def get_table(self, engine: engine.base.Engine, table_name: str) -> pd.DataFrame:
         return pd.read_sql("select * from {}".format(table_name), engine)
 
+    def create_schema_if_not_exists(self, engine) -> None:
+        pass
+
     def get_all_values(
         self, engine: engine.base.Engine, table_name: str, last_date: str = None
     ) -> pd.DataFrame:

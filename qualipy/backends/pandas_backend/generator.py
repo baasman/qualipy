@@ -21,13 +21,13 @@ import pandas as pd
 Column = Dict[str, Union[str, bool, Dict[str, Callable]]]
 
 
-def _create_arg_string(keyword_arguments: Dict[str, Any]) -> str:
-    if keyword_arguments:
-        return str(keyword_arguments)
-    return NaN
 
 
 class BackendPandas(BackendBase):
+
+    def __init__(self, config):
+        pass
+
     @staticmethod
     def set_return_value_type(value: type, return_format: type):
         if return_format in [int, float, str, dict, bool]:
@@ -70,35 +70,6 @@ class BackendPandas(BackendBase):
     @staticmethod
     def get_dtype(data, column):
         return data[column].dtype
-
-    @staticmethod
-    def generate_description(
-        function: Callable,
-        data: pd.DataFrame,
-        column: str,
-        date: datetime.datetime,
-        function_name: str,
-        standard_viz: bool,
-        is_static: bool = True,
-        viz_type: str = "numerical",
-        return_format: str = "float",
-        key_function: bool = False,
-        kwargs: Dict[str, Any] = None,
-    ):
-        kwargs = {} if kwargs is None else kwargs
-        value = function(data, column, **kwargs)
-        return {
-            "value": value,
-            "metric": function_name,
-            "arguments": _create_arg_string(kwargs),
-            "date": date,
-            "column_name": column,
-            "standard_viz": standard_viz,
-            "return_format": return_format,
-            "is_static": is_static,
-            "key_function": key_function,
-            "type": viz_type,
-        }
 
     @staticmethod
     def check_type(data, column, desired_type, force=False):
@@ -158,49 +129,6 @@ class BackendPandas(BackendBase):
             kwargs={},
         )
         return unique, perc_missing, value_props
-
-    @staticmethod
-    def write(conn, measures, project, batch_name, schema=None):
-        data = pd.DataFrame(measures)
-        data["insert_time"] = datetime.datetime.now().replace(tzinfo=None)
-        value_ids = [uuid.uuid4() for _ in range(data.shape[0])]
-        data["batch_name"] = batch_name
-        data["value_id"] = value_ids
-        data.value_id = data.value_id.astype(str)
-
-        value_data = data[
-            data.type.isin(["numerical", "boolean", "data-characteristic"])
-        ][["value_id", "value"]]
-        value_data.value = value_data.value.astype(str)
-
-        value_data_custom = data[data.type.isin(["categorical"])][["value_id", "value"]]
-        value_data_custom.value = value_data_custom.value.apply(
-            lambda v: pickle.dumps(v)
-        )
-
-        data = data.drop("value", axis=1)
-
-        data.to_sql(
-            project.project_name,
-            con=conn,
-            if_exists="append",
-            index=False,
-            schema=schema,
-        )
-        value_data.to_sql(
-            project.value_table,
-            con=conn,
-            if_exists="append",
-            index=False,
-            schema=schema,
-        )
-        value_data_custom.to_sql(
-            project.value_custom_table,
-            con=conn,
-            if_exists="append",
-            index=False,
-            schema=schema,
-        )
 
     @staticmethod
     def get_chunks(data, time_freq, time_column):
