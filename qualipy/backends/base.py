@@ -21,6 +21,15 @@ class BaseType(object):
         return class_name
 
 
+class BaseData(object):
+
+    def __init__(self, data, config=None):
+        self.data = data
+
+    def get_data(self):
+        return self.data
+
+
 class BackendBase(abc.ABC):
     def __init__(self, config):
         pass
@@ -77,6 +86,11 @@ class BackendBase(abc.ABC):
     @staticmethod
     @abc.abstractmethod
     def generate_column_general_info(specs, data, time_of_run):
+        return
+
+    @staticmethod
+    @abc.abstractmethod
+    def generate_data(*args, **kwargs):
         return
 
     @staticmethod

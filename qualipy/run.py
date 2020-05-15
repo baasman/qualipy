@@ -7,6 +7,7 @@ from typing import Any, Dict, Optional, Union, Dict, List, Callable
 import warnings
 
 from qualipy.backends.pandas_backend.generator import BackendPandas
+from qualipy.backends.sql_backend.generator import BackendSQL
 from qualipy.exceptions import FailException, NullableError
 from qualipy.config import STANDARD_VIZ_STATIC, STANDARD_VIZ_DYNAMIC
 from qualipy.project import Project
@@ -22,7 +23,7 @@ except Exception as e:
 HOME = os.path.expanduser("~")
 
 
-GENERATORS = {"pandas": BackendPandas, 'spark': BackendSpark}
+GENERATORS = {"pandas": BackendPandas, "spark": BackendSpark, "sql": BackendSQL}
 
 # types
 Measure = List[Dict[str, Any]]
@@ -109,7 +110,11 @@ class DataSet(object):
     def set_dataset(
         self, df, columns: Optional[List[str]] = None, name: str = None
     ) -> None:
-        self.current_data = df
+        if df.__class__.__name__ in ["SQLData", "PandasData", "SparkData"]:
+            self.current_data = df.get_data()
+        else:
+            self.current_data = df
+
         self.current_name = name if name is not None else self.run_n
         self.columns = self._set_columns(columns)
         self._set_schema(df)
@@ -122,7 +127,7 @@ class DataSet(object):
         time_freq: str = "1D",
         time_column=None,
     ):
-        self.current_data = df
+        self.current_data = self.generator.generate_data(df, self.project.config_dir)
         self.current_name = name if name is not None else self.run_n
         self.columns = self._set_columns(columns)
         self._set_schema(df)
@@ -289,7 +294,7 @@ class DataSet(object):
 
     def _write(self, conn, measures: Measure) -> None:
         if self.chunk:
-            batch_name = 'from_chunked'
+            batch_name = "from_chunked"
         else:
             batch_name = self.batch_name
         self.generator.write(

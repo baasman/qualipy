@@ -414,6 +414,25 @@ def anomaly_data_all_projects(project_names, db_url, config_dir, retrain=False):
     return data
 
 
+def write_anomaly(conn, data, project_name, clear=False, schema=None):
+    schema_str = schema + "." if schema is not None else ""
+    anomaly_table_name = f"{project_name}_anomaly"
+    if clear:
+        conn.execute(
+            f"delete from {schema_str}{anomaly_table_name} where project = '{project_name}'"
+        )
+    most_recent_one = conn.execute(
+        f"select date from {schema_str}{anomaly_table_name} order by date desc limit 1"
+    ).fetchone()
+    if most_recent_one is not None and data.shape[0] > 0:
+        most_recent_one = most_recent_one[0]
+        data = data[pd.to_datetime(data.date) > pd.to_datetime(most_recent_one)]
+    if data.shape[0] > 0:
+        data.to_sql(
+            anomaly_table_name, conn, if_exists="append", index=False, schema=schema
+        )
+
+
 def _run_anomaly(backend, project_name, config_dir, retrain):
     with open(os.path.join(config_dir, "config.json"), "r") as file:
         loaded_config = json.load(file)
@@ -426,7 +445,5 @@ def _run_anomaly(backend, project_name, config_dir, retrain):
     engine = create_engine(qualipy_db)
     db_schema = loaded_config.get("SCHEMA")
     with engine.connect() as conn:
-        backend.write_anomaly(
-            conn, anom_data, project_name, clear=retrain, schema=db_schema
-        )
+        write_anomaly(conn, anom_data, project_name, clear=retrain, schema=db_schema)
 

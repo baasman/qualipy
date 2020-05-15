@@ -1,6 +1,8 @@
 from qualipy.exceptions import InvalidReturnValue
 from qualipy.util import get_column
 from qualipy.backends.base import BackendBase
+
+from qualipy.backends.pandas_backend.dataset import PandasData
 from qualipy.exceptions import InvalidType
 from qualipy.backends.pandas_backend.functions import (
     is_unique,
@@ -21,10 +23,7 @@ import pandas as pd
 Column = Dict[str, Union[str, bool, Dict[str, Callable]]]
 
 
-
-
 class BackendPandas(BackendBase):
-
     def __init__(self, config):
         pass
 
@@ -144,18 +143,6 @@ class BackendPandas(BackendBase):
         return data
 
     @staticmethod
-    def write_anomaly(conn, data, project_name, clear=False, schema=None):
-        schema_str = schema + "." if schema is not None else ""
-        anomaly_table_name = f"{project_name}_anomaly"
-        if clear:
-            conn.execute(
-                f"delete from {schema_str}{anomaly_table_name} where project = '{project_name}'"
-            )
-        most_recent_one = conn.execute(
-            f"select date from {schema_str}{anomaly_table_name} order by date desc limit 1"
-        ).fetchone()
-        if most_recent_one is not None and data.shape[0] > 0:
-            most_recent_one = most_recent_one[0]
-            data = data[pd.to_datetime(data.date) > pd.to_datetime(most_recent_one)]
-        if data.shape[0] > 0:
-            data.to_sql(anomaly_table_name, conn, if_exists="append", index=False, schema=schema)
+    def generate_data(data, config):
+        data = PandasData(data, config)
+        return data.get_data()

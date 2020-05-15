@@ -1,4 +1,5 @@
 from qualipy.backends.base import BackendBase
+from qualipy.backends.spark_backend.dataset import SparkData
 from qualipy.exceptions import InvalidType, InvalidReturnValue
 from qualipy.column import function
 from qualipy.backends.spark_backend.functions import (
@@ -127,3 +128,8 @@ class BackendSpark(BackendBase):
             kwargs={},
         )
         return unique, perc_missing, value_props
+
+    @staticmethod
+    def generate_data(data, config):
+        data = SparkData(data, config)
+        return data.get_data()
