@@ -27,6 +27,8 @@ class SQLData(BaseData):
             else:
                 table_name = f"tmp_{table_name}"
             self._create_temp_table(table_name, custom_select_sql, schema)
+            if self.dialect != 'oracle':
+                schema = None
         self.table_name = table_name
 
         self._table = sa.Table(table_name, sa.MetaData(), schema=schema)
@@ -57,8 +59,9 @@ class SQLData(BaseData):
                 """
             else:
                 create_query = f"""
-                    CREATE TEMPORARY TABLE 
-                    IF NOT EXISTS {schema}{table_name} 
+                    CREATE TEMPORARY TABLE
+                    IF NOT EXISTS {table_name} 
+                    ON COMMIT PRESERVE ROWS
                     AS 
                     ({sql_statement})
                     """

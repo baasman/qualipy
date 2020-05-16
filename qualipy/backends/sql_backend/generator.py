@@ -29,6 +29,8 @@ class BackendSQL(BackendBase):
 
     @staticmethod
     def set_return_value_type(value: type, return_format: type):
+        if str(value) == 'nan':
+            return value
         if return_format in [int, float, str, dict, bool]:
             try:
                 value = return_format(value)
