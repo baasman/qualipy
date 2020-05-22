@@ -1,4 +1,5 @@
 from qualipy.project import Project
+from qualipy.util import set_value_type
 
 from sklearn.ensemble import IsolationForest
 import joblib
@@ -125,16 +126,61 @@ class IsolationForestModel(object):
             return self.predict(train_data.value.values.reshape((-1, 1)))
 
 
+class STDCheck(object):
+    def __init__(self, kwargs):
+        defaults = {"std": 3}
+        kwargs = {**defaults, **kwargs}
+        for k, v in kwargs.items():
+            setattr(self, k, v)
+
+    def fit(self, train_data):
+        self.model = None
+
+    def predict(self, test_data, check_for_std=False, multivariate=False):
+        metric_name = test_data.metric.iloc[0]
+        if multivariate:
+            raise NotImplementedError
+        else:
+            std = test_data.value.std()
+            mean = test_data.value.mean()
+
+            # its useless to check for result set if count is really low
+            # fix hardcoding of metric name here
+            if (
+                metric_name == "count" or metric_name == "number_of_rows_per_patient"
+            ) and std < 5:
+                std_outliers = np.repeat(False, test_data.shape[0])
+            else:
+                std_outliers = (test_data.value < mean - (self.std * std)) | (
+                    test_data.value > mean + (self.std * std)
+                )
+            preds = [-1 if std == True else 1 for std in std_outliers]
+
+        return np.array(preds)
+
+    def train_predict(self, train_data, **kwargs):
+        if isinstance(train_data, pd.DataFrame):
+            self.model.fit(train_data)
+            return self.predict(train_data, **kwargs)
+        else:
+            self.model.fit(train_data.value.values.reshape((-1, 1)))
+            return self.predict(train_data.value.values.reshape((-1, 1)))
+
+
 class AnomalyModel(object):
 
-    mods = {"IsolationForest": IsolationForestModel, "prophet": ProphetModel}
+    mods = {
+        "IsolationForest": IsolationForestModel,
+        "prophet": ProphetModel,
+        "std": STDCheck,
+    }
 
     def __init__(self, config_loc, model=None, arguments=None):
         with open(os.path.join(config_loc, "config.json"), "r") as c:
             config = json.load(c)
 
         if model is None and arguments is None:
-            model = config.get("ANOMALY_MODEL", "IsolationForest")
+            model = config.get("ANOMALY_MODEL", "std")
             arguments = config.get("ANOMALY_ARGS", {})
         self.anom_model = self.mods[model](arguments)
         self.model_dir = os.path.join(config_loc, "models")
@@ -156,8 +202,6 @@ class AnomalyModel(object):
         file_name = create_file_name(
             self.model_dir, project_name, col_name, metric_name, arguments
         )
-        # todo: should be logged instead of printed
-        # print(f"Writing anomaly model to {file_name}")
         joblib.dump(self.anom_model, file_name)
 
 
@@ -169,7 +213,6 @@ class LoadedModel(object):
         file_name = create_file_name(
             self.model_dir, project_name, col_name, metric_name, arguments
         )
-        # print(f"Loading model from {file_name}")
         self.anom_model = joblib.load(file_name)
 
     def predict(self, test_data, check_for_std=False, multivariate=False):
@@ -179,38 +222,6 @@ class LoadedModel(object):
 
     def train_predict(self, train_data):
         return self.anom_model.fit_predict(train_data)
-
-
-class RunModels(object):
-    def __init__(self, project_name, engine, config_dir=default_config_path):
-        self.config_dir = config_dir
-        self.project = Project(project_name, engine, config_dir=config_dir)
-
-    def train_all(self):
-        df = self.project.get_project_table()
-        df = df[
-            (df["type"] == "numerical") | (df["column_name"].isin(["rows", "columns"]))
-        ]
-        df.value = df.value.astype(float)
-        df["metric_name"] = (
-            df.column_name
-            + "_"
-            + df.metric.astype(str)
-            + "_"
-            + np.where(df.arguments.isnull(), "", df.arguments)
-        )
-        for metric_name, data in df.groupby("metric_name"):
-            mod = AnomalyModel(config_loc=self.config_dir)
-            try:
-                mod.train(data.value.values.reshape((-1, 1)))
-                mod.save(
-                    self.project.project_name,
-                    data.column_name.values[0],
-                    data.metric.values[0],
-                    data.arguments.values[0],
-                )
-            except ValueError:
-                warnings.warn(f"Unable to create anomaly model for {metric_name}")
 
 
 class GenerateAnomalies(object):
@@ -310,6 +321,7 @@ class GenerateAnomalies(object):
         )
         all_rows = []
         for metric_name, data in tqdm(df.groupby("metric_name")):
+            data = set_value_type(data.copy())
             try:
                 data_values = [
                     (pd.Series(c) / pd.Series(c).sum()).to_dict() for c in data["value"]
@@ -335,12 +347,17 @@ class GenerateAnomalies(object):
                 for col in all_non_diff_lines.columns:
                     mean = all_non_diff_lines[col].mean()
                     std = all_non_diff_lines[col].std()
-                    all_non_diff_lines[f"{col}_below"] = np.where(
-                        all_non_diff_lines[col] < (mean - (3 * std)), 1, 0
-                    )
-                    all_non_diff_lines[f"{col}_above"] = np.where(
-                        all_non_diff_lines[col] > (mean + (3 * std)), 1, 0
-                    )
+                    if std > .01:
+                        all_non_diff_lines[f"{col}_below"] = np.where(
+                            all_non_diff_lines[col] < (mean - (3* std)), 1, 0
+                        )
+                        all_non_diff_lines[f"{col}_above"] = np.where(
+                            all_non_diff_lines[col] > (mean + (3 * std)), 1, 0
+                        )
+                    else:
+                        all_non_diff_lines[f"{col}_below"] = 0
+                        all_non_diff_lines[f"{col}_above"] = 0
+
                 std_sums = all_non_diff_lines[
                     [
                         col
@@ -349,15 +366,16 @@ class GenerateAnomalies(object):
                     ]
                 ].sum(axis=1)
 
-                mod = AnomalyModel(
-                    config_loc=self.config_dir,
-                    model="IsolationForest",
-                    arguments={"contamination": 0.01, "n_estimators": 50,},
-                )
-                outliers = mod.train_predict(
-                    all_non_diff_lines, check_for_std=False, multivariate=True
-                )
-                outlier_rows = data[(outliers == -1) & (std_sums.values > 0)]
+                # mod = AnomalyModel(
+                #     config_loc=self.config_dir,
+                #     model="IsolationForest",
+                #     arguments={"contamination": 0.01, "n_estimators": 50,},
+                # )
+                # outliers = mod.train_predict(
+                #     all_non_diff_lines, check_for_std=False, multivariate=True
+                # )
+                # outlier_rows = data[(outliers == -1) & (std_sums.values > 0)]
+                outlier_rows = data[(std_sums.values > 0)]
                 if outlier_rows.shape[0] > 0:
                     all_rows.append(outlier_rows)
             except ValueError:
@@ -371,6 +389,19 @@ class GenerateAnomalies(object):
             data = pd.DataFrame([], columns=anomaly_columns)
         return data
 
+    def create_error_check_table(self):
+        # obv only need to do this once
+        df = self.project.get_project_table()
+        df = df[df["type"] == "boolean"]
+        df = (
+            df.groupby("batch_name", as_index=False)
+            .apply(lambda g: g[g.insert_time == g.insert_time.max()])
+            .reset_index(drop=True)
+        )
+
+
+
+
 
 def anomaly_data_project(project_name, db_url, config_dir, retrain):
     engine = create_engine(db_url)
@@ -378,6 +409,7 @@ def anomaly_data_project(project_name, db_url, config_dir, retrain):
     try:
         cat_anomalies = generator.create_anom_cat_table(retrain)
         num_anomalies = generator.create_anom_num_table(retrain)
+        # add failed boolean checks here
         anomalies = pd.concat([num_anomalies, cat_anomalies]).sort_values(
             "date", ascending=False
         )
@@ -446,4 +478,3 @@ def _run_anomaly(backend, project_name, config_dir, retrain):
     db_schema = loaded_config.get("SCHEMA")
     with engine.connect() as conn:
         write_anomaly(conn, anom_data, project_name, clear=retrain, schema=db_schema)
-

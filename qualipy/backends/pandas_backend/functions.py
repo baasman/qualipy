@@ -40,7 +40,7 @@ def percentage_missing(data, column):
     try:
         return missing_data.shape[0] / data.shape[0]
     except ZeroDivisionError:
-        return 0
+        return 1
 
 
 @function(return_format=int)
@@ -85,7 +85,6 @@ def value_counts(data, column):
         data[data[column] != "nan"][column]
         .value_counts()
         .sort_values(ascending=False)
-        .head(10)
         .to_dict()
     )
 

@@ -75,15 +75,12 @@ class Project(object):
         )
 
         if not re_init:
+            # force running command line first
             create_qualipy_folder(self.config_dir, db_url=str(self.engine.url))
 
         if not re_init:
             self.sql_helper.create_schema_if_not_exists(self.engine)
             self.sql_helper.create_table(self.engine, self.project_name)
-            self.sql_helper.create_value_table(self.engine, self.value_table)
-            self.sql_helper.create_custom_value_table(
-                self.engine, self.value_custom_table
-            )
             self.sql_helper.create_anomaly_table(self.engine, self.anomaly_table)
 
     def change_config_dir(self, config_dir):
@@ -133,12 +130,6 @@ class Project(object):
         with self.engine.begin() as conn:
             self.sql_helper.delete_data(
                 conn, self.project_name, self.sql_helper.create_table
-            )
-            self.sql_helper.delete_data(
-                conn, self.value_table, self.sql_helper.create_value_table
-            )
-            self.sql_helper.delete_data(
-                conn, self.value_custom_table, self.sql_helper.create_custom_value_table
             )
             self.sql_helper.delete_data(
                 conn, self.anomaly_table, self.sql_helper.create_anomaly_table

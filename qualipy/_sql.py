@@ -30,12 +30,9 @@ class SQL:
                 "arguments" CHARACTER(100) null,
                 "type" CHARACTER not null DEFAULT 'custom',
                 "return_format" CHARACTER DEFAULT 'float',
-                "standard_viz" CHARACTER(100) null,
-                "is_static" BOOLEAN null DEFAULT true,
-                "key_function" BOOLEAN null DEFAULT FALSE,
                 "batch_name" CHARACTER null DEFAULT true,
                 "run_name" CHARACTER not null DEFAULT FALSE,
-                "value_id" CHARACTER(36) null,
+                "value" CHARACTER null,
                 "insert_time" DATETIME not null
             );
         """.format(
@@ -109,18 +106,12 @@ class SQL:
     def get_all_values(
         self, engine: engine.base.Engine, table_name: str, last_date: str = None
     ) -> pd.DataFrame:
-        value_table = table_name + "_values"
-        # for back compatibility purposes
         if last_date is not None:
             where_stmt = f"where insert_time > '{last_date}'"
         else:
             where_stmt = ""
         query = f"""
-        select *
-        from {table_name}
-        join (select * from {value_table} UNION select * from {table_name + '_values_custom'}) as {value_table + '_all'}
-        on {table_name}.{value_id_name} = {value_table + '_all'}.{value_id_name}
-        {where_stmt};
+            select * from {table_name}
         """
         return pd.read_sql(query, engine)
 
@@ -148,9 +139,6 @@ class SQL:
         self, engine, project_name: str, last_date: str = None
     ) -> pd.DataFrame:
         data = self.get_all_values(engine, project_name, last_date)
-        data = data.drop(value_id_name, axis=1)
-        if data.shape[0] > 0:
-            data.value = data.apply(lambda r: _unpickle(r), axis=1)
         return data
 
     def get_anomaly_table(self, engine, project_name: str) -> pd.DataFrame:
@@ -211,48 +199,14 @@ class Postgres(SQL):
                 "column_name" VARCHAR(100) not null,
                 "date" TIMESTAMPTZ not null,
                 "metric" VARCHAR(100) not null,
-                "arguments" VARCHAR(100) null,
+                "arguments" VARCHAR null,
                 "type" VARCHAR(50) not null DEFAULT 'custom',
                 "return_format" VARCHAR(10) DEFAULT 'float',
-                "standard_viz" VARCHAR(100) null,
-                "is_static" BOOLEAN null DEFAULT true,
-                "key_function" BOOLEAN null DEFAULT FALSE,
                 "batch_name" VARCHAR(100) null DEFAULT true,
                 "run_name" VARCHAR(100) not null DEFAULT FALSE,
-                "value_id" VARCHAR(36) null, 
+                "value" VARCHAR null, 
                 "insert_time" TIMESTAMPTZ not null, 
-                PRIMARY KEY (id, value_id),
-                UNIQUE (value_id) 
-            );
-        """
-        exists = self.does_table_exist(engine, table_name)
-        if not exists:
-            with engine.connect() as conn:
-                conn.execute(create_table_query)
-
-    def create_value_table(self, engine: engine.base.Engine, table_name: str) -> None:
-        schema = self.schema + "." if self.schema is not None else ""
-        create_table_query = f"""
-            create table {schema}{table_name} (
-                value varchar,
-                value_id VARCHAR(36),
-                    foreign key (value_id) references {schema}{table_name.replace("_values", "")}(value_id) on delete cascade
-            );
-        """
-        exists = self.does_table_exist(engine, table_name)
-        if not exists:
-            with engine.connect() as conn:
-                conn.execute(create_table_query)
-
-    def create_custom_value_table(
-        self, engine: engine.base.Engine, table_name: str
-    ) -> None:
-        schema = self.schema + "." if self.schema is not None else ""
-        create_table_query = f"""
-            create table {schema}{table_name} (
-                value BYTEA,
-                value_id VARCHAR(36),
-                    foreign key (value_id) references {schema}{table_name.replace("_values_custom", "")}(value_id) on delete cascade
+                PRIMARY KEY (id)
             );
         """
         exists = self.does_table_exist(engine, table_name)
@@ -268,7 +222,7 @@ class Postgres(SQL):
                 "column_name" VARCHAR(100) not null,
                 "date" TIMESTAMPTZ not null,
                 "metric" VARCHAR(100) not null,
-                "arguments" VARCHAR(100) null,
+                "arguments" VARCHAR null,
                 "return_format" VARCHAR(10) DEFAULT 'float',
                 "batch_name" VARCHAR(100) null DEFAULT true,
                 "run_name" VARCHAR(100) not null DEFAULT FALSE,
@@ -297,6 +251,7 @@ class Postgres(SQL):
             conn.execute(f"drop table {schema}{name} cascade")
         except:
             pass
+        # should it really create the tables on the delete function?
         self.create_table_if_not_exists(conn, name, create_function)
 
     def create_table_if_not_exists(
@@ -318,26 +273,15 @@ class Postgres(SQL):
         self, engine: engine.base.Engine, table_name: str, last_date: str = None
     ) -> pd.DataFrame:
         schema = self.schema + "." if self.schema is not None else ""
-        value_table = table_name + "_values"
         if last_date is not None:
             where_stmt = f"where insert_time > '{last_date}'"
         else:
             where_stmt = ""
-        query_non_binary = f"""
+        query = f"""
             select *
             from {schema}{table_name}
-            join {schema}{value_table} on 
-                {schema}{table_name}.value_id = {schema}{value_table}.value_id
         """
-        non_bin_data = pd.read_sql(query_non_binary, engine, index_col="id")
-        query_binary = f"""
-            select *
-            from {schema}{table_name}
-            join {schema}{value_table + '_custom'} on 
-                {schema}{table_name}.value_id = {schema}{value_table + '_custom'}.value_id
-        """
-        bin_data = pd.read_sql(query_binary, engine, index_col="id")
-        data = pd.concat([non_bin_data, bin_data]).reset_index(drop=True)
+        data = pd.read_sql(query, engine, index_col="id")
         return data
 
     def get_anomaly_table(self, engine, project_name: str) -> pd.DataFrame:
@@ -348,16 +292,3 @@ class Postgres(SQL):
 
 
 DB_ENGINES = {"sqlite": SQLite, "postgresql": Postgres}
-
-if __name__ == "__main__":
-    from sqlalchemy import create_engine
-
-    p = Postgres("test_schema")
-    p.create_table(
-        create_engine("postgresql+psycopg2://postgres:docker@127.0.0.1:5433/postgres"),
-        "test_table",
-    )
-    p.create_value_table(
-        create_engine("postgresql+psycopg2://postgres:docker@127.0.0.1:5433/postgres"),
-        "test_table_values",
-    )

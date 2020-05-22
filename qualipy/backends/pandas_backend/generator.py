@@ -92,10 +92,8 @@ class BackendPandas(BackendBase):
                 function=is_unique,
                 data=data,
                 column=col_name,
-                standard_viz=NaN,
                 function_name="is_unique",
                 date=time_of_run,
-                is_static=True,
                 viz_type="data-characteristic",
                 kwargs={},
             )
@@ -107,9 +105,7 @@ class BackendPandas(BackendBase):
                 data=data,
                 column=col_name,
                 function_name="value_counts",
-                standard_viz=True,
                 date=time_of_run,
-                is_static=True,
                 viz_type="categorical",
                 kwargs={},
                 return_format="dict",
@@ -120,10 +116,8 @@ class BackendPandas(BackendBase):
             function=percentage_missing,
             data=data,
             column=col_name,
-            standard_viz=NaN,
             function_name="perc_missing",
             date=time_of_run,
-            is_static=True,
             viz_type="data-characteristic",
             kwargs={},
         )
@@ -131,6 +125,8 @@ class BackendPandas(BackendBase):
 
     @staticmethod
     def get_chunks(data, time_freq, time_column):
+        if data.shape[0] == 0:
+            raise Exception("Unable to chunk empty dataframe")
         groups = [
             {"batch_name": d[0], "chunk": d[1]}
             for d in list(data.groupby(pd.Grouper(key=time_column, freq=time_freq)))

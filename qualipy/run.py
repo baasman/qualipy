@@ -42,29 +42,9 @@ def _create_value(
         "date": date,
         "column_name": name,
         "metric": metric,
-        "standard_viz": np.NaN,
-        "is_static": True,
         "type": type,
         "return_format": return_format,
-        "key_function": False,
     }
-
-
-def set_standard_viz_params(
-    function_name: str,
-    viz_options_static: Dict[str, Dict[str, str]],
-    viz_options_dynamic: Dict[str, Dict[str, str]],
-):
-    if function_name in viz_options_static:
-        standard_viz = viz_options_static[function_name]["function"]
-        is_static = True
-    elif function_name in viz_options_dynamic:
-        standard_viz = viz_options_dynamic[function_name]["function"]
-        is_static = False
-    else:
-        standard_viz = np.NaN
-        is_static = True
-    return standard_viz, is_static
 
 
 class DataSet(object):
@@ -102,21 +82,19 @@ class DataSet(object):
             for chunk in self.time_chunks:
                 print(f"Running on chunk: {chunk['batch_name']}")
                 self.current_data = chunk["chunk"]
-                if self.current_data.shape[0] > 0:
-                    self.batch_name = str(chunk["batch_name"])
-                    self.time_of_run = chunk["batch_name"]
-                    self._generate_metrics(autocommit=autocommit)
-                else:
-                    print(f"No data found for {chunk['batch_name']}")
+                if self.current_data.shape[0] == 0:
+                    self.current_data = self.fallback_data
+                # if self.current_data.shape[0] > 0:
+                self.batch_name = str(chunk["batch_name"])
+                self.time_of_run = chunk["batch_name"]
+                self._generate_metrics(autocommit=autocommit)
+                # else:
+                #     print(f"No data found for {chunk['batch_name']}")
 
     def set_dataset(
         self, df, columns: Optional[List[str]] = None, name: str = None
     ) -> None:
-        if df.__class__.__name__ in ["SQLData", "PandasData", "SparkData"]:
-            self.current_data = df.get_data()
-        else:
-            self.current_data = df
-
+        self._set_data(df)
         self.current_name = name if name is not None else self.run_n
         self.columns = self._set_columns(columns)
         self._set_schema(df)
@@ -129,15 +107,25 @@ class DataSet(object):
         time_freq: str = "1D",
         time_column=None,
     ):
-        self.current_data = self.generator.generate_data(df, self.project.config_dir)
+        self._set_data(df)
         self.current_name = name if name is not None else self.run_n
         self.columns = self._set_columns(columns)
-        self._set_schema(df)
+        self._set_schema(self.current_data)
         self.chunk = True
         time_column = (
             time_column if time_column is not None else self.project.time_column
         )
-        self.time_chunks = self.generator.get_chunks(df, time_freq, time_column)
+        self.time_chunks = self.generator.get_chunks(self.current_data, time_freq, time_column)
+
+    def _set_data(self, df):
+        if df.__class__.__name__ in ["SQLData", "PandasData", "SparkData"]:
+            self.current_data = df.get_data()
+            try:
+                self.fallback_data = df.set_fallback_data()
+            except:
+                pass
+        else:
+            self.current_data = df
 
     def _set_schema(self, df):
         schema = self.generator.set_schema(df, self.columns, self.current_name)
@@ -192,14 +180,9 @@ class DataSet(object):
                 **specs["extra_functions"],
             }.items():
 
-                standard_viz, is_static = set_standard_viz_params(
-                    function_name, STANDARD_VIZ_STATIC, STANDARD_VIZ_DYNAMIC
-                )
-
                 should_fail = function.fail
                 arguments = function.arguments
                 return_format = function.return_format
-                is_key_function = function.key_function
                 return_format_repr = types[return_format]
                 viz_type = self._set_viz_type(function, function_name)
 
@@ -208,13 +191,10 @@ class DataSet(object):
                     function=function,
                     data=self.current_data,
                     column=column_name,
-                    standard_viz=standard_viz,
                     function_name=function_name,
                     date=self.time_of_run,
-                    is_static=is_static,
                     viz_type=viz_type,
                     return_format=return_format_repr,
-                    key_function=is_key_function,
                     kwargs=arguments,
                 )
 

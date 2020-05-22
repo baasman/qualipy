@@ -5,6 +5,7 @@ import numpy as np
 
 import os
 import types
+import json
 from typing import Any, Dict, Callable, Optional, Union
 import importlib
 
@@ -25,6 +26,8 @@ def set_value_type(data: pd.DataFrame) -> pd.DataFrame:
     type = data.return_format.values[0]
     if type == "bool":
         data.value = data.value.map({"True": True, "False": False})
+    elif type == 'dict':
+        data.value = data.value.apply(lambda v: json.loads(v))
     else:
         data.value = data.value.astype(type)
     return data
@@ -71,7 +74,23 @@ def get_project_data(project, timezone):
     except TypeError:
         data.date = pd.to_datetime(data.date)
     data.insert_time = pd.to_datetime(data.insert_time)
+    data.value = data.value.fillna(np.NaN)
     data["column_name"] = data["column_name"] + "_" + data["run_name"]
+    data.batch_name = np.where(
+        data.batch_name == "from_chunked", data.date.astype(str), data.batch_name
+    )
+    data = data.sort_values("batch_name")
+    return data
+
+
+def get_anomaly_data(project, timezone=None):
+    timezone = "UTC" if timezone is None else timezone
+    data = project.get_anomaly_table()
+    try:
+        data.date = pd.to_datetime(data.date).dt.tz_convert(timezone)
+    except TypeError:
+        data.date = pd.to_datetime(data.date)
+    data.insert_time = pd.to_datetime(data.insert_time)
     data.batch_name = np.where(
         data.batch_name == "from_chunked", data.date.astype(str), data.batch_name
     )

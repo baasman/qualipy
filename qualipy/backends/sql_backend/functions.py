@@ -20,6 +20,26 @@ def mean(data, column):
     return float(data.engine.execute(query).scalar())
 
 
+@function(return_format=float, allowed_arguments=['quantile'])
+def median(data, column, quantile=.5):
+    select = sa.func.percentile_disc(quantile).within_group(sa.column(column).asc())
+    if data.custom_where is None:
+        query = sa.select([select]).select_from(data._table)
+    else:
+        query = (
+            sa.select([select])
+            .select_from(data._table)
+            .where(sa.text(data.custom_where))
+        )
+    res = data.engine.execute(query).scalar()
+    if res is None:
+        return np.NaN
+    try:
+        return float(res)
+    except:
+        return np.NaN
+
+
 def outside_of_range(data, column, low, high):
     if data.custom_where is None:
         res = data.engine.execute(
@@ -56,7 +76,9 @@ def dedup_mean(data, column, dedup_column):
         from part_events
         where row_number = 1
     """
-    res = float(data.engine.execute(sa.text(query)).scalar())
+    res = data.engine.execute(sa.text(query)).scalar()
+    if res is None:
+        return np.NaN
     return res
 
 

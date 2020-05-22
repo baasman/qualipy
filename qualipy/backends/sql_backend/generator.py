@@ -29,7 +29,7 @@ class BackendSQL(BackendBase):
 
     @staticmethod
     def set_return_value_type(value: type, return_format: type):
-        if str(value) == 'nan':
+        if str(value) == "nan":
             return value
         if return_format in [int, float, str, dict, bool]:
             try:
@@ -99,10 +99,8 @@ class BackendSQL(BackendBase):
                 function=is_unique,
                 data=data,
                 column=col_name,
-                standard_viz=NaN,
                 function_name="is_unique",
                 date=time_of_run,
-                is_static=True,
                 viz_type="data-characteristic",
                 kwargs={},
             )
@@ -114,9 +112,7 @@ class BackendSQL(BackendBase):
                 data=data,
                 column=col_name,
                 function_name="value_counts",
-                standard_viz=True,
                 date=time_of_run,
-                is_static=True,
                 viz_type="categorical",
                 kwargs={},
                 return_format="dict",
@@ -127,10 +123,8 @@ class BackendSQL(BackendBase):
             function=percentage_missing,
             data=data,
             column=col_name,
-            standard_viz=NaN,
             function_name="perc_missing",
             date=time_of_run,
-            is_static=True,
             viz_type="data-characteristic",
             kwargs={},
         )

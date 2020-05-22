@@ -10,6 +10,7 @@ from qualipy.util import set_value_type
 from functools import reduce
 from collections import Counter
 from plotly.subplots import make_subplots
+import altair as alt
 
 
 def missing_by_column_bar(data, schema):
@@ -178,3 +179,57 @@ def row_count_view(data, anom_data=None, columns=None):
 
         fig["layout"].update(height=900, width=1000, title=title)
         fig.show()
+
+
+def missing_by_column_bar_altair(data, schema):
+    data = set_value_type(data)
+    data = data.sort_values("value", ascending=False)
+    mean_missing = data.groupby("column_name").value.mean().reset_index()
+    base = alt.Chart(mean_missing).properties(title="Mean Percentage Missing")
+    bars = base.mark_bar().encode(
+        y=alt.Y("column_name:N"), x=alt.X("value:Q", scale=alt.Scale(domain=[0, 1]))
+    )
+    bars.display()
+
+
+def row_count_view_altair(data, anom_data=None, columns=None, only_anomaly=True):
+    if columns is not None:
+        data = data[data.column_name.isin(columns)]
+    data = data[
+        (data["column_name"].str.contains("rows")) & (data["metric"] == "count")
+    ]
+    data.value = data.value.astype(float)
+
+    if anom_data is not None:
+        anom_data = anom_data[
+            (anom_data["column_name"].str.contains("rows"))
+            & (anom_data["metric"] == "count")
+        ]
+        data = data.merge(
+            anom_data[["column_name", "metric", "batch_name", "value"]].rename(
+                columns={"value": "value_anom"}
+            ),
+            on=["column_name", "metric", "batch_name"],
+            how="left",
+        ).drop_duplicates()
+        columns_with_anoms = data[data.value_anom.notnull()].column_name.unique()
+        if only_anomaly:
+            data = data[data.column_name.isin(columns_with_anoms)]
+
+    all_lines = []
+    for idx, (name, df) in enumerate(data.groupby("column_name")):
+        line = (
+            alt.Chart(df)
+            .mark_line()
+            .encode(x=alt.X("date:T"), y=alt.Y("value:Q"))
+            .properties(height=200, width=800, title=name)
+        )
+        line = alt.layer(
+            line,
+            alt.Chart(df)
+            .mark_point(color="red", size=50)
+            .encode(x=alt.X("date:T"), y=alt.Y("value_anom:Q")),
+        )
+        all_lines.append(line)
+    full_chart = alt.vconcat(*all_lines[:100]).resolve_axis(x="shared")
+    full_chart.display()
