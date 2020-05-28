@@ -25,8 +25,10 @@ HOME = os.path.expanduser("~")
 def set_value_type(data: pd.DataFrame) -> pd.DataFrame:
     type = data.return_format.values[0]
     if type == "bool":
-        data.value = data.value.map({"True": True, "False": False})
-    elif type == 'dict':
+        data.value = data.value.map(
+            {"True": True, "False": False, "true": True, "false": False}
+        )
+    elif type == "dict":
         data.value = data.value.apply(lambda v: json.loads(v))
     else:
         data.value = data.value.astype(type)
@@ -80,6 +82,13 @@ def get_project_data(project, timezone):
         data.batch_name == "from_chunked", data.date.astype(str), data.batch_name
     )
     data = data.sort_values("batch_name")
+    data["metric_id"] = (
+        data.column_name
+        + "_"
+        + data.metric.astype(str)
+        + "_"
+        + np.where(data.arguments.isnull(), "", data.arguments)
+    )
     return data
 
 
@@ -95,4 +104,11 @@ def get_anomaly_data(project, timezone=None):
         data.batch_name == "from_chunked", data.date.astype(str), data.batch_name
     )
     data = data.sort_values("batch_name")
+    data["metric_id"] = (
+        data.column_name
+        + "_"
+        + data.metric.astype(str)
+        + "_"
+        + np.where(data.arguments.isnull(), "", data.arguments)
+    )
     return data

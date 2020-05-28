@@ -110,6 +110,7 @@ class BackendPandas(BackendBase):
                 kwargs={},
                 return_format="dict",
             )
+            value_props = None if str(value_props['value']) == 'nan' else value_props
         else:
             value_props = None
         perc_missing = BackendPandas.generate_description(

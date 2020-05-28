@@ -13,7 +13,8 @@ def _create_arg_string(keyword_arguments: Dict[str, Any]) -> str:
     if keyword_arguments:
         return str(keyword_arguments)
     return NaN
-    
+
+
 def convert_value_to_varchar(value):
     if isinstance(value, dict):
         return json.dumps(value)
@@ -21,6 +22,9 @@ def convert_value_to_varchar(value):
 
 
 class BaseType(object):
+    def __init__(self):
+        pass
+
     def __repr__(self):
         class_name = str(self.__class__).split(".")[-1]
         class_name = class_name.replace("'>", "")
@@ -28,9 +32,9 @@ class BaseType(object):
 
 
 class BaseData(object):
-
-    def __init__(self, data, config=None):
+    def __init__(self, data, config=None, stratify=None):
         self.data = data
+        self.stratify = stratify
 
     def get_data(self):
         return self.data

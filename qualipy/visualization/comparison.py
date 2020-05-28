@@ -4,6 +4,8 @@ import plotly.graph_objects as go
 from qualipy.util import set_value_type
 from plotly.subplots import make_subplots
 
+import altair as alt
+
 
 def comparison_trends(data, columns, metrics, show_column_in_name=False):
     df = data.copy()
@@ -91,3 +93,45 @@ def plot_batch_comparison(df1, df2):
         title_text=f"Comparison for {comp_column_name}", showlegend=False,
     )
     fig.show()
+
+
+def comparison_trends_altair(data, columns, metrics, show_column_in_name=False):
+    df = data.copy()
+    df = df[(df.column_name.isin(columns)) & (df.metric.isin(metrics))]
+    df["metric_name"] = df.metric.astype(str) + np.where(
+        df.arguments.isnull(), "", df.arguments
+    )
+    if show_column_in_name:
+        df.metric_name = df.metric_name + "-" + df.column_name
+    col_name = df.column_name.values[0]
+    comparison_column_name = " - ".join(columns)
+    df = set_value_type(df)
+    df = df.sort_values(["metric_name", "date"])
+
+    df["mean_value"] = df.groupby(["column_name", "metric_name"]).value.transform(
+        "mean"
+    )
+    df["std_value"] = df.groupby(["column_name", "metric_name"]).value.transform("std")
+    df["standardized_value"] = (df.value - df.mean_value) / df.std_value
+    for row, (name, group) in enumerate(df.groupby("metric_name"), start=1):
+
+        chart = alt.Chart(group).properties(
+            width=800,
+            height=200,
+            title=f"Comparison of values - {comparison_column_name} - {name}",
+        )
+        chart = chart.mark_line().encode(x="date:T", y="value:Q", color="column_name")
+
+        std_chart = alt.Chart(group).properties(
+            width=800, height=200, title="Standardized values"
+        )
+        std_chart = std_chart.mark_line().encode(
+            x="date:T", y="standardized_value:Q", color="column_name"
+        )
+
+        plot = (
+            alt.vconcat(chart, std_chart)
+            .resolve_axis(y="shared")
+            .configure_legend(orient="bottom")
+        )
+        plot.display()

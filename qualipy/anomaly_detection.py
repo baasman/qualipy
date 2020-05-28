@@ -146,9 +146,7 @@ class STDCheck(object):
 
             # its useless to check for result set if count is really low
             # fix hardcoding of metric name here
-            if (
-                metric_name == "count" or metric_name == "number_of_rows_per_patient"
-            ) and std < 5:
+            if (metric_name in ["count", "number_of_rows_per_patient"]) and std < 5:
                 std_outliers = np.repeat(False, test_data.shape[0])
             else:
                 std_outliers = (test_data.value < mean - (self.std * std)) | (
@@ -228,6 +226,21 @@ class GenerateAnomalies(object):
     def __init__(self, project_name, engine, config_dir=default_config_path):
         self.config_dir = config_dir
         self.project = Project(project_name, config_dir=config_dir)
+        df = self.project.get_project_table()
+        df = (
+            df.groupby("batch_name", as_index=False)
+            .apply(lambda g: g[g.insert_time == g.insert_time.max()])
+            .reset_index(drop=True)
+        )
+        df.column_name = df.column_name + "_" + df.run_name
+        df["metric_name"] = (
+            df.column_name
+            + "_"
+            + df.metric.astype(str)
+            + "_"
+            + np.where(df.arguments.isnull(), "", df.arguments)
+        )
+        self.df = df
 
     def _num_train_and_save(self, data, all_rows, metric_name):
         try:
@@ -264,24 +277,13 @@ class GenerateAnomalies(object):
         return all_rows
 
     def create_anom_num_table(self, retrain=False):
-        df = self.project.get_project_table()
+        df = self.df.copy()
         df = df[
-            (df["type"] == "numerical") | (df["column_name"].isin(["rows", "columns"]))
+            (df["type"] == "numerical")
+            | (df["column_name"].isin(["rows", "columns"]))
+            | (df["metric"] == "perc_missing")
         ]
-        df = (
-            df.groupby("batch_name", as_index=False)
-            .apply(lambda g: g[g.insert_time == g.insert_time.max()])
-            .reset_index(drop=True)
-        )
         df.value = df.value.astype(float)
-        df.column_name = df.column_name + "_" + df.run_name
-        df["metric_name"] = (
-            df.column_name
-            + "_"
-            + df.metric.astype(str)
-            + "_"
-            + np.where(df.arguments.isnull(), "", df.arguments)
-        )
         all_rows = []
         for metric_name, data in tqdm(df.groupby("metric_name")):
 
@@ -304,21 +306,8 @@ class GenerateAnomalies(object):
         return data
 
     def create_anom_cat_table(self, retrain=False):
-        df = self.project.get_project_table()
-        df = (
-            df.groupby("batch_name", as_index=False)
-            .apply(lambda g: g[g.insert_time == g.insert_time.max()])
-            .reset_index(drop=True)
-        )
+        df = self.df
         df = df[df["type"] == "categorical"]
-        df.column_name = df.column_name + "_" + df.run_name
-        df["metric_name"] = (
-            df.column_name
-            + "_"
-            + df.metric.astype(str)
-            + "_"
-            + np.where(df.arguments.isnull(), "", df.arguments)
-        )
         all_rows = []
         for metric_name, data in tqdm(df.groupby("metric_name")):
             data = set_value_type(data.copy())
@@ -347,12 +336,12 @@ class GenerateAnomalies(object):
                 for col in all_non_diff_lines.columns:
                     mean = all_non_diff_lines[col].mean()
                     std = all_non_diff_lines[col].std()
-                    if std > .01:
+                    if std > 0.01:
                         all_non_diff_lines[f"{col}_below"] = np.where(
-                            all_non_diff_lines[col] < (mean - (3* std)), 1, 0
+                            all_non_diff_lines[col] < (mean - (4 * std)), 1, 0
                         )
                         all_non_diff_lines[f"{col}_above"] = np.where(
-                            all_non_diff_lines[col] > (mean + (3 * std)), 1, 0
+                            all_non_diff_lines[col] > (mean + (4 * std)), 1, 0
                         )
                     else:
                         all_non_diff_lines[f"{col}_below"] = 0
@@ -366,16 +355,16 @@ class GenerateAnomalies(object):
                     ]
                 ].sum(axis=1)
 
-                # mod = AnomalyModel(
-                #     config_loc=self.config_dir,
-                #     model="IsolationForest",
-                #     arguments={"contamination": 0.01, "n_estimators": 50,},
-                # )
-                # outliers = mod.train_predict(
-                #     all_non_diff_lines, check_for_std=False, multivariate=True
-                # )
-                # outlier_rows = data[(outliers == -1) & (std_sums.values > 0)]
-                outlier_rows = data[(std_sums.values > 0)]
+                mod = AnomalyModel(
+                    config_loc=self.config_dir,
+                    model="IsolationForest",
+                    arguments={"contamination": 0.01, "n_estimators": 50,},
+                )
+                outliers = mod.train_predict(
+                    all_non_diff_lines, check_for_std=False, multivariate=True
+                )
+                outlier_rows = data[(outliers == -1) & (std_sums.values > 0)]
+                # outlier_rows = data[(std_sums.values > 0)]
                 if outlier_rows.shape[0] > 0:
                     all_rows.append(outlier_rows)
             except ValueError:
@@ -391,28 +380,27 @@ class GenerateAnomalies(object):
 
     def create_error_check_table(self):
         # obv only need to do this once
-        df = self.project.get_project_table()
+        df = self.df
         df = df[df["type"] == "boolean"]
-        df = (
-            df.groupby("batch_name", as_index=False)
-            .apply(lambda g: g[g.insert_time == g.insert_time.max()])
-            .reset_index(drop=True)
-        )
-
-
-
+        if df.shape[0] > 0:
+            df = set_value_type(df)
+            df = df[~df.value]
+            df = df[anomaly_columns]
+        else:
+            df = pd.DataFrame([], columns=anomaly_columns)
+        return df
 
 
 def anomaly_data_project(project_name, db_url, config_dir, retrain):
     engine = create_engine(db_url)
     generator = GenerateAnomalies(project_name, engine, config_dir)
     try:
+        boolean_checks = generator.create_error_check_table()
         cat_anomalies = generator.create_anom_cat_table(retrain)
         num_anomalies = generator.create_anom_num_table(retrain)
-        # add failed boolean checks here
-        anomalies = pd.concat([num_anomalies, cat_anomalies]).sort_values(
-            "date", ascending=False
-        )
+        anomalies = pd.concat(
+            [num_anomalies, cat_anomalies, boolean_checks]
+        ).sort_values("date", ascending=False)
     except ValueError:
         anomalies = pd.DataFrame(
             [],

@@ -1,8 +1,9 @@
 from functools import wraps
-from typing import Any, Dict, List, Callable, Optional, Union
+from typing import Any, Dict, List, Callable, Optional, Union, Tuple
 from abc import abstractmethod, ABC
 
 import pandas as pd
+import sqlalchemy as sa
 
 from qualipy.util import copy_function_spec, import_function_by_name
 
@@ -21,6 +22,8 @@ def function(
     return_format: type = float,
     arguments: Dict[str, Any] = None,
     fail: bool = False,
+    valid_min_range = None,
+    valid_max_range = None
 ) -> Callable:
     def inner_fun(method: Callable):
         method.allowed_arguments = (
@@ -30,6 +33,8 @@ def function(
         method.has_decorator = True
         method.return_format = return_format
         method.fail = fail
+        method.valid_min_range = valid_min_range
+        method.valid_max_range = valid_max_range
 
         @wraps(method)
         def wrapper(*args, **kwargs):
@@ -76,12 +81,12 @@ class Column(object):
 
     def _get_functions(
         self, fun_attribute: str = "functions", column_name: str = None
-    ) -> Dict[str, Callable]:
-        methods = {}
-        for fun in dir(self):
-            function = getattr(self, fun, None)
-            if getattr(function, "has_decorator", False):
-                methods[fun] = function
+    ) -> Tuple[str, Callable]:
+        methods = []
+        # for fun in dir(self):
+        #     function = getattr(self, fun, None)
+        #     if getattr(function, "has_decorator", False):
+        #         methods[fun] = function
         given_methods = getattr(self, fun_attribute, None)
         if fun_attribute == "extra_functions":
             if column_name in given_methods:
@@ -91,7 +96,7 @@ class Column(object):
         if given_methods:
             for func in given_methods:
                 copied_function = copy_function_spec(func)
-                methods[copied_function.__name__] = copied_function
+                methods.append((copied_function.__name__, copied_function))
         return methods
 
 
@@ -112,12 +117,12 @@ class Table(ABC):
         pass
 
     def extract_sample_row(self):
-        pass
+        return
 
     def _get_functions(
         self, fun_attribute: str = "functions", column_name: str = None
     ) -> Dict[str, Callable]:
-        methods = {}
+        methods = []
         for fun in dir(self):
             function = getattr(self, fun, None)
             if getattr(function, "has_decorator", False):
@@ -126,7 +131,7 @@ class Table(ABC):
         if column_name in given_methods:
             for func in given_methods[column_name]:
                 copied_function = copy_function_spec(func)
-                methods[copied_function.__name__] = copied_function
+                methods.append((copied_function.__name__, copied_function))
         return methods
 
 
@@ -140,7 +145,8 @@ class PandasTable(Table):
     ignore: List[str] = []
     types: Dict = {}
     bool_as_cat: bool = False
-    extra_functions: List[Dict] = []
+    int_as_cat: bool = True
+    extra_functions: Dict = {}
 
     _INFER_TYPES = {
         "float64": pFloatType,
@@ -155,21 +161,21 @@ class PandasTable(Table):
         for key, val in args.items():
             setattr(self, key, val)
 
-    def _generate_columns(self, data: pd.DataFrame, infer: bool = True) -> None:
-        if self.columns == "all" and infer:
-            self.columns = [
-                col
-                for col in data.columns
-                if col != self.time_column and col not in self.ignore
-            ]
+    def _generate_columns(self, extract_sample=True) -> None:
+        if self.infer_schema and extract_sample:
+            sample_row = self.extract_sample_row()
+            self.columns = [i for i in sample_row.columns if i not in self.ignore]
         for col in self.columns:
-            if infer:
-                if col in self.types:
-                    col_type = self.types[col]
-                else:
-                    col_type = self._INFER_TYPES[data[col].dtype.name]()
-            else:
+            if col in self.types:
                 col_type = self.types[col]
+            else:
+                try:
+                    if "int" in sample_row[col].dtype.name and self.int_as_cat:
+                        col_type = pObjectType()
+                    else:
+                        col_type = self._INFER_TYPES[sample_row[col].dtype.name]()
+                except:
+                    raise Exception(f"Unable to infer schema for column: {col}")
             bool_and_cat = (
                 True if isinstance(col_type, pBoolType) and self.bool_as_cat else False
             )
@@ -177,7 +183,7 @@ class PandasTable(Table):
             column = Column()
             column._from_dict(
                 {
-                    "name": col,
+                    "column_name": col,
                     "column_type": col_type,
                     "force_type": False,
                     "overwrite_type": False,
@@ -185,12 +191,8 @@ class PandasTable(Table):
                     "force_null": False,
                     "unique": False,
                     "is_category": is_cat,
-                    "functions": DEFAULT_CAT_FUNCTIONS
-                    if is_cat
-                    else DEFAULT_NUM_FUNCTIONS,
-                    "extra_functions": super(PandasTable, self)._get_functions(
-                        "extra_functions", col
-                    ),
+                    "functions": [],
+                    "extra_functions": self.extra_functions,
                 }
             )
             self._columns.append(column)
@@ -204,13 +206,63 @@ class PandasTable(Table):
 
 class SQLTable(Table):
 
-    columns = "all"
-    infer_schema = True
-    table_name = None
-    time_column = None
+    columns: Union[str, List[str]] = "all"
+    infer_schema: bool = True
+    table_name: Optional[str] = None
+    data_source: str = "pandas"
+    time_column: Optional[str] = None
+    ignore: List[str] = []
+    types: Dict = {}
+    bool_as_cat: bool = False
+    int_as_cat: bool = True
+    extra_functions: Dict = {}
 
-    _INFER_TYPES = {"float64": pFloatType, "int64": pIntType, "object": pObjectType}
+    _INFER_TYPES = {}
     _columns = []
 
-    def _generate_columns(self, data: pd.DataFrame, infer: bool = True) -> None:
-        pass
+    def _generate_columns(self, extract_sample=False) -> None:
+        data = self.extract_sample_row()
+        column_info = {
+            i["name"]: i for i in data.table_reflection if "name" in i.keys()
+        }
+        self.columns = [i for i in list(column_info.keys()) if i not in self.ignore]
+
+        for col in self.columns:
+            inferred_type = column_info[col]["type"]
+            if isinstance(inferred_type, sa.sql.sqltypes.INTEGER) and self.int_as_cat:
+                col_type = sa.sql.sqltypes.STRINGTYPE
+            else:
+                col_type = column_info[col]
+            bool_and_cat = (
+                True
+                if isinstance(col_type, sa.sql.sqltypes.BOOLEANTYPE) and self.bool_as_cat
+                else False
+            )
+            is_cat = (
+                True
+                if isinstance(col_type, sa.sql.sqltypes.String) | bool_and_cat
+                else False
+            )
+            column = Column()
+            column._from_dict(
+                {
+                    "column_name": col,
+                    "column_type": col_type,
+                    "force_type": False,
+                    "overwrite_type": False,
+                    "null": True,
+                    "force_null": False,
+                    "unique": False,
+                    "is_category": is_cat,
+                    "functions": [],
+                    "extra_functions": self.extra_functions,
+                }
+            )
+            self._columns.append(column)
+        print(self)
+
+    def _import_function(self, function_name):
+        function = import_function_by_name(function_name, "sql")
+        function.key_function = False
+        function.parameters = {}
+        return function

@@ -2,6 +2,8 @@ import pandas as pd
 import numpy as np
 from scipy import stats
 
+import warnings
+
 from qualipy.util import get_column
 from qualipy.column import function
 
@@ -81,10 +83,16 @@ def number_of_outliers(data, column, std_away):
 
 @function(return_format=dict)
 def value_counts(data, column):
+    if data[column].nunique() > 100:
+        warnings.warn(
+            f"Too many unique columns for column {column}. Ignoring value counts"
+        )
+        return np.NaN
     return (
         data[data[column] != "nan"][column]
         .value_counts()
         .sort_values(ascending=False)
+        .head(100)
         .to_dict()
     )
 

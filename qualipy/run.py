@@ -9,7 +9,6 @@ import warnings
 from qualipy.backends.pandas_backend.generator import BackendPandas
 from qualipy.backends.sql_backend.generator import BackendSQL
 from qualipy.exceptions import FailException, NullableError
-from qualipy.config import STANDARD_VIZ_STATIC, STANDARD_VIZ_DYNAMIC
 from qualipy.project import Project
 
 try:
@@ -71,6 +70,7 @@ class DataSet(object):
         self.run_n = 0
         self.schema = {}
         self.from_step = None
+        self.stratify = False
 
     def run(self, autocommit: bool = False) -> None:
         if not self.chunk:
@@ -84,12 +84,23 @@ class DataSet(object):
                 self.current_data = chunk["chunk"]
                 if self.current_data.shape[0] == 0:
                     self.current_data = self.fallback_data
-                # if self.current_data.shape[0] > 0:
                 self.batch_name = str(chunk["batch_name"])
                 self.time_of_run = chunk["batch_name"]
-                self._generate_metrics(autocommit=autocommit)
-                # else:
-                #     print(f"No data found for {chunk['batch_name']}")
+                if self.stratify:
+                    self.original_data = self.current_data.copy()
+                    self.original_name = self.current_name
+                    for stratify_value in self.stratify_values:
+                        self.current_data = self.stratify_function(
+                            self.current_data, stratify_value
+                        )
+                        self.current_name = f"{self.current_name}_{stratify_value}"
+                        self._generate_metrics(autocommit=autocommit)
+
+                        # turn back name and data
+                        self.current_name = self.original_name
+                        self.current_data = self.original_data
+                else:
+                    self._generate_metrics(autocommit=autocommit)
 
     def set_dataset(
         self, df, columns: Optional[List[str]] = None, name: str = None
@@ -109,13 +120,16 @@ class DataSet(object):
     ):
         self._set_data(df)
         self.current_name = name if name is not None else self.run_n
+        self._set_stratification(df)
         self.columns = self._set_columns(columns)
         self._set_schema(self.current_data)
         self.chunk = True
         time_column = (
             time_column if time_column is not None else self.project.time_column
         )
-        self.time_chunks = self.generator.get_chunks(self.current_data, time_freq, time_column)
+        self.time_chunks = self.generator.get_chunks(
+            self.current_data, time_freq, time_column
+        )
 
     def _set_data(self, df):
         if df.__class__.__name__ in ["SQLData", "PandasData", "SparkData"]:
@@ -126,6 +140,14 @@ class DataSet(object):
                 pass
         else:
             self.current_data = df
+
+    def _set_stratification(self, df):
+        # stratification only implemented in Pandas for now
+        if df.__class__.__name__ in ["PandasData"]:
+            if df.stratify:
+                self.stratify = True
+                self.stratify_values = df.stratify_values
+                self.stratify_function = df.subset_function()
 
     def _set_schema(self, df):
         schema = self.generator.set_schema(df, self.columns, self.current_name)
@@ -175,10 +197,9 @@ class DataSet(object):
 
             # run through functions for column, if any
             # TODO: this breaks if same function name diff arguments
-            for function_name, function in {
-                **specs["functions"],
-                **specs["extra_functions"],
-            }.items():
+            for function_name, function in (
+                specs["functions"] + specs["extra_functions"]
+            ):
 
                 should_fail = function.fail
                 arguments = function.arguments

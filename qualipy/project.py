@@ -93,20 +93,16 @@ class Project(object):
         else:
             self._add_column(column, name)
 
-    def add_table(self, table: Table) -> None:
-        if table.infer_schema:
-            sample_row = table.extract_sample_row()
-        else:
-            sample_row = None
-        table._generate_columns(sample_row, table.infer_schema)
+    def add_table(self, table: Table, extract_sample=False) -> None:
+        table._generate_columns(extract_sample=extract_sample)
         self.time_column = table.time_column
         for column in table._columns:
-            imported_functions = {}
+            imported_functions = []
             for function in column.functions:
-                imported_functions[function] = table._import_function(function)
+                imported_functions.append((function, table._import_function(function)))
             column.functions = imported_functions
-            self.columns[column.name] = column._as_dict(
-                column.name, read_functions=False
+            self.columns[column.column_name] = column._as_dict(
+                column.column_name, read_functions=False
             )
 
     def _add_column(

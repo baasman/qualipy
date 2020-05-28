@@ -17,6 +17,7 @@ import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
 import altair as alt
+import banpei
 
 
 def trend_line(data, var, metric, config_dir, project_name, anom_data):
@@ -114,8 +115,17 @@ def trend_line(data, var, metric, config_dir, project_name, anom_data):
 
 
 def trend_line_altair(
-    trend_data, var_name, metric_name, config_dir, project_name, anom_data, point=True
+    trend_data,
+    var_name,
+    config_dir,
+    project_name,
+    anom_data,
+    point=True,
+    show_sst=True,
 ):
+    args = trend_data.arguments.iloc[0]
+    args = f"_{args}" if args is not None else ""
+    metric_name = trend_data.metric.iloc[0]
     if anom_data.shape[0] > 0:
         trend_data = trend_data.merge(
             anom_data[["column_name", "batch_name", "value"]].rename(
@@ -153,7 +163,9 @@ def trend_line_altair(
     max_y = max(
         trend_data.value.max() + 0.001, trend_data["2std_plus_line"].iloc[0] + 0.001
     )
-    base = alt.Chart(td).properties(title=f"{var_name} - {metric_name}", width=800)
+    base = alt.Chart(td).properties(
+        title=f"{var_name} - {metric_name}{args}", width=800
+    )
     value_line = base.mark_line(point=point).encode(
         x=alt.X("date:T"),
         y=alt.Y("value:Q", scale=alt.Scale(domain=[min_y, max_y])),
@@ -168,4 +180,15 @@ def trend_line_altair(
         .encode(x=alt.X("date:T"), y=alt.Y("anom_val"), color=alt.value("red"))
     )
     chart = value_line + anom_points
+    if show_sst:
+        model = banpei.SST(w=30)
+        results = model.detect(trend_data.value.values)
+        d = pd.DataFrame({"date": trend_data["date"], "sst": results})
+        sst = (
+            alt.Chart(d)
+            .mark_line()
+            .encode(x="date:T", y="sst:Q")
+            .properties(height=100, width=800)
+        )
+        chart = alt.vconcat(chart, sst).resolve_axis(y="shared")
     chart.display()
