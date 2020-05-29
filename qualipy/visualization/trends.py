@@ -115,13 +115,13 @@ def trend_line(data, var, metric, config_dir, project_name, anom_data):
 
 
 def trend_line_altair(
-    trend_data,
-    var_name,
-    config_dir,
-    project_name,
-    anom_data,
-    point=True,
-    show_sst=True,
+    trend_data: pd.DataFrame,
+    var_name: str,
+    config_dir: str,
+    project_name: str,
+    anom_data: pd.DataFrame,
+    point: bool = True,
+    sst: int = 30,
 ):
     args = trend_data.arguments.iloc[0]
     args = f"_{args}" if args is not None else ""
@@ -180,8 +180,8 @@ def trend_line_altair(
         .encode(x=alt.X("date:T"), y=alt.Y("anom_val"), color=alt.value("red"))
     )
     chart = value_line + anom_points
-    if show_sst:
-        model = banpei.SST(w=30)
+    if sst is not None:
+        model = banpei.SST(w=sst)
         results = model.detect(trend_data.value.values)
         d = pd.DataFrame({"date": trend_data["date"], "sst": results})
         sst = (

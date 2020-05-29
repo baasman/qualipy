@@ -48,6 +48,8 @@ def copy_function_spec(function: Union[Dict[str, Any], Callable]):
         copied_function = copy_func(function["function"])
         copied_function.arguments = function.get("parameters", {})
         copied_function.key_function = function.get("key", False)
+        copied_function.valid_min_range = function.get('valid_min')
+        copied_function.valid_max_range = function.get('valid_max')
     else:
         copied_function = copy_func(function)
         copied_function.arguments = {}

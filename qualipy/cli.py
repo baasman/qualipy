@@ -75,6 +75,28 @@ def run_anomaly(project_name, config_dir, retrain):
     _run_anomaly(backend, project_name, config_dir, retrain)
 
 
+@qualipy.command()
+@click.option("--config_dir", default=None)
+@click.option("--retrain", default=False, type=bool)
+def schedule_anomaly(config_dir, retrain):
+    with open(os.path.join(config_dir, "config.json"), "rb") as cf:
+        config = json.load(cf)
+
+    scheduler_conf = config["ANOMALY_SCHEDULER"]
+    project_names = scheduler_conf["PROJECTS"]
+    for project_name in project_names:
+        _run_anomaly(backend, project_name, config_dir, retrain)
+
+
+@qualipy.command()
+@click.option("--config_dir", default=None)
+@click.option("--project_name", default=False, type=bool)
+def produce_report(config_dir, project_name):
+    with open(os.path.join(config_dir, "config.json"), "rb") as cf:
+        config = json.load(cf)
+
+
+
 if __name__ == "__main__":
     import sys
 

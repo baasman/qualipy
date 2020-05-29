@@ -206,6 +206,8 @@ class Postgres(SQL):
                 "run_name" VARCHAR(100) not null DEFAULT FALSE,
                 "value" VARCHAR null, 
                 "insert_time" TIMESTAMPTZ not null, 
+                "valid_min" VARCHAR null, 
+                "valid_max" VARCHAR null, 
                 PRIMARY KEY (id)
             );
         """
@@ -227,7 +229,10 @@ class Postgres(SQL):
                 "batch_name" VARCHAR(100) null DEFAULT true,
                 "run_name" VARCHAR(100) not null DEFAULT FALSE,
                 "value" VARCHAR null,
-                "insert_time" TIMESTAMPTZ not null
+                "severity" VARCHAR null,
+                "insert_time" TIMESTAMPTZ not null,
+                "valid_min" VARCHAR null, 
+                "valid_max" VARCHAR null 
             );
         """
         exists = self.does_table_exist(engine, table_name)

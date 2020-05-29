@@ -181,7 +181,7 @@ def row_count_view(data, anom_data=None, columns=None):
         fig.show()
 
 
-def missing_by_column_bar_altair(data, schema):
+def missing_by_column_bar_altair(data, schema=None):
     data = set_value_type(data)
     data = data.sort_values("value", ascending=False)
     mean_missing = data.groupby("column_name").value.mean().reset_index()

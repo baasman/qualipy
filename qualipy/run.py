@@ -124,9 +124,14 @@ class DataSet(object):
         self.columns = self._set_columns(columns)
         self._set_schema(self.current_data)
         self.chunk = True
-        time_column = (
-            time_column if time_column is not None else self.project.time_column
-        )
+        try:
+            time_column = (
+                time_column if time_column is not None else self.project.time_column
+            )
+        except AttributeError:
+            raise Exception(
+                "No time_column specified. Must be given if chunking dataset"
+            )
         self.time_chunks = self.generator.get_chunks(
             self.current_data, time_freq, time_column
         )
@@ -195,14 +200,14 @@ class DataSet(object):
             # get default column info
             measures = self._get_column_specific_general_info(specs, measures)
 
-            # run through functions for column, if any
-            # TODO: this breaks if same function name diff arguments
             for function_name, function in (
                 specs["functions"] + specs["extra_functions"]
             ):
 
                 should_fail = function.fail
                 arguments = function.arguments
+                valid_min_range = function.valid_min_range
+                valid_max_range = function.valid_max_range
                 return_format = function.return_format
                 return_format_repr = types[return_format]
                 viz_type = self._set_viz_type(function, function_name)

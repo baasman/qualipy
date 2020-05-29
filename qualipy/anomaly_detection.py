@@ -2,6 +2,7 @@ from qualipy.project import Project
 from qualipy.util import set_value_type
 
 from sklearn.ensemble import IsolationForest
+from scipy.stats import zscore
 import joblib
 import numpy as np
 import pandas as pd
@@ -28,6 +29,7 @@ anomaly_columns = [
     "arguments",
     "return_format",
     "value",
+    "severity",
     "batch_name",
     "insert_time",
 ]
@@ -128,7 +130,7 @@ class IsolationForestModel(object):
 
 class STDCheck(object):
     def __init__(self, kwargs):
-        defaults = {"std": 3}
+        defaults = {"std": 4}
         kwargs = {**defaults, **kwargs}
         for k, v in kwargs.items():
             setattr(self, k, v)
@@ -148,13 +150,15 @@ class STDCheck(object):
             # fix hardcoding of metric name here
             if (metric_name in ["count", "number_of_rows_per_patient"]) and std < 5:
                 std_outliers = np.repeat(False, test_data.shape[0])
+                zscores = np.repeat(0, test_data.shape[0])
             else:
-                std_outliers = (test_data.value < mean - (self.std * std)) | (
-                    test_data.value > mean + (self.std * std)
-                )
+                low = mean - (self.std * std)
+                high = mean + (self.std * std)
+                zscores = zscore(test_data.value)
+                std_outliers = (zscores < -self.std) | (zscores > self.std)
             preds = [-1 if std == True else 1 for std in std_outliers]
 
-        return np.array(preds)
+        return np.array(preds), zscores
 
     def train_predict(self, train_data, **kwargs):
         if isinstance(train_data, pd.DataFrame):
@@ -228,7 +232,7 @@ class GenerateAnomalies(object):
         self.project = Project(project_name, config_dir=config_dir)
         df = self.project.get_project_table()
         df = (
-            df.groupby("batch_name", as_index=False)
+            df.groupby("date", as_index=False)
             .apply(lambda g: g[g.insert_time == g.insert_time.max()])
             .reset_index(drop=True)
         )
@@ -255,7 +259,14 @@ class GenerateAnomalies(object):
             )
             # preds = mod.predict(data.value.values.reshape((-1, 1)))
             preds = mod.predict(data, multivariate=False, check_for_std=True)
-            outlier_rows = data[preds == -1]
+            if isinstance(preds, tuple):
+                severity = preds[1]
+                preds = preds[0]
+                outlier_rows = data[preds == -1].copy()
+                outlier_rows["severity"] = severity[preds == -1]
+            else:
+                outlier_rows = data[preds == -1]
+                outlier_rows["severity"] = np.NaN
             if outlier_rows.shape[0] > 0:
                 all_rows.append(outlier_rows)
         except:
@@ -271,6 +282,9 @@ class GenerateAnomalies(object):
             data.arguments.values[0],
         )
         preds = mod.predict(data, check_for_std=True)
+        if isinstance(preds, tuple):
+            reasons = preds[1]
+            preds = preds[0]
         outlier_rows = data[preds == -1]
         if outlier_rows.shape[0] > 0:
             all_rows.append(outlier_rows)
@@ -372,6 +386,7 @@ class GenerateAnomalies(object):
 
         try:
             data = pd.concat(all_rows).sort_values("date", ascending=False)
+            data["severity"] = np.NaN
             data = data[anomaly_columns]
             data.value = data.value.astype(str)
         except:
@@ -385,6 +400,7 @@ class GenerateAnomalies(object):
         if df.shape[0] > 0:
             df = set_value_type(df)
             df = df[~df.value]
+            df["severity"] = np.NaN
             df = df[anomaly_columns]
         else:
             df = pd.DataFrame([], columns=anomaly_columns)

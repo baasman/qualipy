@@ -22,8 +22,6 @@ def function(
     return_format: type = float,
     arguments: Dict[str, Any] = None,
     fail: bool = False,
-    valid_min_range = None,
-    valid_max_range = None
 ) -> Callable:
     def inner_fun(method: Callable):
         method.allowed_arguments = (
@@ -33,8 +31,8 @@ def function(
         method.has_decorator = True
         method.return_format = return_format
         method.fail = fail
-        method.valid_min_range = valid_min_range
-        method.valid_max_range = valid_max_range
+        method.valid_min_range = None
+        method.valid_max_range = None
 
         @wraps(method)
         def wrapper(*args, **kwargs):
@@ -83,10 +81,6 @@ class Column(object):
         self, fun_attribute: str = "functions", column_name: str = None
     ) -> Tuple[str, Callable]:
         methods = []
-        # for fun in dir(self):
-        #     function = getattr(self, fun, None)
-        #     if getattr(function, "has_decorator", False):
-        #         methods[fun] = function
         given_methods = getattr(self, fun_attribute, None)
         if fun_attribute == "extra_functions":
             if column_name in given_methods:
