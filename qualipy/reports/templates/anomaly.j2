@@ -1,0 +1,56 @@
+{% extends "base.j2" %}
+
+{% block content %}
+
+    {% import 'util.j2' as util %}
+
+    <h2>{{ project_name }}</h2>
+    <h3> Anomalies </h3>
+    {{ util.plot_table(anomaly_table, project_name) }}
+
+    <h3>Result Set Size</h3>
+    <button class="btn btn-primary" type="button" data-toggle="collapse" 
+        data-target=".row_counts" aria-expanded="true" aria-controls=".row_counts">
+        View Row Count Results
+    </button>
+    <div class='row_counts collapse'>
+        {% for r in row_plots %}
+        {{ util.plot_chart('row_vis' + loop.index|string, r) }}
+        {% endfor %}
+    </div>
+
+    <h3>Trends and Numerical Aggregates</h3>
+    <button class="btn btn-primary" type="button" data-toggle="collapse" 
+        data-target=".trends" aria-expanded="true" aria-controls=".trends">
+        View Numerical Trends
+    </button>
+    <div class='trends collapse'>
+        {% for trend in trend_plots %}
+        {{ util.plot_chart('vis' + loop.index|string, trend) }}
+        {% endfor %}
+    </div>
+
+
+    <h3>Categorical Data and Proportional Trends</h3>
+    <button class="btn btn-primary" type="button" data-toggle="collapse" 
+        data-target=".categorical" aria-expanded="true" aria-controls=".categorical">
+        View Categorical Trends
+    </button>
+    <div class='categorical collapse'>
+        {% for cat in cat_plots %}
+        {{ util.plot_chart('cat_vis' + loop.index|string, cat) }}
+        {% endfor %}
+    </div>
+
+    <h3>Missingness</h3>
+    <button class="btn btn-primary" type="button" data-toggle="collapse" 
+        data-target=".missingness" aria-expanded="true" aria-controls=".missingness">
+        View Missingness
+    </button>
+    <div class='missingness collapse'>
+        {% for m in missing_plots %}
+        {{ util.plot_chart('mis_vis' + loop.index|string, m) }}
+        {% endfor %}
+    </div>
+
+{% endblock %}

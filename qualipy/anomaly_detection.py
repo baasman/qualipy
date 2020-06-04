@@ -344,13 +344,12 @@ class GenerateAnomalies(object):
                 potential_lines = sorted(
                     potential_lines, key=lambda v: v[2], reverse=True
                 )
-                all_lines = pd.DataFrame({i[0]: i[1] for i in potential_lines})
                 all_non_diff_lines = pd.DataFrame({i[0]: i[1] for i in non_diff_lines})
 
                 for col in all_non_diff_lines.columns:
                     mean = all_non_diff_lines[col].mean()
                     std = all_non_diff_lines[col].std()
-                    if std > 0.01:
+                    if std > 0.05:
                         all_non_diff_lines[f"{col}_below"] = np.where(
                             all_non_diff_lines[col] < (mean - (4 * std)), 1, 0
                         )

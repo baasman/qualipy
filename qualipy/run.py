@@ -108,7 +108,7 @@ class DataSet(object):
         self._set_data(df)
         self.current_name = name if name is not None else self.run_n
         self.columns = self._set_columns(columns)
-        self._set_schema(df)
+        self._set_schema(self.current_data)
 
     def set_chunked_dataset(
         self,

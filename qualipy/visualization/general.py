@@ -181,18 +181,23 @@ def row_count_view(data, anom_data=None, columns=None):
         fig.show()
 
 
-def missing_by_column_bar_altair(data, schema=None):
+def missing_by_column_bar_altair(data, schema=None, show_notebook=True):
     data = set_value_type(data)
     data = data.sort_values("value", ascending=False)
     mean_missing = data.groupby("column_name").value.mean().reset_index()
-    base = alt.Chart(mean_missing).properties(title="Mean Percentage Missing")
+    base = alt.Chart(mean_missing).properties(title="Mean Percentage Missing", width=800)
     bars = base.mark_bar().encode(
         y=alt.Y("column_name:N"), x=alt.X("value:Q", scale=alt.Scale(domain=[0, 1]))
     )
-    bars.display()
+    if show_notebook:
+        bars.display()
+    else:
+        return bars
 
 
-def row_count_view_altair(data, anom_data=None, columns=None, only_anomaly=True):
+def row_count_view_altair(
+    data, anom_data=None, columns=None, only_anomaly=True, show_notebook=True
+):
     if columns is not None:
         data = data[data.column_name.isin(columns)]
     data = data[
@@ -232,4 +237,7 @@ def row_count_view_altair(data, anom_data=None, columns=None, only_anomaly=True)
         )
         all_lines.append(line)
     full_chart = alt.vconcat(*all_lines[:100]).resolve_axis(x="shared")
-    full_chart.display()
+    if show_notebook:
+        full_chart.display()
+    else:
+        return full_chart

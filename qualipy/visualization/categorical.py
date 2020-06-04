@@ -100,7 +100,7 @@ def proportion_change(data, var):
     plot.show()
 
 
-def barchart_top_categories_altair(data, column, top_n=20):
+def barchart_top_categories_altair(data, column, top_n=20, show_notebook=True):
     counter = Counter(data.value.values[0])
     for vc in data.value.values[1:]:
         counter += Counter(vc)
@@ -116,10 +116,13 @@ def barchart_top_categories_altair(data, column, top_n=20):
         .encode(x=alt.X("category:N", sort="-y"), y=alt.Y(f"{column}:Q"))
         .properties(title="All Categories", width=600)
     )
-    chart.display()
+    if show_notebook:
+        chart.display()
+    else:
+        return chart
 
 
-def value_count_chart_altair(data, var, anom_data, top_n=20):
+def value_count_chart_altair(data, var, anom_data, top_n=20, show_notebook=True):
     prop_change_plot = proportion_change_altair(data, var, top_n)
     metric = data.metric.iloc[0]
     data_values = [pd.Series(c) for c in data["value"]]
@@ -148,7 +151,10 @@ def value_count_chart_altair(data, var, anom_data, top_n=20):
     )
     plot = alt.layer(area, anom_line)
     final_plot = alt.vconcat(plot, prop_change_plot).resolve_axis(y="shared")
-    final_plot.display()
+    if show_notebook:
+        final_plot.display()
+    else:
+        return final_plot
 
 
 def proportion_change_altair(data, var, top_n=20):

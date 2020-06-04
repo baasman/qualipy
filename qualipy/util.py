@@ -70,7 +70,7 @@ def get_latest_insert_only(data):
     )
 
 
-def get_project_data(project, timezone):
+def get_project_data(project, timezone, latest_insert_only=False):
     timezone = "UTC" if timezone is None else timezone
     data = project.get_project_table()
     try:
@@ -91,6 +91,8 @@ def get_project_data(project, timezone):
         + "_"
         + np.where(data.arguments.isnull(), "", data.arguments)
     )
+    if latest_insert_only:
+        data = get_latest_insert_only(data)
     return data
 
 

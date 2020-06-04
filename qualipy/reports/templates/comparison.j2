@@ -1,0 +1,22 @@
+{% extends "base.j2" %}
+
+{% block content %}
+
+    {% import 'util.j2' as util %}
+
+    <h2>{{ project_name }}</h2>
+    <h3> Comparison </h3>
+
+    <h3>Numerical Trend Comparison</h3>
+    <button class="btn btn-primary" type="button" data-toggle="collapse" 
+        data-target=".numerical" aria-expanded="true" aria-controls=".numerical">
+        View Numerical Trend Comparisons
+    </button>
+    <div class='numerical collapse'>
+        {% for plot in num_plots %}
+        {{ util.plot_chart('num_vis' + loop.index|string, plot) }}
+        {% endfor %}
+    </div>
+
+
+{% endblock %}

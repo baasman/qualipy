@@ -3,6 +3,7 @@ import os
 import json
 from functools import reduce
 from collections import Counter
+import warnings
 
 import qualipy
 from qualipy.anomaly_detection import (
@@ -122,6 +123,7 @@ def trend_line_altair(
     anom_data: pd.DataFrame,
     point: bool = True,
     sst: int = 30,
+    display_notebook=True,
 ):
     args = trend_data.arguments.iloc[0]
     args = f"_{args}" if args is not None else ""
@@ -181,14 +183,25 @@ def trend_line_altair(
     )
     chart = value_line + anom_points
     if sst is not None:
-        model = banpei.SST(w=sst)
-        results = model.detect(trend_data.value.values)
-        d = pd.DataFrame({"date": trend_data["date"], "sst": results})
-        sst = (
-            alt.Chart(d)
-            .mark_line()
-            .encode(x="date:T", y="sst:Q")
-            .properties(height=100, width=800)
-        )
-        chart = alt.vconcat(chart, sst).resolve_axis(y="shared")
-    chart.display()
+        try:
+            model = banpei.SST(w=sst)
+            results = model.detect(trend_data.value.values)
+            d = pd.DataFrame({"date": trend_data["date"], "sst": results})
+            sst = (
+                alt.Chart(d)
+                .mark_line()
+                .encode(x="date:T", y="sst:Q")
+                .properties(height=100, width=800)
+            )
+            chart = alt.vconcat(chart, sst).resolve_axis(y="shared")
+        except IndexError:
+            warnings.warn(
+                f"""Not enough data for variable {var_name} and 
+                 metric {metric_name} to generate sst"""
+            )
+        except ValueError:
+            warnings.warn("sst is set to too high a number")
+    if display_notebook:
+        chart.display()
+    else:
+        return chart

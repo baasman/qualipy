@@ -6,6 +6,7 @@ from qualipy.web._config import _Config
 from qualipy.anomaly_detection import anomaly_data_all_projects
 from qualipy.backends.pandas_backend.generator import BackendPandas
 from qualipy.project import create_qualipy_folder, Project
+from qualipy.reports.view import JinjaView
 
 import os
 import json
@@ -90,11 +91,42 @@ def schedule_anomaly(config_dir, retrain):
 
 @qualipy.command()
 @click.option("--config_dir", default=None)
-@click.option("--project_name", default=False, type=bool)
-def produce_report(config_dir, project_name):
-    with open(os.path.join(config_dir, "config.json"), "rb") as cf:
-        config = json.load(cf)
-
+@click.option("--project_name", default=None, type=str)
+@click.option("--run_anomaly", default=False, type=bool)
+@click.option("--clear_anomaly", default=False, type=bool)
+@click.option("--only_show_anomaly", default=False, type=bool)
+@click.option("--report_type", default="anomaly", type=str)
+@click.option("--t1", default=None, type=str)
+@click.option("--t2", default=None, type=str)
+@click.option("--comparison", default=None, type=str)
+@click.option("--out_file", default=None, type=str)
+def produce_report(
+    config_dir,
+    project_name,
+    run_anomaly,
+    clear_anomaly,
+    only_show_anomaly,
+    report_type,
+    t1,
+    t2,
+    comparison,
+    out_file,
+):
+    view = JinjaView(
+        config_dir=config_dir,
+        project_name=project_name,
+        run_anomaly=run_anomaly,
+        retrain_anomaly=clear_anomaly,
+        t1=t1,
+        t2=t2,
+        comparison=comparison,
+    )
+    rendered_page = view.render(
+        template=f"{report_type}.j2", title="Anomaly Report", project_name=project_name
+    )
+    if out_file is None:
+        out_file = f"{report_type}_report_{project_name}.html"
+    rendered_page.dump(out_file)
 
 
 if __name__ == "__main__":
@@ -102,4 +134,4 @@ if __name__ == "__main__":
 
     sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
 
-    run_anomaly(sys.argv[1:])
+    produce_report(sys.argv[1:])

@@ -1,0 +1,32 @@
+{% macro plot_chart(id, json) -%}
+<div class='trend_chart' style="border-style: ridge;">
+    <button class="btn btn-primary" type="button" data-toggle="collapse" 
+        data-target="#{{ id }}" aria-expanded="true" aria-controls="{{ id }}">
+        Hide
+    </button>
+    <div class="collapse collapse show" id="{{ id }}">
+        <script type="text/javascript">
+            var spec = {{ json }}
+            var opt = { "renderer": "canvas", "actions": false };
+            vegaEmbed("#{{ id }}", spec, opt);
+        </script>
+    </div>
+</div>
+{%- endmacro %}
+
+{% macro plot_table(html_table, project_name) -%}
+<div id='anomaly_table'>
+    {{ html_table }}
+    <script type="text/javascript">
+        $(document).ready( function () {
+            $('#{{ project_name }}').DataTable(
+                {
+                    fixedColumns:   {
+                        heightMatch: 'none'
+                    }
+                }
+            );
+        } );
+    </script>
+</div>
+{%- endmacro %}
