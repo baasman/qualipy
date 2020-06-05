@@ -7,6 +7,7 @@ import altair as alt
 from qualipy.util import set_value_type
 
 from collections import Counter
+from functools import reduce
 
 
 def comparison_trends(data, columns, metrics, show_column_in_name=False):
@@ -192,7 +193,9 @@ def get_counts(data, metric_id, top_n=20):
     return counts
 
 
-def bar_chart_comparison_altair(data: list, metrics: list, top_n=10, only_overlapping=False, show_notebook=True):
+def bar_chart_comparison_altair(
+    data: list, metrics: list, top_n=10, only_overlapping=False, show_notebook=True
+):
     counts = []
     for df, metric in zip(data, metrics):
         df_ = df[df.metric_id == metric].copy()
@@ -201,11 +204,73 @@ def bar_chart_comparison_altair(data: list, metrics: list, top_n=10, only_overla
 
     df = pd.concat(counts)
 
-    title = ' - '.join(metrics)
+    title = " - ".join(metrics)
     chart = alt.Chart(df).properties(height=50, title=title)
-    chart = chart.mark_bar().encode(y=alt.Y('metric:N', axis=alt.Axis(title=None, labels=False)), x=alt.X('value:Q'), 
-                                    row=alt.Row('category:N', header=alt.Header(labelAngle=0, labelAlign='left')), color='metric:N')
+    chart = chart.mark_bar().encode(
+        y=alt.Y("metric:N", axis=alt.Axis(title=None, labels=False)),
+        x=alt.X("value:Q"),
+        row=alt.Row("category:N", header=alt.Header(labelAngle=0, labelAlign="left")),
+        color="metric:N",
+    )
     plot = chart.configure_view(strokeOpacity=0)
+    if show_notebook:
+        plot.display()
+    else:
+        return plot
+
+
+def get_cat_lines(data, top_n=10):
+    data_values = [pd.Series(c) for c in data["value"]]
+    unique_vals = reduce(lambda x, y: x.union(y), [set(i.keys()) for i in data_values])
+    df = pd.DataFrame(
+        {cat: [i.get(cat, 0) for i in data_values] for cat in unique_vals}
+    )
+    if df.shape[0] == 0:
+        return
+    top_columns = (
+        df.sum().sort_values(ascending=False).head(min(len(unique_vals), top_n))
+    )
+    df = df[top_columns.index]
+    return df
+
+
+def create_column_data(data, column):
+    if column in data.columns:
+        cdata = data[[column] + ["date", "metric"]]
+    else:
+        cdata = pd.DataFrame(columns=[column, "date", "metric"])
+    return cdata
+
+
+def value_count_comparison_altair(
+    datasets: list, metrics: list, top_n=10, only_overlapping=False, show_notebook=True
+):
+    dfs = []
+    for data, metric in zip(datasets, metrics):
+        d = data[data.metric_id == metric].copy()
+        d = set_value_type(d)
+        df = get_cat_lines(d)
+        df["metric"] = metric
+        df["date"] = d["date"].values
+        dfs.append(df)
+
+    all_columns = reduce(lambda x, y: x.union(y), [set(i.columns) for i in dfs])
+
+    lines = []
+    for column in [i for i in all_columns if i not in ["metric", "date"]]:
+        sub_dfs = []
+        for df in dfs:
+            sub_dfs.append(create_column_data(df, column))
+        subdata = pd.concat(sub_dfs)
+        line = (
+            alt.Chart(subdata)
+            .mark_line()
+            .encode(x="date:T", y=f"{column}:Q", color="metric:N")
+            .properties(height=100, width=800)
+        )
+        lines.append(line)
+
+    plot = alt.vconcat(*lines).resolve_axis(y="shared")
     if show_notebook:
         plot.display()
     else:

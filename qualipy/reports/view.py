@@ -18,6 +18,7 @@ from qualipy.visualization.general import (
 from qualipy.visualization.comparison import (
     plot_diffs_altair,
     bar_chart_comparison_altair,
+    value_count_comparison_altair
 )
 
 from jinja2 import (
@@ -241,6 +242,8 @@ class JinjaView(object):
         cat_comparisons = self.comparison_config["cat_metrics"]
         for comp in cat_comparisons:
             chart = bar_chart_comparison_altair(data, comp, show_notebook=False)
+            plots.append(jinja2.Markup(chart.to_json()))
+            chart = value_count_comparison_altair(data, comp, show_notebook=False)
             plots.append(jinja2.Markup(chart.to_json()))
         return plots
 

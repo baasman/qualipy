@@ -134,4 +134,4 @@ if __name__ == "__main__":
 
     sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
 
-    clear_data(sys.argv[1:])
+    produce_report(sys.argv[1:])
