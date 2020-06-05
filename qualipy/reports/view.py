@@ -15,7 +15,10 @@ from qualipy.visualization.general import (
     missing_by_column_bar_altair,
     row_count_view_altair,
 )
-from qualipy.visualization.comparison import plot_diffs_altair
+from qualipy.visualization.comparison import (
+    plot_diffs_altair,
+    bar_chart_comparison_altair,
+)
 
 from jinja2 import (
     ChoiceLoader,
@@ -77,6 +80,7 @@ class JinjaView(object):
             self.comparison_config = config["COMPARISONS"][comparison]
 
         self._subset_data()
+        alt.themes.enable("quartz")
 
     def render(self, template, **kwargs):
         t = self._get_template(template)
@@ -88,11 +92,13 @@ class JinjaView(object):
 
     def _create_comparison_kwargs(self) -> dict:
         num_plots = self._create_num_comparison_plot()
+        cat_plots = self._create_cat_comparison_plot()
 
         kwargs = {
             "project_name": self.project_name,
             "title": "Qualipy - Project Report",
-            "num_plots": num_plots
+            "num_plots": num_plots,
+            "cat_plots": cat_plots,
         }
         return kwargs
 
@@ -203,11 +209,11 @@ class JinjaView(object):
 
     def _create_num_comparison_plot(self):
         plots = []
-        project_1 = self.comparison_config["project_1"]
-        project_2 = self.comparison_config["project_2"]
-        project_1 = Project(project_name="omop_covid", config_dir=self.config_dir)
+        project_1_name = self.comparison_config["project_1"]
+        project_2_name = self.comparison_config["project_2"]
+        project_1 = Project(project_name=project_1_name, config_dir=self.config_dir)
         data_1 = get_project_data(project_1, "US/Eastern", latest_insert_only=True)
-        project_2 = Project(project_name="clarity_covid", config_dir=self.config_dir)
+        project_2 = Project(project_name=project_2_name, config_dir=self.config_dir)
         data_2 = get_project_data(project_2, "US/Eastern", latest_insert_only=True)
         time_freq = self.comparison_config.get("time_freq", "1D")
 
@@ -216,6 +222,25 @@ class JinjaView(object):
             chart = plot_diffs_altair(
                 data_1, data_2, comp[0], comp[1], time_freq, show_notebook=False
             )
+            plots.append(jinja2.Markup(chart.to_json()))
+        return plots
+
+    def _create_cat_comparison_plot(self):
+        plots = []
+        project_keys = sorted(
+            [i for i in self.comparison_config.keys() if "project" in i]
+        )
+        data = []
+        for project_key in project_keys:
+            project_name = self.comparison_config[project_key]
+            project = Project(project_name=project_name, config_dir=self.config_dir)
+            data.append(
+                get_project_data(project, "US/Eastern", latest_insert_only=True)
+            )
+
+        cat_comparisons = self.comparison_config["cat_metrics"]
+        for comp in cat_comparisons:
+            chart = bar_chart_comparison_altair(data, comp, show_notebook=False)
             plots.append(jinja2.Markup(chart.to_json()))
         return plots
 

@@ -4,7 +4,7 @@
 
     {% import 'util.j2' as util %}
 
-    <h2>{{ project_name }}</h2>
+    <h1>{{ project_name }}</h2>
     <h3> Comparison </h3>
 
     <h3>Numerical Trend Comparison</h3>
@@ -18,5 +18,15 @@
         {% endfor %}
     </div>
 
+    <h3>Categorical Trend Comparison</h3>
+    <button class="btn btn-primary" type="button" data-toggle="collapse" 
+        data-target=".categorical" aria-expanded="true" aria-controls=".categorical">
+        View Categorical Trend Comparisons
+    </button>
+    <div class='categorical collapse'>
+        {% for plot in cat_plots %}
+        {{ util.plot_chart('cat_vis' + loop.index|string, plot) }}
+        {% endfor %}
+    </div>
 
 {% endblock %}

@@ -220,6 +220,7 @@ class Postgres(SQL):
         schema = self.schema + "." if self.schema is not None else ""
         create_table_query = f"""
             create table {schema}{table_name} (
+                "id" SERIAL,
                 "project" VARCHAR(50) not null,
                 "column_name" VARCHAR(100) not null,
                 "date" TIMESTAMPTZ not null,
@@ -232,7 +233,8 @@ class Postgres(SQL):
                 "severity" VARCHAR null,
                 "insert_time" TIMESTAMPTZ not null,
                 "valid_min" VARCHAR null, 
-                "valid_max" VARCHAR null 
+                "valid_max" VARCHAR null,
+                PRIMARY KEY (id)
             );
         """
         exists = self.does_table_exist(engine, table_name)

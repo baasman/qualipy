@@ -17,3 +17,4 @@ gunicorn
 flask_table
 holidays==0.9.12
 tqdm
+altair
