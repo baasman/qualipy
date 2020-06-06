@@ -122,14 +122,16 @@ class Project(object):
     def get_anomaly_table(self) -> pd.DataFrame:
         return self.sql_helper.get_anomaly_table(self.engine, self.project_name)
 
-    def delete_data(self):
+    def delete_data(self, source_data=True, anomaly=True):
         with self.engine.begin() as conn:
-            self.sql_helper.delete_data(
-                conn, self.project_name, self.sql_helper.create_table
-            )
-            self.sql_helper.delete_data(
-                conn, self.anomaly_table, self.sql_helper.create_anomaly_table
-            )
+            if source_data:
+                self.sql_helper.delete_data(
+                    conn, self.project_name, self.sql_helper.create_table
+                )
+            if anomaly:
+                self.sql_helper.delete_data(
+                    conn, self.anomaly_table, self.sql_helper.create_anomaly_table
+                )
 
     def delete_from_project_config(self):
         project_file_path = os.path.join(self.config_dir, "projects.json")

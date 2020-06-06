@@ -140,30 +140,28 @@ def comparison_trends_altair(data, columns, metrics, show_column_in_name=False):
         plot.display()
 
 
-def plot_diffs_altair(data_1, data_2, m1, m2, time_freq="1D", show_notebook=True):
-    df1 = data_1[data_1.metric_id == m1].copy()
-    df1 = set_value_type(df1)
-    df1["standardized"] = (df1.value - df1.value.mean()) / df1.value.std()
-    df2 = data_2[data_2.metric_id == m2].copy()
-    df1 = set_value_type(df1)
-    df2.value = df2.value.astype(int) + 20
-    df2["standardized"] = (df2.value - df2.value.mean()) / df2.value.std()
+def plot_diffs_altair(data, metrics, time_freq="1D", show_notebook=True):
+    sub_data = []
+    for sub, metric in zip(data, metrics):
+        subd = sub[sub.metric_id == metric].copy()
+        subd = set_value_type(subd)
+        subd["standardized"] = (subd.value - subd.value.mean()) / subd.value.std()
+        sub_data.append(subd)
 
-    df = pd.concat([df1, df2])
+    df = pd.concat(sub_data)
+    # diff_df = df.set_index("date")
+    # resampled = (
+    #     diff_df.groupby("metric_id")
+    #     .value.resample(rule=time_freq)
+    #     .sum()
+    #     .reset_index()
+    #     .pivot(columns="metric_id", index="date")
+    # )
+    # resampled.columns = [i[1] for i in resampled.columns]
+    # resampled = resampled.reset_index()
 
-    diff_df = df.set_index("date")
-    resampled = (
-        diff_df.groupby("metric_id")
-        .value.resample(rule=time_freq)
-        .sum()
-        .reset_index()
-        .pivot(columns="metric_id", index="date")
-    )
-    resampled.columns = [i[1] for i in resampled.columns]
-    resampled["difference"] = resampled[m2] - resampled[m1]
-    resampled = resampled.reset_index()
-
-    chart = alt.Chart(df).properties(width=800, height=200, title=f"{m1} - {m2}")
+    title = " - ".join(metrics)
+    chart = alt.Chart(df).properties(width=800, height=200, title=title)
     chart = chart.mark_line().encode(x="date:T", y="value:Q", color="metric_id")
 
     std_chart = alt.Chart(df).properties(width=800, height=100)
@@ -171,10 +169,7 @@ def plot_diffs_altair(data_1, data_2, m1, m2, time_freq="1D", show_notebook=True
         x="date:T", y="standardized:Q", color="metric_id"
     )
 
-    diff_chart = alt.Chart(resampled).properties(width=800, height=100)
-    diff_chart = diff_chart.mark_line().encode(x="date:T", y="difference:Q")
-
-    plot = alt.vconcat(chart, std_chart, diff_chart).resolve_axis(y="shared")
+    plot = alt.vconcat(chart, std_chart).resolve_axis(y="shared")
     if show_notebook:
         plot.display()
     else:
