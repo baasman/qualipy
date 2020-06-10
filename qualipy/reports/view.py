@@ -59,20 +59,40 @@ class BaseJinjaView(object):
         self,
         project_data,
         anomaly_data,
-        severity_level=None,
+        num_severity_level=None,
+        cat_severity_level=None,
         t1=None,
         t2=None,
         only_show_anomaly=False,
         key_columns=None,
     ):
-        if severity_level is not None:
-            anomaly_data = anomaly_data[
-                (anomaly_data.severity.isnull())
-                | (
+        anomaly_data["keep"] = np.where(anomaly_data.type == "boolean", True, False)
+        if num_severity_level is not None:
+            anomaly_data.keep = np.where(
+                (
                     (anomaly_data.severity.notnull())
-                    & (anomaly_data.severity.astype(float).abs() > severity_level)
-                )
-            ]
+                    & (
+                        (anomaly_data.type == "numerical")
+                        | (anomaly_data.metric == "perc_missing")
+                        | (anomaly_data["column_name"].isin(["rows", "columns"]))
+                    )
+                    & (anomaly_data.severity.astype(float).abs() > num_severity_level)
+                ),
+                True,
+                anomaly_data.keep,
+            )
+
+        if cat_severity_level is not None:
+            anomaly_data.keep = np.where(
+                (
+                    (anomaly_data.severity.notnull())
+                    & ((anomaly_data.type == "categorical"))
+                    & (anomaly_data.severity.astype(float).abs() > cat_severity_level)
+                ),
+                True,
+                anomaly_data.keep,
+            )
+        anomaly_data = anomaly_data[anomaly_data.keep == True].drop("keep", axis=1)
 
         if t1 is not None and t2 is not None and anomaly_data.shape[0] > 0:
             t1 = pd.to_datetime(t1)
@@ -150,8 +170,19 @@ class AnomalyReport(BaseJinjaView):
                 retrain_anomaly=retrain_anomaly,
             )
 
-        self.project_data = get_project_data(self.project, timezone=time_zone)
+        self.project_data = get_project_data(
+            self.project,
+            timezone=time_zone,
+            latest_insert_only=True,
+            floor_datetime=True,
+        )
         self.anomaly_data = get_anomaly_data(self.project, timezone=time_zone)
+        # limitation - type not part of anomaly table
+        self.anomaly_data = self.anomaly_data.merge(
+            self.project_data[["metric_id", "type"]].drop_duplicates(),
+            on="metric_id",
+            how="left",
+        )
         if self.project_data.shape[0] == 0:
             raise Exception(f"No data found for project {project_name}")
 
@@ -161,13 +192,15 @@ class AnomalyReport(BaseJinjaView):
         self.t1 = t1
         self.t2 = t2
         self.only_show_anomaly = only_show_anomaly
-        self.severity_level = self.project_specific_config.get("severity_level")
+        self.num_severity_level = self.project_specific_config.get("NUM_SEVERITY_LEVEL")
+        self.cat_severity_level = self.project_specific_config.get("CAT_SEVERITY_LEVEL")
 
         self.full_backup_data = self.project_data.copy()
         self.project_data, self.anomaly_data = self._subset_data(
             project_data=self.project_data,
             anomaly_data=self.anomaly_data,
-            severity_level=self.severity_level,
+            num_severity_level=self.num_severity_level,
+            cat_severity_level=self.cat_severity_level,
             t1=self.t1,
             t2=self.t2,
             only_show_anomaly=self.only_show_anomaly,
@@ -232,8 +265,11 @@ class AnomalyReport(BaseJinjaView):
     def _create_missing_plot(self):
         plots = []
         missing_data = self.project_data[self.project_data["metric"] == "perc_missing"]
-        chart = missing_by_column_bar_altair(missing_data, show_notebook=False)
-        plots.append(jinja2.Markup(chart.to_json()))
+        if missing_data.shape[0] > 0:
+            chart = missing_by_column_bar_altair(missing_data, show_notebook=False)
+            plots.append(jinja2.Markup(chart.to_json()))
+            perc_missing_plots = self._create_trend_lines(only_missing=True)
+            plots.extend(perc_missing_plots)
         return plots
 
     def _create_row_counts_plot(self):
@@ -249,11 +285,12 @@ class AnomalyReport(BaseJinjaView):
         plots.append(jinja2.Markup(chart.to_json()))
         return plots
 
-    def _create_trend_lines(self):
-        num_data = self.project_data[
-            (self.project_data.type == "numerical")
-            | (self.project_data.metric == "perc_missing")
-        ]
+    def _create_trend_lines(self, only_missing=False):
+        if only_missing:
+            num_data = self.project_data[(self.project_data.metric == "perc_missing")]
+        else:
+            num_data = self.project_data[(self.project_data.type == "numerical")]
+
         num_data = get_latest_insert_only(num_data)
         plots = []
         if num_data.shape[0] > 0:

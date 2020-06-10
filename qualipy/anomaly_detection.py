@@ -1,5 +1,5 @@
 from qualipy.project import Project
-from qualipy.util import set_value_type
+from qualipy.util import set_value_type, set_metric_id
 
 from sklearn.ensemble import IsolationForest
 from scipy.stats import zscore
@@ -35,47 +35,90 @@ anomaly_columns = [
 ]
 
 
-def create_file_name(model_dir, project_name, col_name, metric_name, arguments):
-    file_name = os.path.join(
-        model_dir, f"{project_name}_{col_name}_{metric_name}_{arguments}.mod"
-    )
+def create_file_name(model_dir, metric_id):
+    file_name = os.path.join(model_dir, f"{metric_id}.mod")
     return file_name
 
 
 class ProphetModel(object):
-    def __init__(self, kwargs):
+    def __init__(self, metric_name, kwargs):
+        self.check_for_std = kwargs.pop("check_for_std", False)
+        self.importance_level = kwargs.pop("importance_level", 0)
+        self.distance_from_bound = kwargs.pop("distance_from_bound", 0)
+        _model_specific_conf = kwargs.pop("metric_specific_conf", {})
+        self.model_specific_conf = _model_specific_conf.get(metric_name, {})
+
+        self.importance_level = self.model_specific_conf.get(
+            "importance_level", self.importance_level
+        )
+        self.distance_from_bound = self.model_specific_conf.get(
+            "distance_from_bound", self.distance_from_bound
+        )
+
         self.model = Prophet(**kwargs)
 
     def fit(self, train_data):
         train_data = train_data[["date", "value"]].rename(
             columns={"date": "ds", "value": "y"}
         )
+        train_data.ds = train_data.ds.dt.tz_localize(None)
         self.model.fit(train_data)
 
     def predict(self, test_data, check_for_std=False, multivariate=False):
         test_data = test_data[["date", "value"]].rename(
             columns={"date": "ds", "value": "y"}
         )
+        test_data.ds = test_data.ds.dt.tz_localize(None)
         predicted = self.model.predict(test_data)
         predicted = predicted.set_index(test_data.index)
         predicted["y"] = test_data["y"]
 
-        predicted.loc[predicted.y > predicted.yhat, "importance"] = (
+        predicted["outlier"] = 1
+        predicted["outlier"] = np.where(predicted.y < predicted.yhat_lower, -1, 1)
+        predicted["outlier"] = np.where(predicted.y > predicted.yhat_upper, -1, 1)
+
+        predicted["importance"] = np.NaN
+        predicted.loc[predicted.outlier == 1, "importance"] = (
             predicted.y - predicted.yhat_upper
-        ) / predicted.y
-        predicted.loc[predicted.y < predicted.yhat, "importance"] = (
+        ) / (predicted.yhat_upper - predicted.yhat_lower)
+        predicted.loc[predicted.outlier == -1, "importance"] = (
             predicted.yhat_lower - predicted.y
-        ) / predicted.y
-        predicted["outlier"] = np.where(
-            (
-                (predicted.y > predicted.yhat_upper)
-                | (predicted.y < predicted.yhat_lower)
-            )
-            & (predicted.importance > 0.1),
-            -1,
-            1,
+        ) / (predicted.yhat_upper - predicted.yhat_lower)
+        predicted.importance = predicted.importance.abs()
+        predicted["score"] = (predicted["y"] - predicted["yhat_upper"]) * (
+            predicted["y"] >= predicted["yhat"]
+        ) + (predicted["yhat_lower"] - predicted["y"]) * (
+            predicted["y"] < predicted["yhat"]
         )
-        return predicted.outlier
+        predicted["standardized_score"] = (
+            (predicted.score - predicted.score.mean()) / predicted.score.std()
+        ).abs()
+        if self.check_for_std:
+            std = test_data.y.std(ddof=0)
+            mean = test_data.y.mean()
+            zscores = (test_data.y - mean) / std
+            std_outliers = (zscores < -3) | (zscores > 3)
+            predicted["zscore_outlier"] = std_outliers
+            predicted["zscore"] = zscores
+            predicted["outlier"] = np.where(
+                (predicted.outlier == -1)
+                & (predicted.standardized_score > self.distance_from_bound)
+                & (predicted.importance > self.importance_level)
+                & ((predicted.y < 3) | (predicted.y > 3)),
+                -1,
+                1,
+            )
+        else:
+            predicted["outlier"] = np.where(
+                (predicted.outlier == -1)
+                & (predicted.standardized_score > self.distance_from_bound)
+                & (predicted.importance > self.importance_level),
+                -1,
+                1,
+            )
+            if predicted[predicted.outlier == -1].shape[0] > 0:
+                print(predicted.head())
+        return predicted.outlier.values, predicted.importance.values
 
     def train_predict(self, train_data):
         train_data = train_data[["date", "value"]].rename(
@@ -93,7 +136,7 @@ class ProphetModel(object):
 
 
 class IsolationForestModel(object):
-    def __init__(self, kwargs):
+    def __init__(self, metric_name, kwargs):
         defaults = {"contamination": 0.05}
         kwargs = {**kwargs, **defaults}
         self.model = IsolationForest(**kwargs)
@@ -129,7 +172,7 @@ class IsolationForestModel(object):
 
 
 class STDCheck(object):
-    def __init__(self, kwargs):
+    def __init__(self, metric_name, kwargs):
         defaults = {"std": 4}
         kwargs = {**defaults, **kwargs}
         for k, v in kwargs.items():
@@ -177,14 +220,17 @@ class AnomalyModel(object):
         "std": STDCheck,
     }
 
-    def __init__(self, config_loc, model=None, arguments=None):
+    def __init__(
+        self, config_loc, metric_name, project_name=None, model=None, arguments=None,
+    ):
         with open(os.path.join(config_loc, "config.json"), "r") as c:
             config = json.load(c)
 
+        self.metric_name = metric_name
         if model is None and arguments is None:
-            model = config.get("ANOMALY_MODEL", "std")
-            arguments = config.get("ANOMALY_ARGS", {})
-        self.anom_model = self.mods[model](arguments)
+            model = config[project_name].get("ANOMALY_MODEL", "std")
+            arguments = config[project_name].get("ANOMALY_ARGS", {})
+        self.anom_model = self.mods[model](self.metric_name, arguments)
         self.model_dir = os.path.join(config_loc, "models")
         if not os.path.isdir(self.model_dir):
             os.mkdir(self.model_dir)
@@ -200,10 +246,8 @@ class AnomalyModel(object):
     def train_predict(self, train_data, **kwargs):
         return self.anom_model.train_predict(train_data, **kwargs)
 
-    def save(self, project_name, col_name, metric_name, arguments=None):
-        file_name = create_file_name(
-            self.model_dir, project_name, col_name, metric_name, arguments
-        )
+    def save(self):
+        file_name = create_file_name(self.model_dir, self.metric_name)
         joblib.dump(self.anom_model, file_name)
 
 
@@ -211,10 +255,8 @@ class LoadedModel(object):
     def __init__(self, config_loc):
         self.model_dir = os.path.join(config_loc, "models")
 
-    def load(self, project_name, col_name, metric_name, arguments=None):
-        file_name = create_file_name(
-            self.model_dir, project_name, col_name, metric_name, arguments
-        )
+    def load(self, metric_id):
+        file_name = create_file_name(self.model_dir, metric_id)
         self.anom_model = joblib.load(file_name)
 
     def predict(self, test_data, check_for_std=False, multivariate=False):
@@ -229,13 +271,16 @@ class LoadedModel(object):
 class GenerateAnomalies(object):
     def __init__(self, project_name, engine, config_dir=default_config_path):
         self.config_dir = config_dir
+        self.project_name = project_name
         self.project = Project(project_name, config_dir=config_dir)
         df = self.project.get_project_table()
+        df["floored_datetime"] = df.date.dt.floor("T")
         df = (
-            df.groupby("date", as_index=False)
+            df.groupby("floored_datetime", as_index=False)
             .apply(lambda g: g[g.insert_time == g.insert_time.max()])
             .reset_index(drop=True)
         )
+        df = df.drop("floored_datetime", axis=1)
         df.column_name = df.column_name + "_" + df.run_name
         df["metric_name"] = (
             df.column_name
@@ -244,20 +289,21 @@ class GenerateAnomalies(object):
             + "_"
             + np.where(df.arguments.isnull(), "", df.arguments)
         )
+        df = set_metric_id(df)
+        df = df.sort_values("date")
+        df = df[df.column_name.str.contains('vaso')]
         self.df = df
 
     def _num_train_and_save(self, data, all_rows, metric_name):
         try:
-            mod = AnomalyModel(config_loc=self.config_dir)
-            # mod.train(data.value.values.reshape((-1, 1)))
-            mod.train(data)
-            mod.save(
-                self.project.project_name,
-                data.column_name.values[0],
-                data.metric.values[0],
-                data.arguments.values[0],
+            metric_id = data.metric_id.iloc[0]
+            mod = AnomalyModel(
+                config_loc=self.config_dir,
+                metric_name=metric_id,
+                project_name=self.project_name,
             )
-            # preds = mod.predict(data.value.values.reshape((-1, 1)))
+            mod.train(data)
+            mod.save()
             preds = mod.predict(data, multivariate=False, check_for_std=True)
             if isinstance(preds, tuple):
                 severity = preds[1]
@@ -275,12 +321,7 @@ class GenerateAnomalies(object):
 
     def _num_from_loaded_model(self, data, all_rows):
         mod = LoadedModel(config_loc=self.config_dir)
-        mod.load(
-            self.project.project_name,
-            data.column_name.values[0],
-            data.metric.values[0],
-            data.arguments.values[0],
-        )
+        mod.load(data.metric_id.iloc[0])
         preds = mod.predict(data, check_for_std=True)
         if isinstance(preds, tuple):
             reasons = preds[1]
@@ -344,6 +385,8 @@ class GenerateAnomalies(object):
                 potential_lines = sorted(
                     potential_lines, key=lambda v: v[2], reverse=True
                 )
+                diffs_df = pd.DataFrame({i[0]: i[1] for i in potential_lines})
+                diffs_df["sum_of_changes"] = diffs_df.abs().sum(axis=1)
                 all_non_diff_lines = pd.DataFrame({i[0]: i[1] for i in non_diff_lines})
 
                 for col in all_non_diff_lines.columns:
@@ -370,14 +413,19 @@ class GenerateAnomalies(object):
 
                 mod = AnomalyModel(
                     config_loc=self.config_dir,
+                    metric_name=data.metric_id.iloc[0],
                     model="IsolationForest",
                     arguments={"contamination": 0.01, "n_estimators": 50,},
                 )
                 outliers = mod.train_predict(
                     all_non_diff_lines, check_for_std=False, multivariate=True
                 )
-                outlier_rows = data[(outliers == -1) & (std_sums.values > 0)]
-                # outlier_rows = data[(std_sums.values > 0)]
+                all_non_diff_lines["iso_outlier"] = outliers
+                data["severity"] = diffs_df.sum_of_changes.values
+                sample_size = data.value.apply(lambda v: sum(v.values()))
+                outlier_rows = data[
+                    (outliers == -1) & (std_sums.values > 0) & (sample_size > 10)
+                ]
                 if outlier_rows.shape[0] > 0:
                     all_rows.append(outlier_rows)
             except ValueError:
@@ -385,7 +433,7 @@ class GenerateAnomalies(object):
 
         try:
             data = pd.concat(all_rows).sort_values("date", ascending=False)
-            data["severity"] = np.NaN
+            # data["severity"] = np.NaN
             data = data[anomaly_columns]
             data.value = data.value.astype(str)
         except:
@@ -409,44 +457,17 @@ class GenerateAnomalies(object):
 def anomaly_data_project(project_name, db_url, config_dir, retrain):
     engine = create_engine(db_url)
     generator = GenerateAnomalies(project_name, engine, config_dir)
-    try:
-        boolean_checks = generator.create_error_check_table()
-        cat_anomalies = generator.create_anom_cat_table(retrain)
-        num_anomalies = generator.create_anom_num_table(retrain)
-        anomalies = pd.concat(
-            [num_anomalies, cat_anomalies, boolean_checks]
-        ).sort_values("date", ascending=False)
-    except ValueError:
-        anomalies = pd.DataFrame(
-            [],
-            columns=[
-                "column_name",
-                "date",
-                "metric",
-                "arguments",
-                "value",
-                "batch_name",
-            ],
-        )
+    boolean_checks = generator.create_error_check_table()
+    cat_anomalies = generator.create_anom_cat_table(retrain)
+    num_anomalies = generator.create_anom_num_table(retrain)
+    anomalies = pd.concat([num_anomalies, cat_anomalies, boolean_checks]).sort_values(
+        "date", ascending=False
+    )
+    anomalies["project"] = project_name
+    anomalies = anomalies[
+        ["project"] + [col for col in anomalies.columns if col != "project"]
+    ]
     return anomalies
-
-
-# TODO: why is db url a input when its already part of the config dir
-def anomaly_data_all_projects(project_names, db_url, config_dir, retrain=False):
-    data = []
-    if isinstance(project_names, str):
-        project_names = [project_names]
-    for project in project_names:
-        adata = anomaly_data_project(project, db_url, config_dir, retrain)
-        adata["project"] = project
-        adata = adata[["project"] + [col for col in adata.columns if col != "project"]]
-        data.append(adata)
-    if len(project_names) == 0:
-        data = pd.DataFrame([], columns=anomaly_columns)
-    else:
-        data = pd.concat(data)
-    data = data.sort_values("date")
-    return data
 
 
 def write_anomaly(conn, data, project_name, clear=False, schema=None):
@@ -471,11 +492,12 @@ def write_anomaly(conn, data, project_name, clear=False, schema=None):
 def _run_anomaly(backend, project_name, config_dir, retrain):
     with open(os.path.join(config_dir, "config.json"), "r") as file:
         loaded_config = json.load(file)
-    qualipy_db = loaded_config.get(
-        "QUALIPY_DB", f"sqlite:///{os.path.join(config_dir, 'qualipy.db')}"
-    )
-    anom_data = anomaly_data_all_projects(
-        project_name, qualipy_db, config_dir, retrain=retrain
+    qualipy_db = loaded_config["QUALIPY_DB"]
+    anom_data = anomaly_data_project(
+        project_name=project_name,
+        db_url=qualipy_db,
+        config_dir=config_dir,
+        retrain=retrain,
     )
     engine = create_engine(qualipy_db)
     db_schema = loaded_config.get("SCHEMA")

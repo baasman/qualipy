@@ -22,6 +22,17 @@ def get_column(data: pd.DataFrame, name: str) -> pd.Series:
 HOME = os.path.expanduser("~")
 
 
+def set_metric_id(data):
+    data["metric_id"] = (
+        data.column_name
+        + "_"
+        + data.metric.astype(str)
+        + "_"
+        + np.where(data.arguments.isnull(), "", data.arguments)
+    )
+    return data
+
+
 def set_value_type(data: pd.DataFrame) -> pd.DataFrame:
     type = data.return_format.values[0]
     if type == "bool":
@@ -48,8 +59,8 @@ def copy_function_spec(function: Union[Dict[str, Any], Callable]):
         copied_function = copy_func(function["function"])
         copied_function.arguments = function.get("parameters", {})
         copied_function.key_function = function.get("key", False)
-        copied_function.valid_min_range = function.get('valid_min')
-        copied_function.valid_max_range = function.get('valid_max')
+        copied_function.valid_min_range = function.get("valid_min")
+        copied_function.valid_max_range = function.get("valid_max")
     else:
         copied_function = copy_func(function)
         copied_function.arguments = {}
@@ -62,15 +73,22 @@ def import_function_by_name(name: str, backend: str) -> Callable:
     return getattr(module, name)
 
 
-def get_latest_insert_only(data):
-    return (
-        data.groupby("batch_name", as_index=False)
+def get_latest_insert_only(data, floor_datetime=False):
+    group_name = "batch_name"
+    if floor_datetime:
+        data["floored_datetime"] = data.date.dt.floor("T")
+        group_name = "floored_datetime"
+    data = (
+        data.groupby(group_name, as_index=False)
         .apply(lambda g: g[g.insert_time == g.insert_time.max()])
         .reset_index(drop=True)
     )
+    if "floored_datetime" in data.columns:
+        data = data.drop("floored_datetime", axis=1)
+    return data
 
 
-def get_project_data(project, timezone, latest_insert_only=False):
+def get_project_data(project, timezone, latest_insert_only=False, floor_datetime=False):
     timezone = "UTC" if timezone is None else timezone
     data = project.get_project_table()
     try:
@@ -84,15 +102,9 @@ def get_project_data(project, timezone, latest_insert_only=False):
         data.batch_name == "from_chunked", data.date.astype(str), data.batch_name
     )
     data = data.sort_values("batch_name")
-    data["metric_id"] = (
-        data.column_name
-        + "_"
-        + data.metric.astype(str)
-        + "_"
-        + np.where(data.arguments.isnull(), "", data.arguments)
-    )
+    data = set_metric_id(data)
     if latest_insert_only:
-        data = get_latest_insert_only(data)
+        data = get_latest_insert_only(data, floor_datetime=floor_datetime)
     return data
 
 
@@ -108,11 +120,5 @@ def get_anomaly_data(project, timezone=None):
         data.batch_name == "from_chunked", data.date.astype(str), data.batch_name
     )
     data = data.sort_values("batch_name")
-    data["metric_id"] = (
-        data.column_name
-        + "_"
-        + data.metric.astype(str)
-        + "_"
-        + np.where(data.arguments.isnull(), "", data.arguments)
-    )
+    data = set_metric_id(data)
     return data

@@ -115,6 +115,7 @@ def produce_anomaly_report(
         project_name=project_name,
         run_anomaly=run_anomaly,
         retrain_anomaly=clear_anomaly,
+        only_show_anomaly=only_show_anomaly,
         t1=t1,
         t2=t2,
     )
@@ -153,4 +154,4 @@ if __name__ == "__main__":
 
     sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
 
-    produce_comparison_report(sys.argv[1:])
+    produce_anomaly_report(sys.argv[1:])

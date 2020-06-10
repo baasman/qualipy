@@ -5,7 +5,7 @@
     {% import 'util.j2' as util %}
 
     <h2>{{ project_name }}</h2>
-    <h3> Anomalies </h3>
+    <h3> Anomalies and Failed Checks </h3>
     {{ util.plot_table(anomaly_table, project_name) }}
 
     <h3>Result Set Size</h3>
