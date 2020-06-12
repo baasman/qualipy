@@ -1,9 +1,8 @@
 import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
-from qualipy.anomaly_detection import (
+from qualipy.anomaly.models import (
     LoadedModel,
-    anomaly_data_all_projects,
     AnomalyModel,
 )
 from qualipy.util import set_value_type
@@ -185,7 +184,9 @@ def missing_by_column_bar_altair(data, schema=None, show_notebook=True):
     data = set_value_type(data)
     data = data.sort_values("value", ascending=False)
     mean_missing = data.groupby("column_name").value.mean().reset_index()
-    base = alt.Chart(mean_missing).properties(title="Mean Percentage Missing", width=800)
+    base = alt.Chart(mean_missing).properties(
+        title="Mean Percentage Missing", width=800
+    )
     bars = base.mark_bar().encode(
         y=alt.Y("column_name:N"), x=alt.X("value:Q", scale=alt.Scale(domain=[0, 1]))
     )
@@ -222,7 +223,7 @@ def row_count_view_altair(
             data = data[data.column_name.isin(columns_with_anoms)]
 
     all_lines = []
-    for idx, (name, df) in enumerate(data.groupby("column_name")):
+    for _, (name, df) in enumerate(data.groupby("column_name")):
         line = (
             alt.Chart(df)
             .mark_line()

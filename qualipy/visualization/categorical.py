@@ -1,7 +1,6 @@
 import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
-from qualipy.anomaly_detection import AnomalyModel
 from functools import reduce
 from collections import Counter
 from plotly.subplots import make_subplots

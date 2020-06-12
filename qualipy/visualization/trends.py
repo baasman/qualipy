@@ -6,9 +6,8 @@ from collections import Counter
 import warnings
 
 import qualipy
-from qualipy.anomaly_detection import (
+from qualipy.anomaly.models import (
     LoadedModel,
-    anomaly_data_all_projects,
     AnomalyModel,
 )
 from qualipy.util import set_value_type

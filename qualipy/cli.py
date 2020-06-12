@@ -1,22 +1,21 @@
-import click
-from sqlalchemy import create_engine
-from qualipy.anomaly_detection import _run_anomaly
-from qualipy.web.deploy import FlaskDeploy, GUnicornDeploy
-from qualipy.web._config import _Config
-from qualipy.anomaly_detection import anomaly_data_all_projects
-from qualipy.backends.pandas_backend.generator import BackendPandas
-from qualipy.project import create_qualipy_folder, Project
-from qualipy.reports.view import AnomalyReport, ComparisonReport
-
 import os
 import json
+
+import click
+from qualipy.anomaly.anomaly import _run_anomaly
+from qualipy.web.deploy import FlaskDeploy, GUnicornDeploy
+from qualipy.web._config import _Config
+from qualipy.backends.pandas_backend.generator import BackendPandas
+from qualipy.project import create_qualipy_folder, Project
+from qualipy.reports.anomaly import AnomalyReport
+from qualipy.reports.comparison import ComparisonReport
 
 
 HOME = os.path.expanduser("~")
 
 DEPLOYMENT_OPTIONS = {"flask": FlaskDeploy, "gunicorn": GUnicornDeploy}
 
-backend = BackendPandas
+BACKEND = BackendPandas
 
 
 @click.group()
@@ -75,7 +74,7 @@ def run(port, host, config_dir, train_anomaly, engine):
 @click.option("--config_dir", default=None)
 @click.option("--retrain", default=False, type=bool)
 def run_anomaly(project_name, config_dir, retrain):
-    _run_anomaly(backend, project_name, config_dir, retrain)
+    _run_anomaly(BACKEND, project_name, config_dir, retrain)
 
 
 @qualipy.command()
@@ -88,7 +87,7 @@ def schedule_anomaly(config_dir, retrain):
     scheduler_conf = config["ANOMALY_SCHEDULER"]
     project_names = scheduler_conf["PROJECTS"]
     for project_name in project_names:
-        _run_anomaly(backend, project_name, config_dir, retrain)
+        _run_anomaly(BACKEND, project_name, config_dir, retrain)
 
 
 @qualipy.command()
@@ -130,15 +129,11 @@ def produce_anomaly_report(
 @qualipy.command()
 @click.option("--config_dir", default=None)
 @click.option("--comparison_name", default=None, type=str)
-@click.option("--t1", default=None, type=str)
-@click.option("--t2", default=None, type=str)
 @click.option("--out_file", default=None, type=str)
 def produce_comparison_report(
-    config_dir, comparison_name, t1, t2, out_file,
+    config_dir, comparison_name, out_file,
 ):
-    view = ComparisonReport(
-        config_dir=config_dir, comparison_name=comparison_name, t1=t1, t2=t2,
-    )
+    view = ComparisonReport(config_dir=config_dir, comparison_name=comparison_name,)
     rendered_page = view.render(
         template=f"comparison.j2",
         title="Comparison Report",
@@ -150,8 +145,10 @@ def produce_comparison_report(
 
 
 if __name__ == "__main__":
+    # I do the following the debug cli commands, ignore
+
     import sys
 
     sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
 
-    produce_anomaly_report(sys.argv[1:])
+    produce_anomaly_report(sys.argv[1:])  # pylint: disable=no-value-for-parameter

@@ -1,9 +1,9 @@
-import pandas as pd
-from sqlalchemy import engine
-
 from typing import Callable
 import pickle
 import datetime
+
+import pandas as pd
+from sqlalchemy import engine
 
 
 def create_table(conn: engine.base.Connection, table_name: str) -> None:
