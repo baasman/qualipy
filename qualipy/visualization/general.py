@@ -1,10 +1,6 @@
 import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
-from qualipy.anomaly.models import (
-    LoadedModel,
-    AnomalyModel,
-)
 from qualipy.util import set_value_type
 from functools import reduce
 from collections import Counter

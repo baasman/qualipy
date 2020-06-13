@@ -7,10 +7,8 @@ from sqlalchemy import create_engine
 from qualipy.anomaly.generate import GenerateAnomalies
 
 
-
-def anomaly_data_project(project_name, db_url, config_dir, retrain):
-    engine = create_engine(db_url)
-    generator = GenerateAnomalies(project_name, engine, config_dir)
+def anomaly_data_project(project_name, config_dir, retrain):
+    generator = GenerateAnomalies(project_name, config_dir)
     boolean_checks = generator.create_error_check_table()
     cat_anomalies = generator.create_anom_cat_table(retrain)
     num_anomalies = generator.create_anom_num_table(retrain)
@@ -48,10 +46,7 @@ def _run_anomaly(backend, project_name, config_dir, retrain):
         loaded_config = json.load(file)
     qualipy_db = loaded_config["QUALIPY_DB"]
     anom_data = anomaly_data_project(
-        project_name=project_name,
-        db_url=qualipy_db,
-        config_dir=config_dir,
-        retrain=retrain,
+        project_name=project_name, config_dir=config_dir, retrain=retrain,
     )
     engine = create_engine(qualipy_db)
     db_schema = loaded_config.get("SCHEMA")

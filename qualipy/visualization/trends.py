@@ -6,10 +6,6 @@ from collections import Counter
 import warnings
 
 import qualipy
-from qualipy.anomaly.models import (
-    LoadedModel,
-    AnomalyModel,
-)
 from qualipy.util import set_value_type
 from plotly.subplots import make_subplots
 

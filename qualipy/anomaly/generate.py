@@ -1,5 +1,7 @@
 import warnings
 from functools import reduce
+import os
+import json
 
 import numpy as np
 import pandas as pd
@@ -7,7 +9,10 @@ from tqdm import tqdm
 
 from qualipy.project import Project
 from qualipy.util import set_value_type, set_metric_id
-from qualipy.anomaly.models import AnomalyModel, LoadedModel
+from qualipy.anomaly._isolation_forest import IsolationForestModel
+from qualipy.anomaly._prophet import ProphetModel
+from qualipy.anomaly._std import STDCheck
+from qualipy.anomaly.base import LoadedModel
 
 
 anomaly_columns = [
@@ -22,10 +27,21 @@ anomaly_columns = [
     "insert_time",
 ]
 
+MODS = {
+    "IsolationForest": IsolationForestModel,
+    "prophet": ProphetModel,
+    "std": STDCheck,
+}
 
-class GenerateAnomalies(object):
-    def __init__(self, project_name, engine, config_dir):
+
+class GenerateAnomalies:
+    def __init__(self, project_name, config_dir):
         self.config_dir = config_dir
+
+        with open(os.path.join(config_dir, "config.json"), "r") as conf_file:
+            config = json.load(conf_file)
+
+        self.model_type = config[project_name].get("ANOMALY_MODEL", "std")
         self.project_name = project_name
         self.project = Project(project_name, config_dir=config_dir)
         df = self.project.get_project_table()
@@ -51,12 +67,12 @@ class GenerateAnomalies(object):
     def _num_train_and_save(self, data, all_rows, metric_name):
         try:
             metric_id = data.metric_id.iloc[0]
-            mod = AnomalyModel(
-                config_loc=self.config_dir,
+            mod = MODS[self.model_type](
+                config_dir=self.config_dir,
                 metric_name=metric_id,
                 project_name=self.project_name,
             )
-            mod.train(data)
+            mod.fit(data)
             mod.save()
             preds = mod.predict(data)
             if isinstance(preds, tuple):
@@ -69,12 +85,13 @@ class GenerateAnomalies(object):
                 outlier_rows["severity"] = np.NaN
             if outlier_rows.shape[0] > 0:
                 all_rows.append(outlier_rows)
-        except:
+        except Exception as e:
+            print(str(e))
             warnings.warn(f"Unable to create anomaly model for {metric_name}")
         return all_rows
 
     def _num_from_loaded_model(self, data, all_rows):
-        mod = LoadedModel(config_loc=self.config_dir)
+        mod = LoadedModel(config_dir=self.config_dir)
         mod.load(data.metric_id.iloc[0])
         preds = mod.predict(data)
         if isinstance(preds, tuple):
@@ -169,10 +186,9 @@ class GenerateAnomalies(object):
                     ]
                 ].sum(axis=1)
 
-                mod = AnomalyModel(
-                    config_loc=self.config_dir,
+                mod = IsolationForestModel(
+                    config_dir=self.config_dir,
                     metric_name=metric_id,
-                    model="IsolationForest",
                     arguments={
                         "contamination": 0.01,
                         "n_estimators": 50,
@@ -180,7 +196,6 @@ class GenerateAnomalies(object):
                         "check_for_std": True,
                     },
                 )
-                # make sure this is still doing multivariate
                 outliers = mod.train_predict(all_non_diff_lines)
                 all_non_diff_lines["iso_outlier"] = outliers
                 data["severity"] = diffs_df.sum_of_changes.values

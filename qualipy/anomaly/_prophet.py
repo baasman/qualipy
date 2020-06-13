@@ -8,12 +8,17 @@ from qualipy.anomaly.base import AnomalyModelImplementation
 
 
 class ProphetModel(AnomalyModelImplementation):
-    def __init__(self, metric_name, kwargs):
-        self.check_for_std = kwargs.pop("check_for_std", False)
-        self.importance_level = kwargs.pop("importance_level", 0)
-        self.distance_from_bound = kwargs.pop("distance_from_bound", 0)
-        _model_specific_conf = kwargs.pop("metric_specific_conf", {})
-        self.model_specific_conf = _model_specific_conf.get(metric_name, {})
+    def __init__(
+        self, config_dir, metric_name, project_name=None, arguments=None
+    ):
+        super(ProphetModel, self).__init__(
+            config_dir, metric_name, project_name, arguments
+        )
+        self.check_for_std = self.arguments.pop("check_for_std", False)
+        self.importance_level = self.arguments.pop("importance_level", 0)
+        self.distance_from_bound = self.arguments.pop("distance_from_bound", 0)
+        _model_specific_conf = self.arguments.pop("metric_specific_conf", {})
+        self.model_specific_conf = _model_specific_conf.get(self.metric_name, {})
 
         self.importance_level = self.model_specific_conf.get(
             "importance_level", self.importance_level
@@ -22,7 +27,7 @@ class ProphetModel(AnomalyModelImplementation):
             "distance_from_bound", self.distance_from_bound
         )
 
-        self.model = Prophet(**kwargs)
+        self.model = Prophet(**self.arguments)
 
     def fit(self, train_data):
         train_data = train_data[["date", "value"]].rename(

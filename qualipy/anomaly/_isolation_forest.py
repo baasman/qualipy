@@ -1,5 +1,4 @@
 from sklearn.ensemble import IsolationForest
-from scipy.stats import zscore
 import pandas as pd
 import numpy as np
 
@@ -7,12 +6,15 @@ from qualipy.anomaly.base import AnomalyModelImplementation
 
 
 class IsolationForestModel(AnomalyModelImplementation):
-    def __init__(self, metric_name, kwargs):
-        self.multivariate = kwargs.pop("multivariate", True)
-        self.check_for_std = kwargs.pop("check_for_std", True)
+    def __init__(self, config_dir, metric_name, project_name=None, arguments=None):
+        super(IsolationForestModel, self).__init__(
+            config_dir, metric_name, project_name, arguments
+        )
+        self.multivariate = self.arguments.pop("multivariate", True)
+        self.check_for_std = self.arguments.pop("check_for_std", True)
         defaults = {"contamination": 0.05}
-        kwargs = {**kwargs, **defaults}
-        self.model = IsolationForest(**kwargs)
+        self.arguments = {**self.arguments, **defaults}
+        self.model = IsolationForest(**self.arguments)
 
     def fit(self, train_data):
         self.model.fit(train_data.value.values.reshape((-1, 1)))
@@ -35,10 +37,10 @@ class IsolationForestModel(AnomalyModelImplementation):
             ]
         return np.array(preds)
 
-    def train_predict(self, train_data, **kwargs):
+    def train_predict(self, train_data):
         if isinstance(train_data, pd.DataFrame):
             self.model.fit(train_data)
-            return self.predict(train_data, **kwargs)
+            return self.predict(train_data)
         else:
             self.model.fit(train_data.value.values.reshape((-1, 1)))
             return self.predict(train_data.value.values.reshape((-1, 1)))
