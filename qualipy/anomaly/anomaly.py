@@ -1,10 +1,11 @@
-from sqlalchemy import create_engine
-from qualipy.anomaly.generate import GenerateAnomalies
+import json
+import os
 
 import pandas as pd
 
-import json
-import os
+from sqlalchemy import create_engine
+from qualipy.anomaly.generate import GenerateAnomalies
+
 
 
 def anomaly_data_project(project_name, db_url, config_dir, retrain):

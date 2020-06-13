@@ -25,7 +25,6 @@ from qualipy.visualization.general import (
 )
 
 
-
 class AnomalyReport(BaseJinjaView):
     def __init__(
         self,

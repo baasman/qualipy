@@ -11,7 +11,7 @@ import pandas as pd
 from qualipy.anomaly.anomaly import _run_anomaly
 
 
-class BaseJinjaView():
+class BaseJinjaView:
     def __init__(self, custom_styles_directory):
         self.custom_styles_directory = custom_styles_directory
 
@@ -93,6 +93,7 @@ class BaseJinjaView():
         )
 
     def _get_template(self, template=None):
+        # TODO: FIX THIS
         templates_loader = FileSystemLoader(
             searchpath="/home/baasman/Qualipy/qualipy/reports/templates"
         )

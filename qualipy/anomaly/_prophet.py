@@ -4,8 +4,10 @@ except ImportError:
     print("fbprophet not installed. Can not be used for anomaly training")
 import numpy as np
 
+from qualipy.anomaly.base import AnomalyModelImplementation
 
-class ProphetModel(object):
+
+class ProphetModel(AnomalyModelImplementation):
     def __init__(self, metric_name, kwargs):
         self.check_for_std = kwargs.pop("check_for_std", False)
         self.importance_level = kwargs.pop("importance_level", 0)
@@ -29,7 +31,7 @@ class ProphetModel(object):
         train_data.ds = train_data.ds.dt.tz_localize(None)
         self.model.fit(train_data)
 
-    def predict(self, test_data, check_for_std=False, multivariate=False):
+    def predict(self, test_data):
         test_data = test_data[["date", "value"]].rename(
             columns={"date": "ds", "value": "y"}
         )

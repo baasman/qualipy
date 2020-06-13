@@ -1,11 +1,11 @@
-from qualipy.anomaly._isolation_forest import IsolationForestModel
-from qualipy.anomaly._prophet import ProphetModel
-from qualipy.anomaly._std import STDCheck
+import json
+import os
 
 import joblib
 
-import json
-import os
+from qualipy.anomaly._isolation_forest import IsolationForestModel
+from qualipy.anomaly._prophet import ProphetModel
+from qualipy.anomaly._std import STDCheck
 
 
 def create_file_name(model_dir, metric_id):
@@ -13,25 +13,27 @@ def create_file_name(model_dir, metric_id):
     return file_name
 
 
-class AnomalyModel(object):
+# All available anomaly models
+MODS = {
+    "IsolationForest": IsolationForestModel,
+    "prophet": ProphetModel,
+    "std": STDCheck,
+}
 
-    mods = {
-        "IsolationForest": IsolationForestModel,
-        "prophet": ProphetModel,
-        "std": STDCheck,
-    }
-
+# TODO: these methods should really just be part of the base class
+# no need for this class at all, should refactor
+class AnomalyModel:
     def __init__(
         self, config_loc, metric_name, project_name=None, model=None, arguments=None,
     ):
-        with open(os.path.join(config_loc, "config.json"), "r") as c:
-            config = json.load(c)
+        with open(os.path.join(config_loc, "config.json"), "r") as conf_file:
+            config = json.load(conf_file)
 
         self.metric_name = metric_name
         if model is None and arguments is None:
             model = config[project_name].get("ANOMALY_MODEL", "std")
             arguments = config[project_name].get("ANOMALY_ARGS", {})
-        self.anom_model = self.mods[model](self.metric_name, arguments)
+        self.anom_model = MODS[model](self.metric_name, arguments)
         self.model_dir = os.path.join(config_loc, "models")
         if not os.path.isdir(self.model_dir):
             os.mkdir(self.model_dir)
@@ -39,10 +41,8 @@ class AnomalyModel(object):
     def train(self, train_data):
         self.anom_model.fit(train_data)
 
-    def predict(self, test_data, check_for_std=False, multivariate=False):
-        return self.anom_model.predict(
-            test_data, check_for_std=check_for_std, multivariate=multivariate
-        )
+    def predict(self, test_data):
+        return self.anom_model.predict(test_data)
 
     def train_predict(self, train_data, **kwargs):
         return self.anom_model.train_predict(train_data, **kwargs)
@@ -60,10 +60,5 @@ class LoadedModel(object):
         file_name = create_file_name(self.model_dir, metric_id)
         self.anom_model = joblib.load(file_name)
 
-    def predict(self, test_data, check_for_std=False, multivariate=False):
-        return self.anom_model.predict(
-            test_data, check_for_std=check_for_std, multivariate=multivariate
-        )
-
-    def train_predict(self, train_data):
-        return self.anom_model.fit_predict(train_data)
+    def predict(self, test_data):
+        return self.anom_model.predict(test_data)

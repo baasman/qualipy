@@ -1,24 +1,12 @@
-from qualipy.project import Project
-from qualipy.util import set_value_type, set_metric_id
-
-from sklearn.ensemble import IsolationForest
-from scipy.stats import zscore
-import joblib
-import numpy as np
-import pandas as pd
-from sqlalchemy import create_engine
-
-try:
-    from fbprophet import Prophet
-except ImportError:
-    print("fbprophet not installed. Can not be used for anomaly training")
-from tqdm import tqdm
-
-import os
-import json
 import warnings
 from functools import reduce
 
+import numpy as np
+import pandas as pd
+from tqdm import tqdm
+
+from qualipy.project import Project
+from qualipy.util import set_value_type, set_metric_id
 from qualipy.anomaly.models import AnomalyModel, LoadedModel
 
 
@@ -70,7 +58,7 @@ class GenerateAnomalies(object):
             )
             mod.train(data)
             mod.save()
-            preds = mod.predict(data, multivariate=False, check_for_std=True)
+            preds = mod.predict(data)
             if isinstance(preds, tuple):
                 severity = preds[1]
                 preds = preds[0]
@@ -88,7 +76,7 @@ class GenerateAnomalies(object):
     def _num_from_loaded_model(self, data, all_rows):
         mod = LoadedModel(config_loc=self.config_dir)
         mod.load(data.metric_id.iloc[0])
-        preds = mod.predict(data, check_for_std=True)
+        preds = mod.predict(data)
         if isinstance(preds, tuple):
             severity = preds[1]
             preds = preds[0]
@@ -185,11 +173,15 @@ class GenerateAnomalies(object):
                     config_loc=self.config_dir,
                     metric_name=metric_id,
                     model="IsolationForest",
-                    arguments={"contamination": 0.01, "n_estimators": 50,},
+                    arguments={
+                        "contamination": 0.01,
+                        "n_estimators": 50,
+                        "multivariate": True,
+                        "check_for_std": True,
+                    },
                 )
-                outliers = mod.train_predict(
-                    all_non_diff_lines, check_for_std=False, multivariate=True
-                )
+                # make sure this is still doing multivariate
+                outliers = mod.train_predict(all_non_diff_lines)
                 all_non_diff_lines["iso_outlier"] = outliers
                 data["severity"] = diffs_df.sum_of_changes.values
                 sample_size = data.value.apply(lambda v: sum(v.values()))
