@@ -1,7 +1,7 @@
 from qualipy.backends.base import BackendBase
 from qualipy.backends.spark_backend.dataset import SparkData
 from qualipy.exceptions import InvalidType, InvalidReturnValue
-from qualipy.column import function
+from qualipy.reflect.function import function
 from qualipy.backends.spark_backend.functions import (
     is_unique,
     percentage_missing,

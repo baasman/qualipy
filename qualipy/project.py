@@ -1,14 +1,16 @@
-from qualipy.util import HOME
-from qualipy._sql import DB_ENGINES
-from qualipy.column import Column, Table
-
 import json
 import os
 import datetime
 import pandas as pd
 from typing import List, Optional, Union, Dict
+from collections import Callable
 
 from sqlalchemy import create_engine
+
+from qualipy.util import HOME
+from qualipy._sql import DB_ENGINES
+from qualipy.reflect.column import Column
+from qualipy.reflect.table import Table
 
 
 def _validate_project_name(project_name):
@@ -91,7 +93,10 @@ class Project(object):
             for col in column:
                 self._add_column(col)
         else:
-            self._add_column(column, name)
+            if isinstance(column, Callable):
+                self._add_column_func(column, name)
+            else:
+                self._add_column_class(column, name)
 
     def add_table(self, table: Table, extract_sample=False) -> None:
         table._generate_columns(extract_sample=extract_sample)
@@ -105,7 +110,7 @@ class Project(object):
                 column.column_name, read_functions=False
             )
 
-    def _add_column(
+    def _add_column_class(
         self, column: Union[Column, List[Column]], name: str = None
     ) -> None:
         if name is None:
@@ -115,6 +120,17 @@ class Project(object):
                 self.columns[n] = column._as_dict(name=n)
         else:
             self.columns[name] = column._as_dict(name=name)
+
+    def _add_column_func(
+        self, column: Union[Column, List[Column]], name: str = None
+    ) -> None:
+        if name is None:
+            name = column.column_name
+        if isinstance(name, list):
+            for n in name:
+                self.columns[n] = column(name=n)
+        else:
+            self.columns[name] = column(name)
 
     def get_project_table(self) -> pd.DataFrame:
         return self.sql_helper.get_project_table(self.engine, self.project_name)

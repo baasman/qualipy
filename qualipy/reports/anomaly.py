@@ -47,7 +47,6 @@ class AnomalyReport(BaseJinjaView):
 
         if run_anomaly:
             self._run_anomaly_detection(
-                backend_url=str(self.project.engine.url),
                 project_name=self.project_name,
                 config_dir=self.config_dir,
                 retrain_anomaly=retrain_anomaly,

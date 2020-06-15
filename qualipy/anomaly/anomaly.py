@@ -41,7 +41,7 @@ def write_anomaly(conn, data, project_name, clear=False, schema=None):
         )
 
 
-def _run_anomaly(backend, project_name, config_dir, retrain):
+def _run_anomaly(project_name, config_dir, retrain):
     with open(os.path.join(config_dir, "config.json"), "r") as file:
         loaded_config = json.load(file)
     qualipy_db = loaded_config["QUALIPY_DB"]

@@ -1,4 +1,4 @@
-from qualipy.column import function
+from qualipy.reflect.function import function
 
 import sqlalchemy as sa
 import numpy as np
@@ -20,8 +20,8 @@ def mean(data, column):
     return float(data.engine.execute(query).scalar())
 
 
-@function(return_format=float, allowed_arguments=['quantile'])
-def median(data, column, quantile=.5):
+@function(return_format=float, allowed_arguments=["quantile"])
+def median(data, column, quantile=0.5):
     select = sa.func.percentile_disc(quantile).within_group(sa.column(column).asc())
     if data.custom_where is None:
         query = sa.select([select]).select_from(data._table)

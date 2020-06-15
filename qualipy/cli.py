@@ -74,7 +74,7 @@ def run(port, host, config_dir, train_anomaly, engine):
 @click.option("--config_dir", default=None)
 @click.option("--retrain", default=False, type=bool)
 def run_anomaly(project_name, config_dir, retrain):
-    _run_anomaly(BACKEND, project_name, config_dir, retrain)
+    _run_anomaly(project_name, config_dir, retrain)
 
 
 @qualipy.command()
@@ -87,7 +87,7 @@ def schedule_anomaly(config_dir, retrain):
     scheduler_conf = config["ANOMALY_SCHEDULER"]
     project_names = scheduler_conf["PROJECTS"]
     for project_name in project_names:
-        _run_anomaly(BACKEND, project_name, config_dir, retrain)
+        _run_anomaly(project_name, config_dir, retrain)
 
 
 @qualipy.command()

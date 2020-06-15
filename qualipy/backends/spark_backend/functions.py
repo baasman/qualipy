@@ -1,4 +1,4 @@
-from qualipy.column import function
+from qualipy.reflect.function import function
 
 import pyspark.sql.functions as F
 

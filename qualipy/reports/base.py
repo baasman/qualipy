@@ -1,3 +1,5 @@
+import os
+
 from jinja2 import (
     ChoiceLoader,
     Environment,
@@ -82,23 +84,18 @@ class BaseJinjaView:
             project_data = project_data[project_data.column_name.isin(key_columns)]
         return project_data, anomaly_data
 
-    def _run_anomaly_detection(
-        self, backend_url, project_name, config_dir, retrain_anomaly
-    ):
+    def _run_anomaly_detection(self, project_name, config_dir, retrain_anomaly):
         _run_anomaly(
-            backend=backend_url,
-            project_name=project_name,
-            config_dir=config_dir,
-            retrain=retrain_anomaly,
+            project_name=project_name, config_dir=config_dir, retrain=retrain_anomaly,
         )
 
     def _get_template(self, template=None):
-        # TODO: FIX THIS
+        current_path = os.path.dirname(os.path.abspath(__file__))
         templates_loader = FileSystemLoader(
-            searchpath="/home/baasman/Qualipy/qualipy/reports/templates"
+            searchpath=os.path.join(current_path, "templates")
         )
         styles_loader = FileSystemLoader(
-            searchpath="/home/baasman/Qualipy/qualipy/reports/static"
+            searchpath=os.path.join(current_path, "static")
         )
 
         loaders = [templates_loader, styles_loader]

@@ -17,6 +17,7 @@ class AnomalyModelImplementation(abc.ABC):
     Note: self.arguments contains the arguments used to configure the
           anomaly model
     """
+
     def __init__(
         self, config_dir, metric_name, project_name=None, arguments=None,
     ):
@@ -44,9 +45,10 @@ class AnomalyModelImplementation(abc.ABC):
         joblib.dump(self, file_name)
 
 
-class LoadedModel(object):
+class LoadedModel:
     def __init__(self, config_dir):
         self.model_dir = os.path.join(config_dir, "models")
+        self.anom_model = None
 
     def load(self, metric_id):
         file_name = create_file_name(self.model_dir, metric_id)

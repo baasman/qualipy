@@ -5,7 +5,7 @@ from scipy import stats
 import warnings
 
 from qualipy.util import get_column
-from qualipy.column import function
+from qualipy.reflect.function import function
 
 
 # numeric
