@@ -14,7 +14,7 @@ What it looks like
 
 Take a look at the following example to get a view of what a qualipy pipeline looks like::
 
-    from qualipy import Column, function, Project, DataSet
+    from qualipy import Column, function, Project, Qualipy
     from qualipy.backend.pandas_backend.pandas_types import FloatType
 
     import pandas as pd

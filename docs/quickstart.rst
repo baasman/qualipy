@@ -11,7 +11,7 @@ Basic Example
 First, we will create a function called 'mean', using the function decorator. This establishes a numerical aggregator that
 returns the mean of a column, in a float format. We'll do the same with the function 'std'.::
 
-    from qualipy import Column, function, Project, DataSet
+    from qualipy import Column, function, Project, Qualipy
     from qualipy.backends.pandas_backend.pandas_types import FloatType
 
     import pandas as pd

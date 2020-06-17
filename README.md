@@ -22,7 +22,7 @@ and run data quality aggregates on that column.
 To monitor a column, all we need to do is create a mapping to that column. Consider the following script: 
 
 ```python
-from qualipy import Column, function, Project, DataSet
+from qualipy import Column, function, Project, Qualipy
 from qualipy.backends.pandas_backend.pandas_types import FloatType
 
 import pandas as pd

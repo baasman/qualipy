@@ -46,7 +46,7 @@ def _create_value(
     }
 
 
-class DataSet(object):
+class Qualipy(object):
     def __init__(
         self,
         project: Project,
