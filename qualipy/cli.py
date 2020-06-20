@@ -36,7 +36,7 @@ def generate_config(config_dir_path, db_url):
 @click.option("--source-data", default=True, type=bool)
 @click.option("--anomaly-data", default=True, type=bool)
 def clear_data(config_dir, project_name, source_data, anomaly_data):
-    project = Project(config_dir=config_dir, project_name=project_name)
+    project = Project(config_dir=config_dir, project_name=project_name, re_init=True)
     project.delete_data(source_data=source_data, anomaly=anomaly_data)
     project.delete_from_project_config()
 

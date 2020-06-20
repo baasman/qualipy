@@ -43,7 +43,7 @@ class GenerateAnomalies:
 
         self.model_type = config[project_name].get("ANOMALY_MODEL", "std")
         self.project_name = project_name
-        self.project = Project(project_name, config_dir=config_dir)
+        self.project = Project(project_name, config_dir=config_dir, re_init=True)
         df = self.project.get_project_table()
         df["floored_datetime"] = df.date.dt.floor("T")
         df = (

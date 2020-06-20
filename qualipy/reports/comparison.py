@@ -35,7 +35,9 @@ class ComparisonReport(BaseJinjaView):
         self.data = []
         for project_key in project_keys:
             project_name = self.comparison_config[project_key]
-            project = Project(project_name=project_name, config_dir=self.config_dir)
+            project = Project(
+                project_name=project_name, config_dir=self.config_dir, re_init=True
+            )
             self.data.append(
                 get_project_data(project, time_zone, latest_insert_only=True)
             )

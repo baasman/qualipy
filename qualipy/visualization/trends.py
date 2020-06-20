@@ -119,6 +119,7 @@ def trend_line_altair(
     point: bool = True,
     sst: int = 30,
     display_notebook=True,
+    add_diff=None,
 ):
     args = trend_data.arguments.iloc[0]
     args = f"_{args}" if args is not None else ""
@@ -166,6 +167,7 @@ def trend_line_altair(
     value_line = base.mark_line(point=point).encode(
         x=alt.X("date:T"),
         y=alt.Y("value:Q", scale=alt.Scale(domain=[min_y, max_y])),
+        tooltip=["value"],
         color="variable:N",
         opacity=alt.condition(
             alt.datum.variable == "value", alt.value(1), alt.value(0.3)
@@ -177,6 +179,7 @@ def trend_line_altair(
         .encode(x=alt.X("date:T"), y=alt.Y("anom_val"), color=alt.value("red"))
     )
     chart = value_line + anom_points
+    charts = [chart]
     if sst is not None:
         try:
             model = banpei.SST(w=sst)
@@ -188,15 +191,32 @@ def trend_line_altair(
                 .encode(x="date:T", y="sst:Q")
                 .properties(height=100, width=800)
             )
-            chart = alt.vconcat(chart, sst).resolve_axis(y="shared")
+            charts.append(sst)
         except IndexError:
-            warnings.warn(
-                f"""Not enough data for variable {var_name} and 
-                 metric {metric_name} to generate sst"""
-            )
+            # make this a logger debug instead
+            pass
         except ValueError:
+            # same here
             warnings.warn("sst is set to too high a number")
+    if add_diff is not None:
+        # should this be put in the database?
+        # could be useful in a number of different ways, like to detect where biggest changes are occurring
+        shift = add_diff.get('shift', 1)
+        compute_anomaly = add_diff.get('compute_anomaly', False)
+        trend_data["value_diff"] = trend_data.value.diff()
+        # trend_data["value_perc_change"] = trend_data.value.pct_change()
+        d = pd.DataFrame(
+            {"date": trend_data["date"], "value_diff": trend_data["value_diff"]}
+        )
+        value_diff = (
+            alt.Chart(d)
+            .mark_line(point=point)
+            .encode(x="date:T", y="value_diff:Q", tooltip=["value_diff"])
+            .properties(height=100, width=800)
+        )
+        charts.append(value_diff)
+    final_chart = alt.vconcat(*charts).resolve_axis(y="shared")
     if display_notebook:
-        chart.display()
+        final_chart.display()
     else:
-        return chart
+        return final_chart

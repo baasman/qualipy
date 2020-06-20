@@ -43,7 +43,9 @@ class AnomalyReport(BaseJinjaView):
         with open(os.path.join(config_dir, "config.json"), "rb") as cf:
             config = json.load(cf)
         self.project_name = project_name
-        self.project = Project(config_dir=config_dir, project_name=project_name)
+        self.project = Project(
+            config_dir=config_dir, project_name=project_name, re_init=True
+        )
 
         if run_anomaly:
             self._run_anomaly_detection(
@@ -60,14 +62,20 @@ class AnomalyReport(BaseJinjaView):
         )
         self.anomaly_data = get_anomaly_data(self.project, timezone=time_zone)
         # limitation - type not part of anomaly table
-        self.anomaly_data = self.anomaly_data.merge(
-            self.project_data[["metric_id", "type"]].drop_duplicates(),
-            on="metric_id",
-            how="left",
-        )
+        if self.anomaly_data.shape[0] > 0:
+            self.anomaly_data = self.anomaly_data.merge(
+                self.project_data[["metric_id", "type"]].drop_duplicates(),
+                on="metric_id",
+                how="left",
+            )
         if self.project_data.shape[0] == 0:
             raise Exception(f"No data found for project {project_name}")
 
+        if self.project_name not in config:
+            raise Exception(
+                f"""Must specify {project_name} in your configuration file ({self.config_dir})
+                in order to generate an anomly report"""
+            )
         self.project_specific_config = config[self.project_name]
         self._get_viz_config(self.project_specific_config)
 
@@ -113,7 +121,9 @@ class AnomalyReport(BaseJinjaView):
         self.key_columns = config.get("KEY_COLUMNS")
         self.date_range = config.get("DATE_RANGE", [])
         vis_conf = config.get("VISUALIZATION", {})
-        self.trend = vis_conf.get("trend", {"point": False, "sst": 30})
+        self.trend = vis_conf.get(
+            "trend", {"point": False, "sst": 30, "add_diff": None}
+        )
         self.proportion = vis_conf.get("proportion", {})
         self.missing = vis_conf.get("missing", {})
         self.boolean = vis_conf.get("boolean", {})
@@ -154,21 +164,19 @@ class AnomalyReport(BaseJinjaView):
         return plots
 
     def _create_row_counts_plot(self):
-        plots = []
-        data = self.full_backup_data.copy()
-        data = get_latest_insert_only(data)
-        chart = row_count_view_altair(
-            data.copy(),
-            anom_data=self.anomaly_data,
-            only_anomaly=False,
-            show_notebook=False,
-        )
-        plots.append(jinja2.Markup(chart.to_json()))
-        return plots
+        row_count_plots = self._create_trend_lines(only_row_counts=True)
+        return row_count_plots
 
-    def _create_trend_lines(self, only_missing=False):
+    def _create_trend_lines(self, only_missing=False, only_row_counts=False):
         if only_missing:
             num_data = self.project_data[(self.project_data.metric == "perc_missing")]
+        elif only_row_counts:
+            num_data = self.full_backup_data.copy()
+            num_data = num_data[
+                (num_data["column_name"].str.contains("rows"))
+                & (num_data["metric"] == "count")
+            ]
+            num_data.value = num_data.value.astype(float)
         else:
             num_data = self.project_data[(self.project_data.type == "numerical")]
 
@@ -197,6 +205,7 @@ class AnomalyReport(BaseJinjaView):
                             point=self.trend["point"],
                             sst=self.trend["sst"],
                             display_notebook=False,
+                            add_diff=self.trend["add_diff"],
                         )
                         plots.append(jinja2.Markup(chart.to_json()))
         return plots

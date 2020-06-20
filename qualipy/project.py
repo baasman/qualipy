@@ -41,15 +41,14 @@ def inspect_db_connection(url):
 
 
 class Project(object):
-    def __init__(
-        self, project_name: str, config_dir: str = None,
-    ):
-        self._initialize(project_name, config_dir, False)
+    def __init__(self, project_name: str, config_dir: str = None, re_init=False):
+        self._initialize(
+            project_name=project_name, config_dir=config_dir, re_init=re_init
+        )
 
     def _initialize(
         self, project_name: str, config_dir: str = None, re_init: bool = False,
     ):
-        _validate_project_name(project_name)
         self.project_name = project_name
         self.value_table = "{}_values".format(self.project_name)
         self.value_custom_table = "{}_values_custom".format(self.project_name)
@@ -75,6 +74,10 @@ class Project(object):
         self.sql_helper = DB_ENGINES[inspect_db_connection(str(self.engine.url))](
             self.db_schema
         )
+        if re_init:
+            exists = self.sql_helper.does_table_exist(self.engine, self.project_name)
+            if exists is None:
+                raise Exception(f'Project {project_name} does not exist.')
 
         if not re_init:
             # force running command line first

@@ -41,42 +41,53 @@ class BaseJinjaView:
         only_show_anomaly=False,
         key_columns=None,
     ):
-        anomaly_data["keep"] = np.where(anomaly_data.type == "boolean", True, False)
-        if num_severity_level is not None:
-            anomaly_data.keep = np.where(
-                (
-                    (anomaly_data.severity.notnull())
-                    & (
-                        (anomaly_data.type == "numerical")
-                        | (anomaly_data.metric == "perc_missing")
-                        | (anomaly_data["column_name"].isin(["rows", "columns"]))
-                    )
-                    & (anomaly_data.severity.astype(float).abs() > num_severity_level)
-                ),
-                True,
-                anomaly_data.keep,
-            )
+        if anomaly_data.shape[0] > 0:
+            anomaly_data["keep"] = np.where(anomaly_data.type == "boolean", True, False)
+            if num_severity_level is not None:
+                anomaly_data.keep = np.where(
+                    (
+                        (anomaly_data.severity.notnull())
+                        & (
+                            (anomaly_data.type == "numerical")
+                            | (anomaly_data.metric == "perc_missing")
+                            | (anomaly_data["column_name"].isin(["rows", "columns"]))
+                        )
+                        & (
+                            anomaly_data.severity.astype(float).abs()
+                            > num_severity_level
+                        )
+                    ),
+                    True,
+                    anomaly_data.keep,
+                )
 
-        if cat_severity_level is not None:
-            anomaly_data.keep = np.where(
-                (
-                    (anomaly_data.severity.notnull())
-                    & ((anomaly_data.type == "categorical"))
-                    & (anomaly_data.severity.astype(float).abs() > cat_severity_level)
-                ),
-                True,
-                anomaly_data.keep,
-            )
-        anomaly_data = anomaly_data[anomaly_data.keep == True].drop("keep", axis=1)
+            if cat_severity_level is not None:
+                anomaly_data.keep = np.where(
+                    (
+                        (anomaly_data.severity.notnull())
+                        & ((anomaly_data.type == "categorical"))
+                        & (
+                            anomaly_data.severity.astype(float).abs()
+                            > cat_severity_level
+                        )
+                    ),
+                    True,
+                    anomaly_data.keep,
+                )
+            anomaly_data = anomaly_data[anomaly_data.keep == True].drop("keep", axis=1)
 
-        if t1 is not None and t2 is not None and anomaly_data.shape[0] > 0:
-            t1 = pd.to_datetime(t1)
-            t2 = pd.to_datetime(t2)
-            anomaly_data = anomaly_data[
-                (anomaly_data.date >= t1) & (anomaly_data.date <= t2)
-            ]
+            if t1 is not None and t2 is not None and anomaly_data.shape[0] > 0:
+                t1 = pd.to_datetime(t1)
+                t2 = pd.to_datetime(t2)
+                anomaly_data = anomaly_data[
+                    (anomaly_data.date >= t1) & (anomaly_data.date <= t2)
+                ]
 
         if only_show_anomaly:
+            if anomaly_data.shape[0] == 0:
+                raise Exception(
+                    'You specified "only_show_anomaly" but no anomalies were found'
+                )
             project_data = project_data.merge(
                 anomaly_data[["column_name", "metric"]], on=["column_name", "metric"],
             ).drop_duplicates()

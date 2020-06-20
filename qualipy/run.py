@@ -74,11 +74,10 @@ class Qualipy(object):
 
     def run(self, autocommit: bool = False) -> None:
         if not self.chunk:
+            # TODO: still need to add stratification
             self._generate_metrics(autocommit=autocommit)
             self.run_n += 1
         else:
-            # this only makes sense if there's any data
-            # will skip metrics if df is totally empty - which you dont usually want
             for chunk in self.time_chunks:
                 print(f"Running on chunk: {chunk['batch_name']}")
                 self.current_data = chunk["chunk"]
