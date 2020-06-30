@@ -27,6 +27,7 @@ class AnomalyModelImplementation(abc.ABC):
         self.metric_name = metric_name
         if arguments is None:
             arguments = config[project_name].get("ANOMALY_ARGS", {})
+        self.specific = arguments.pop("specific", {})
         self.arguments = arguments
         self.model_dir = os.path.join(config_dir, "models")
         if not os.path.isdir(self.model_dir):

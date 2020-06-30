@@ -14,15 +14,27 @@ from qualipy.util import (
 )
 
 # from qualipy.anomaly_detection import _run_anomaly
-from qualipy.visualization.trends import trend_line_altair
+from qualipy.visualization.trends import (
+    trend_line_altair,
+    trend_bar_lateset,
+    trend_summary,
+)
 from qualipy.visualization.categorical import (
     value_count_chart_altair,
     barchart_top_categories_altair,
 )
 from qualipy.visualization.general import (
     missing_by_column_bar_altair,
-    row_count_view_altair,
+    missing_bar_latest,
+    row_count_bar_latest,
+    row_count_summary,
 )
+
+
+def convert_to_markup(chart):
+    markup = jinja2.Markup(chart.to_json())
+    plot = json.dumps({"chart": markup})
+    return plot
 
 
 class AnomalyReport(BaseJinjaView):
@@ -95,6 +107,7 @@ class AnomalyReport(BaseJinjaView):
             t2=self.t2,
             only_show_anomaly=self.only_show_anomaly,
             key_columns=self.key_columns,
+            include_0_missing=self.missing.get("include_0", True),
         )
 
     def _create_template_vars(self) -> dict:
@@ -121,11 +134,28 @@ class AnomalyReport(BaseJinjaView):
         self.key_columns = config.get("KEY_COLUMNS")
         self.date_range = config.get("DATE_RANGE", [])
         vis_conf = config.get("VISUALIZATION", {})
+        self.row_counts = vis_conf.get(
+            "row_counts",
+            {
+                "include_bar_of_latest": {"use": False, "diff": True},
+                "include_summary": {"use": False},
+            },
+        )
         self.trend = vis_conf.get(
-            "trend", {"point": False, "sst": 30, "add_diff": None}
+            "trend",
+            {
+                "point": False,
+                "sst": 30,
+                "add_diff": None,
+                "n_steps": 20,
+                "include_bar_of_latest": {"use": False},
+                "include_summary": {"use": False},
+            },
         )
         self.proportion = vis_conf.get("proportion", {})
-        self.missing = vis_conf.get("missing", {})
+        self.missing = vis_conf.get(
+            "missing", {"include_0": True, "include_bar_of_latest": {"use": False}}
+        )
         self.boolean = vis_conf.get("boolean", {})
         self.comparison = vis_conf.get("comparison", [])
 
@@ -156,18 +186,49 @@ class AnomalyReport(BaseJinjaView):
     def _create_missing_plot(self):
         plots = []
         missing_data = self.project_data[self.project_data["metric"] == "perc_missing"]
+        if self.missing.get("include_bar_of_latest", False):
+            conf = self.missing["include_bar_of_latest"]
+            missing_data = self.project_data[
+                (self.project_data["metric"] == "perc_missing")
+            ].copy()
+            missing_data.value = missing_data.value.astype(float).round(3)
+            chart = trend_bar_lateset(
+                missing_data,
+                diff=conf.get("diff", False),
+                variables=conf.get("variables"),
+                axis="column_name",
+            )
+            plots.append(jinja2.Markup(chart.to_json()))
         if missing_data.shape[0] > 0:
             chart = missing_by_column_bar_altair(missing_data, show_notebook=False)
             plots.append(jinja2.Markup(chart.to_json()))
-            perc_missing_plots = self._create_trend_lines(only_missing=True)
+            perc_missing_plots = self._create_trend_lines(main=False, only_missing=True)
             plots.extend(perc_missing_plots)
         return plots
 
     def _create_row_counts_plot(self):
-        row_count_plots = self._create_trend_lines(only_row_counts=True)
-        return row_count_plots
+        plots = []
+        if self.row_counts["include_bar_of_latest"].get("use", False):
+            conf = self.row_counts["include_bar_of_latest"]
+            row_data = self.project_data[
+                (self.project_data["column_name"].str.contains("rows"))
+                & (self.project_data["metric"] == "count")
+            ]
+            chart = trend_bar_lateset(
+                row_data,
+                diff=conf.get("diff", False),
+                variables=conf.get("variables"),
+                axis="column_name",
+            )
+            plots.append(jinja2.Markup(chart.to_json()))
+        if self.row_counts["include_summary"].get("use", False):
+            chart = row_count_summary(self.project_data)
+            plots.append(jinja2.Markup(chart.to_json()))
+        row_count_plots = self._create_trend_lines(main=False, only_row_counts=True)
+        plots.extend(row_count_plots)
+        return plots
 
-    def _create_trend_lines(self, only_missing=False, only_row_counts=False):
+    def _create_trend_lines(self, main=True, only_missing=False, only_row_counts=False):
         if only_missing:
             num_data = self.project_data[(self.project_data.metric == "perc_missing")]
         elif only_row_counts:
@@ -183,6 +244,19 @@ class AnomalyReport(BaseJinjaView):
         num_data = get_latest_insert_only(num_data)
         plots = []
         if num_data.shape[0] > 0:
+            if main and self.trend["include_bar_of_latest"].get("use", False):
+                conf = self.trend["include_bar_of_latest"]
+                chart = trend_bar_lateset(
+                    num_data,
+                    diff=conf.get("diff", False),
+                    variables=conf.get("variables"),
+                )
+                plots.append(jinja2.Markup(chart.to_json()))
+                # plots.append(convert_to_markup(chart))
+            if main and self.trend["include_summary"].get("use", False):
+                conf = self.trend["include_summary"]
+                chart = trend_summary(num_data, variables=conf.get("variables"),)
+                plots.append(jinja2.Markup(chart.to_json()))
             columns = num_data.column_name.unique()
             for var in columns:
                 var_data = num_data[num_data.column_name == var].copy()
@@ -202,10 +276,11 @@ class AnomalyReport(BaseJinjaView):
                             self.config_dir,
                             self.project_name,
                             anom_trend,
-                            point=self.trend["point"],
-                            sst=self.trend["sst"],
+                            point=self.trend.get("point", True),
+                            sst=self.trend.get("sst", None),
                             display_notebook=False,
-                            add_diff=self.trend["add_diff"],
+                            add_diff=self.trend.get("add_diff", None),
+                            n_steps=self.trend.get("n_steps", 20),
                         )
                         plots.append(jinja2.Markup(chart.to_json()))
         return plots

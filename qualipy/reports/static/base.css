@@ -3,3 +3,7 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+.body {
+  background-color:#f9f9f9;
+}

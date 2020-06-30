@@ -40,9 +40,11 @@ class BaseJinjaView:
         t2=None,
         only_show_anomaly=False,
         key_columns=None,
+        include_0_missing=True,
     ):
         if anomaly_data.shape[0] > 0:
             anomaly_data["keep"] = np.where(anomaly_data.type == "boolean", True, False)
+            anomaly_data["keep"] = np.where(anomaly_data.severity.isnull(), True, False)
             if num_severity_level is not None:
                 anomaly_data.keep = np.where(
                     (
@@ -82,6 +84,15 @@ class BaseJinjaView:
                 anomaly_data = anomaly_data[
                     (anomaly_data.date >= t1) & (anomaly_data.date <= t2)
                 ]
+        if not include_0_missing:
+            missing = project_data[project_data.metric == "perc_missing"]
+            metrics_with_missing = missing[
+                missing.value.astype(float) > 0
+            ].metric_id.unique()
+            project_data = project_data[
+                (project_data.metric_id.isin(metrics_with_missing))
+                | (project_data.metric != "perc_missing")
+            ]
 
         if only_show_anomaly:
             if anomaly_data.shape[0] == 0:

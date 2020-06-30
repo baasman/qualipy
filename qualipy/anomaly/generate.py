@@ -13,6 +13,7 @@ from qualipy.anomaly._isolation_forest import IsolationForestModel
 from qualipy.anomaly._prophet import ProphetModel
 from qualipy.anomaly._std import STDCheck
 from qualipy.anomaly.base import LoadedModel
+from qualipy.anomaly.trend_rules import trend_rules
 
 
 anomaly_columns = [
@@ -42,6 +43,8 @@ class GenerateAnomalies:
             config = json.load(conf_file)
 
         self.model_type = config[project_name].get("ANOMALY_MODEL", "std")
+        self.anom_args = config[project_name].get("ANOMALY_ARGS", {})
+        self.specific = self.anom_args.pop("specific", {})
         self.project_name = project_name
         self.project = Project(project_name, config_dir=config_dir, re_init=True)
         df = self.project.get_project_table()
@@ -111,7 +114,7 @@ class GenerateAnomalies:
         df = df[
             (df["type"] == "numerical")
             | (df["column_name"].isin(["rows", "columns"]))
-            | (df["metric"] == "perc_missing")
+            | (df["metric"].isin(["perc_missing", "count"]))
         ]
         df.value = df.value.astype(float)
         all_rows = []
@@ -228,3 +231,24 @@ class GenerateAnomalies:
         else:
             df = pd.DataFrame([], columns=anomaly_columns)
         return df
+
+    def create_trend_rule_table(self):
+        # obv only need to do this once
+        df = self.df
+        if len(self.specific) > 0:
+            all_rows = []
+            df = df[df.metric_id.isin(self.specific)]
+            for metric_id, group in df.groupby("metric_id"):
+                trend_functions = self.specific[metric_id]
+                group = set_value_type(group)
+                for fun in trend_functions:
+                    outlier_data = trend_rules[fun](group.copy())
+                    if outlier_data.shape[0] > 0:
+                        all_rows.append(outlier_data)
+            data = pd.concat(all_rows).sort_values("date", ascending=False)
+            data["severity"] = np.NaN
+            data = data[anomaly_columns]
+            data.value = data.value.astype(str)
+        else:
+            data = pd.DataFrame([], columns=anomaly_columns)
+        return data

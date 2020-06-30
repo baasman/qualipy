@@ -238,3 +238,71 @@ def row_count_view_altair(
         full_chart.display()
     else:
         return full_chart
+
+
+def row_count_bar_latest(data):
+    data = data[
+        (data["column_name"].str.contains("rows")) & (data["metric"] == "count")
+    ]
+    data.value = data.value.astype(float)
+    data = data.sort_values(["metric_id", "date"])
+    data["value_diff"] = data.groupby("metric_id").value.diff()
+    data = data.groupby("metric_id").nth(-1)
+    batch_name = data.batch_name.iloc[0]
+    data = data[["date", "column_name", "value", "value_diff"]]
+    bars = (
+        alt.Chart(data)
+        .mark_bar()
+        .encode(x=alt.X("column_name:N"), y=alt.Y("value_diff:Q"))
+        .properties(width=800, title=f"Total count for {batch_name}")
+    )
+    text = bars.mark_text(align="center", baseline="middle", dy=-6).encode(
+        text="value_diff:Q"
+    )
+    chart = alt.layer(bars, text)
+    return chart
+
+
+def row_count_summary(data):
+    data = data[
+        (data["column_name"].str.contains("rows")) & (data["metric"] == "count")
+    ]
+    data.value = data.value.astype(float)
+    data = data.sort_values(["metric_id", "date"])
+    data["value_change"] = data.groupby("metric_id").value.diff()
+    data["percentage_change"] = data.groupby("metric_id").value.pct_change()
+    data = data.melt(
+        id_vars=["column_name", "date"],
+        value_vars=["percentage_change", "value_change"],
+    )
+    trends = (
+        alt.Chart(data)
+        .mark_line(point=True)
+        .encode(x="date:T", y=alt.Y("value:Q"), color="column_name", tooltip=["value"])
+        .properties(width=800, height=200)
+    )
+    trends = trends.facet(
+        row=alt.Row("variable:N", title=None), title="Row Count Summary"
+    ).resolve_scale(y="independent")
+    trends = trends.configure_title(dx=450)
+    return trends
+
+
+def missing_bar_latest(data):
+    data = data[(data["metric"] == "perc_missing")].copy()
+    data.value = data.value.astype(float).round(3)
+    data = data.sort_values(["metric_id", "date"])
+    data = data.groupby("metric_id").nth(-1)
+    batch_name = data.batch_name.iloc[0]
+    data = data[["date", "column_name", "value"]]
+    bars = (
+        alt.Chart(data)
+        .mark_bar()
+        .encode(y=alt.Y("column_name:N"), x=alt.X("value:Q"))
+        .properties(width=800, title=f"Total Missingness for {batch_name}")
+    )
+    text = bars.mark_text(align="center", baseline="middle", dx=-10).encode(
+        text="value:Q"
+    )
+    chart = alt.layer(bars, text)
+    return chart

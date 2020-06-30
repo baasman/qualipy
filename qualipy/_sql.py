@@ -24,16 +24,19 @@ class SQL:
     def create_table(self, engine: engine.base.Engine, table_name: str) -> None:
         create_table_query = """
             create table {} (
-                "column_name" CHARACTER(20) not null,
+                "id" INTEGER primary key autoincrement,
+                "column_name" CHARACTER not null,
                 "date" DATETIME not null,
-                "metric" CHARACTER(30) not null,
-                "arguments" CHARACTER(100) null,
+                "metric" CHARACTER not null,
+                "arguments" CHARACTER null,
                 "type" CHARACTER not null DEFAULT 'custom',
                 "return_format" CHARACTER DEFAULT 'float',
                 "batch_name" CHARACTER null DEFAULT true,
                 "run_name" CHARACTER not null DEFAULT FALSE,
                 "value" CHARACTER null,
-                "insert_time" DATETIME not null
+                "insert_time" DATETIME not null,
+                "valid_min" CHARACTER null,
+                "valid_max" CHARACTER null
             );
         """.format(
             table_name
@@ -46,16 +49,20 @@ class SQL:
     def create_anomaly_table(self, engine: engine.base.Engine, table_name: str) -> None:
         create_table_query = """
             create table {} (
-                "project" CHARACTER(30) not null,
-                "column_name" CHARACTER(30) not null,
+                "id" INTEGER primary key autoincrement,
+                "project" CHARACTER not null,
+                "column_name" CHARACTER not null,
                 "date" DATETIME not null,
-                "metric" CHARACTER(30) not null,
-                "arguments" CHARACTER(100) null,
+                "metric" CHARACTER not null,
+                "arguments" CHARACTER null,
                 "return_format" CHARACTER DEFAULT 'float',
                 "batch_name" CHARACTER null DEFAULT true,
                 "run_name" CHARACTER not null DEFAULT FALSE,
-                "value" CHARACTER(36) null,
-                "insert_time" DATETIME not null
+                "value" CHARACTER null,
+                "severity" CHARACTER null,
+                "insert_time" DATETIME not null,
+                "valid_min" CHARACTER null,
+                "valid_max" CHARACTER null
             );
         """.format(
             table_name
@@ -64,41 +71,6 @@ class SQL:
         if not exists:
             with engine.connect() as conn:
                 conn.execute(create_table_query)
-
-    def create_value_table(self, engine: engine.base.Engine, table_name: str) -> None:
-        create_table_query = """
-            create table {} (
-                value varchar,
-                value_id CHARACTER(36),
-                    foreign key (value_id) references {}(value_id)
-            );
-        """.format(
-            table_name, table_name.replace("_values", "")
-        )
-        exists = self.does_table_exist(engine, table_name)
-        if not exists:
-            with engine.connect() as conn:
-                conn.execute(create_table_query)
-
-    def create_custom_value_table(
-        self, engine: engine.base.Engine, table_name: str
-    ) -> None:
-        create_table_query = """
-            create table {} (
-                value BLOB,
-                value_id CHARACTER(36),
-                    foreign key (value_id) references {}(value_id)
-            );
-        """.format(
-            table_name, table_name.replace("_values_custom", "")
-        )
-        exists = self.does_table_exist(engine, table_name)
-        if not exists:
-            with engine.connect() as conn:
-                conn.execute(create_table_query)
-
-    def get_table(self, engine: engine.base.Engine, table_name: str) -> pd.DataFrame:
-        return pd.read_sql("select * from {}".format(table_name), engine)
 
     def create_schema_if_not_exists(self, engine) -> None:
         pass
@@ -113,27 +85,24 @@ class SQL:
         query = f"""
             select * from {table_name}
         """
-        return pd.read_sql(query, engine)
+        data = pd.read_sql(query, engine)
+        data.date = pd.to_datetime(data.date)
+        return data
 
     def delete_data(
-        self, conn: engine.base.Connection, name: str, create_function: Callable
+        self,
+        engine: engine.base.Engine,
+        name: str,
+        anomaly_name: str,
+        recreate: bool = False,
     ) -> None:
-        try:
-            conn.execute("drop table {}".format(name))
-        except:
-            pass
-        self.create_table_if_not_exists(conn, name, create_function)
-
-    def create_table_if_not_exists(
-        self, conn: engine.base.Connection, name: str, create_function: Callable
-    ) -> None:
-        exists = conn.execute(
-            "select name from sqlite_master "
-            'where type="table" '
-            'and name="{}"'.format(name)
-        ).fetchone()
-        if not exists:
-            create_function(conn, name)
+        schema = self.schema + "." if self.schema is not None else ""
+        with engine.begin() as conn:
+            conn.execute(f"drop table {schema}{name} cascade")
+            conn.execute(f"drop table {schema}{anomaly_name} cascade")
+        if recreate:
+            self.create_table(engine, name)
+            self.create_anomaly_table(engine, anomaly_name)
 
     def get_project_table(
         self, engine, project_name: str, last_date: str = None
@@ -145,14 +114,6 @@ class SQL:
         anom_table_name = f"{project_name}_anomaly"
         data = pd.read_sql(f"select * from {anom_table_name}", con=engine)
         return data
-
-    def get_last_time(self, engine, project_name: str):
-        with engine.connect() as conn:
-            time = conn.execute(
-                f"select insert_time from {project_name} order by rowid desc limit 1"
-            ).fetchone()[0]
-            time = datetime.datetime.strptime(time.split(".")[0], "%Y-%m-%d %H:%M:%S")
-        return time
 
     def does_table_exist(self, engine: engine.base.Engine, table_name: str) -> bool:
         with engine.connect() as conn:
@@ -251,23 +212,19 @@ class Postgres(SQL):
         return exists[0]
 
     def delete_data(
-        self, conn: engine.base.Connection, name: str, create_function: Callable
+        self,
+        engine: engine.base.Engine,
+        name: str,
+        anomaly_name: str,
+        recreate: bool = False,
     ) -> None:
         schema = self.schema + "." if self.schema is not None else ""
-        try:
+        with engine.begin() as conn:
             conn.execute(f"drop table {schema}{name} cascade")
-        except:
-            pass
-        # should it really create the tables on the delete function?
-        self.create_table_if_not_exists(conn, name, create_function)
-
-    def create_table_if_not_exists(
-        self, conn: engine.base.Connection, name: str, create_function: Callable
-    ) -> None:
-        schema = self.schema + "." if self.schema is not None else ""
-        exists = conn.execute(f"SELECT to_regclass('{schema}{name}')").fetchone()[0]
-        if not exists:
-            create_function(conn, name)
+            conn.execute(f"drop table {schema}{anomaly_name} cascade")
+        if recreate:
+            self.create_table(engine, name)
+            self.create_anomaly_table(engine, anomaly_name)
 
     def create_schema_if_not_exists(self, engine) -> None:
         if self.schema is not None:

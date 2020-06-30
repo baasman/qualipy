@@ -2,7 +2,7 @@ import json
 import os
 import datetime
 import pandas as pd
-from typing import List, Optional, Union, Dict
+from typing import List, Union, Dict
 from collections import Callable
 
 from sqlalchemy import create_engine
@@ -17,10 +17,11 @@ def _validate_project_name(project_name):
     assert "-" not in project_name
 
 
-def set_default_config(db_url=None):
+def set_default_config(config_dir, db_url=None):
     conf = {}
-    if db_url is not None:
-        conf["QUALIPY_DB"] = db_url
+    if db_url is None:
+        db_url = f'sqlite:///{os.path.join(config_dir, "qualipy.db")}'
+    conf["QUALIPY_DB"] = db_url
     return conf
 
 
@@ -28,7 +29,7 @@ def create_qualipy_folder(config_dir, db_url=None):
     if not os.path.exists(config_dir):
         os.makedirs(config_dir, exist_ok=True)
         with open(os.path.join(config_dir, "config.json"), "w") as f:
-            json.dump(set_default_config(db_url), f)
+            json.dump(set_default_config(config_dir, db_url), f)
         with open(os.path.join(config_dir, "projects.json"), "w") as f:
             json.dump({}, f)
         os.makedirs(os.path.join(config_dir, "models"), exist_ok=True)
@@ -41,13 +42,13 @@ def inspect_db_connection(url):
 
 
 class Project(object):
-    def __init__(self, project_name: str, config_dir: str = None, re_init=False):
+    def __init__(self, project_name: str, config_dir: str, re_init=False):
         self._initialize(
             project_name=project_name, config_dir=config_dir, re_init=re_init
         )
 
     def _initialize(
-        self, project_name: str, config_dir: str = None, re_init: bool = False,
+        self, project_name: str, config_dir: str, re_init: bool = False,
     ):
         self.project_name = project_name
         self.value_table = "{}_values".format(self.project_name)
@@ -55,21 +56,11 @@ class Project(object):
         self.anomaly_table = "{}_anomaly".format(self.project_name)
         if not re_init:
             self.columns = {}
-        if not re_init:
-            self.config_dir = (
-                os.path.join(HOME, ".qualipy") if config_dir is None else config_dir
-            )
-        else:
-            self.config_dir = config_dir
+        self.config_dir = config_dir
         with open(os.path.join(self.config_dir, "config.json"), "rb") as f:
             config = json.load(f)
         engine = config.get("QUALIPY_DB")
-        if engine is None:
-            self.engine = create_engine(
-                "sqlite:///{}".format(os.path.join(self.config_dir, "qualipy.db"))
-            )
-        else:
-            self.engine = create_engine(engine)
+        self.engine = create_engine(engine)
         self.db_schema = config.get("SCHEMA")
         self.sql_helper = DB_ENGINES[inspect_db_connection(str(self.engine.url))](
             self.db_schema
@@ -77,11 +68,7 @@ class Project(object):
         if re_init:
             exists = self.sql_helper.does_table_exist(self.engine, self.project_name)
             if exists is None:
-                raise Exception(f'Project {project_name} does not exist.')
-
-        if not re_init:
-            # force running command line first
-            create_qualipy_folder(self.config_dir, db_url=str(self.engine.url))
+                raise Exception(f"Project {project_name} does not exist.")
 
         if not re_init:
             self.sql_helper.create_schema_if_not_exists(self.engine)
@@ -141,16 +128,13 @@ class Project(object):
     def get_anomaly_table(self) -> pd.DataFrame:
         return self.sql_helper.get_anomaly_table(self.engine, self.project_name)
 
-    def delete_data(self, source_data=True, anomaly=True):
-        with self.engine.begin() as conn:
-            if source_data:
-                self.sql_helper.delete_data(
-                    conn, self.project_name, self.sql_helper.create_table
-                )
-            if anomaly:
-                self.sql_helper.delete_data(
-                    conn, self.anomaly_table, self.sql_helper.create_anomaly_table
-                )
+    def delete_data(self, recreate=True):
+        self.sql_helper.delete_data(
+            engine=self.engine,
+            name=self.project_name,
+            anomaly_name=self.anomaly_table,
+            recreate=recreate,
+        )
 
     def delete_from_project_config(self):
         project_file_path = os.path.join(self.config_dir, "projects.json")

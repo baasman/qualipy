@@ -122,3 +122,13 @@ def get_anomaly_data(project, timezone=None):
     data = data.sort_values("batch_name")
     data = set_metric_id(data)
     return data
+
+
+def set_title_name(data):
+    data = data.iloc[0]
+    run_name = data["run_name"].capitalize()
+    var_name = data["column_name"].replace(f"_{data['run_name']}", "")
+    metric_name = data["metric"]
+    arguments = "" if data["arguments"] is None else f"_{data['arguments']}"
+    title = f"{run_name}: {var_name} - {metric_name}{arguments}"
+    return title

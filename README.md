@@ -1,6 +1,6 @@
 ## Qualipy
 
-Qualipy is a data monitoring and quality library.
+Qualipy is a library designed to track and monitor real-time data and provide anomaly detection on that data.
 
 ## Install
 

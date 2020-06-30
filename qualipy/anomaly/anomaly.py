@@ -12,9 +12,10 @@ def anomaly_data_project(project_name, config_dir, retrain):
     boolean_checks = generator.create_error_check_table()
     cat_anomalies = generator.create_anom_cat_table(retrain)
     num_anomalies = generator.create_anom_num_table(retrain)
-    anomalies = pd.concat([num_anomalies, cat_anomalies, boolean_checks]).sort_values(
-        "date", ascending=False
-    )
+    rule_anomalies = generator.create_trend_rule_table()
+    anomalies = pd.concat(
+        [num_anomalies, cat_anomalies, boolean_checks, rule_anomalies]
+    ).sort_values("date", ascending=False)
     anomalies["project"] = project_name
     anomalies = anomalies[
         ["project"] + [col for col in anomalies.columns if col != "project"]
@@ -42,6 +43,7 @@ def write_anomaly(conn, data, project_name, clear=False, schema=None):
 
 
 def _run_anomaly(project_name, config_dir, retrain):
+    # should this return the anomaly data?
     with open(os.path.join(config_dir, "config.json"), "r") as file:
         loaded_config = json.load(file)
     qualipy_db = loaded_config["QUALIPY_DB"]
