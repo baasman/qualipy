@@ -9,10 +9,10 @@ from qualipy.anomaly.generate import GenerateAnomalies
 
 def anomaly_data_project(project_name, config_dir, retrain):
     generator = GenerateAnomalies(project_name, config_dir)
+    rule_anomalies = generator.create_trend_rule_table()
     boolean_checks = generator.create_error_check_table()
     cat_anomalies = generator.create_anom_cat_table(retrain)
     num_anomalies = generator.create_anom_num_table(retrain)
-    rule_anomalies = generator.create_trend_rule_table()
     anomalies = pd.concat(
         [num_anomalies, cat_anomalies, boolean_checks, rule_anomalies]
     ).sort_values("date", ascending=False)

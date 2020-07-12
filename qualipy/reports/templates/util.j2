@@ -1,20 +1,20 @@
-{% macro plot_chart(id, json) -%}
+{% macro plot_chart(json) -%}
 <div class='trend_chart'>
     <button class="btn btn-primary" type="button" data-toggle="collapse" 
-        data-target="#{{ id }}" aria-expanded="true" aria-controls="{{ id }}">
-        Hide
+        data-target="#{{ json['chart_id'] }}" aria-expanded="true" aria-controls="{{ id }}">
+        {{ json['button_name'] }}
     </button>
-    <div class="collapse collapse show" id="{{ id }}">
+    <div class="collapse collapse {{ json['show_by_default'] }}" id="{{ json['chart_id'] }}">
         <script type="text/javascript">
-            var spec = {{ json }}
+            var spec = {{ json['chart'] }}
             var opt = { "renderer": "canvas", "actions": false };
-            vegaEmbed("#{{ id }}", spec, opt);
+            vegaEmbed("#{{ json['chart_id'] }}", spec, opt);
         </script>
     </div>
 </div>
 {%- endmacro %}
 
-{% macro plot_table(html_table, project_name) -%}
+{% macro plot_table(html_table, project_name, sort_by) -%}
 <div id='anomaly_table'>
     {{ html_table }}
     <script type="text/javascript">
@@ -23,7 +23,8 @@
                 {
                     fixedColumns:   {
                         heightMatch: 'none'
-                    }
+                    },
+                    order: [{{sort_by}}] 
                 }
             );
         } );

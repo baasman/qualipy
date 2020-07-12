@@ -155,7 +155,11 @@ def value_counts(data, column):
     return counts
 
 
-@function(return_format=float)
+@function(
+    return_format=float,
+    display_name="Percentage Missing",
+    description="This function finds the percentage of values set to Null in the column",
+)
 def percentage_missing(data, column):
     if data.custom_where is None:
         counts = data.engine.execute(

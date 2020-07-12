@@ -6,16 +6,16 @@
 
     <h2>{{ project_name }}</h2>
     <h3> Anomalies and Failed Checks </h3>
-    {{ util.plot_table(anomaly_table, project_name) }}
+    {{ util.plot_table(anomaly_table, project_name, js_config['sort_by']) }}
 
     <h3>Result Set Size</h3>
     <button class="btn btn-primary" type="button" data-toggle="collapse" 
         data-target=".row_counts" aria-expanded="true" aria-controls=".row_counts">
         View Row Count Results
     </button>
-    <div class='row_counts collapse'>
+    <div class='row_counts collapse show'>
         {% for r in row_plots %}
-        {{ util.plot_chart('row_vis' + loop.index|string, r) }}
+        {{ util.plot_chart(r) }}
         {% endfor %}
     </div>
 
@@ -24,9 +24,9 @@
         data-target=".trends" aria-expanded="true" aria-controls=".trends">
         View Numerical Trends
     </button>
-    <div class='trends collapse'>
+    <div class='trends collapse show'>
         {% for trend in trend_plots %}
-        {{ util.plot_chart('vis' + loop.index|string, trend) }}
+        {{ util.plot_chart(trend) }}
         {% endfor %}
     </div>
 
@@ -36,9 +36,9 @@
         data-target=".categorical" aria-expanded="true" aria-controls=".categorical">
         View Categorical Trends
     </button>
-    <div class='categorical collapse'>
+    <div class='categorical collapse show'>
         {% for cat in cat_plots %}
-        {{ util.plot_chart('cat_vis' + loop.index|string, cat) }}
+        {{ util.plot_chart(cat) }}
         {% endfor %}
     </div>
 
@@ -47,10 +47,16 @@
         data-target=".missingness" aria-expanded="true" aria-controls=".missingness">
         View Missingness
     </button>
-    <div class='missingness collapse'>
+    <div class='missingness collapse show'>
         {% for m in missing_plots %}
-        {{ util.plot_chart('mis_vis' + loop.index|string, m) }}
+        {{ util.plot_chart(m) }}
         {% endfor %}
     </div>
 
+{% endblock %}
+
+{% block scripts %}
+    $(document).ready(function(){
+        $('[data-toggle="tooltip"]').tooltip();   
+    });
 {% endblock %}

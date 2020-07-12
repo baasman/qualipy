@@ -13,6 +13,14 @@ import pandas as pd
 from qualipy.anomaly.anomaly import _run_anomaly
 
 
+DEFAULT_FUNCTION_DESCRIPTIONS = {
+    "count": {
+        "display_name": "count",
+        "description": "A simple count of rows in the batch subset",
+    }
+}
+
+
 class BaseJinjaView:
     def __init__(self, custom_styles_directory):
         self.custom_styles_directory = custom_styles_directory
@@ -52,7 +60,7 @@ class BaseJinjaView:
                         & (
                             (anomaly_data.type == "numerical")
                             | (anomaly_data.metric == "perc_missing")
-                            | (anomaly_data["column_name"].isin(["rows", "columns"]))
+                            | (anomaly_data["column_name"].str.contains("rows"))
                         )
                         & (
                             anomaly_data.severity.astype(float).abs()

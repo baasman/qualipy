@@ -195,6 +195,7 @@ class Postgres(SQL):
                 "insert_time" TIMESTAMPTZ not null,
                 "valid_min" VARCHAR null, 
                 "valid_max" VARCHAR null,
+                "trend_function_name" VARCHAR null,
                 PRIMARY KEY (id)
             );
         """
@@ -220,10 +221,10 @@ class Postgres(SQL):
     ) -> None:
         schema = self.schema + "." if self.schema is not None else ""
         with engine.begin() as conn:
-            conn.execute(f"drop table {schema}{name} cascade")
+            # conn.execute(f"drop table {schema}{name} cascade")
             conn.execute(f"drop table {schema}{anomaly_name} cascade")
         if recreate:
-            self.create_table(engine, name)
+            # self.create_table(engine, name)
             self.create_anomaly_table(engine, anomaly_name)
 
     def create_schema_if_not_exists(self, engine) -> None:

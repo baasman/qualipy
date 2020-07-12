@@ -26,6 +26,7 @@ anomaly_columns = [
     "severity",
     "batch_name",
     "insert_time",
+    "trend_function_name",
 ]
 
 MODS = {
@@ -78,6 +79,7 @@ class GenerateAnomalies:
             mod.fit(data)
             mod.save()
             preds = mod.predict(data)
+
             if isinstance(preds, tuple):
                 severity = preds[1]
                 preds = preds[0]
@@ -132,6 +134,7 @@ class GenerateAnomalies:
 
         try:
             data = pd.concat(all_rows).sort_values("date", ascending=False)
+            data["trend_function_name"] = np.NaN
             data = data[anomaly_columns]
             data.value = data.value.astype(str)
         except:
@@ -213,6 +216,7 @@ class GenerateAnomalies:
 
         try:
             data = pd.concat(all_rows).sort_values("date", ascending=False)
+            data["trend_function_name"] = np.NaN
             data = data[anomaly_columns]
             data.value = data.value.astype(str)
         except:
@@ -227,6 +231,7 @@ class GenerateAnomalies:
             df = set_value_type(df)
             df = df[~df.value]
             df["severity"] = np.NaN
+            df["trend_function_name"] = np.NaN
             df = df[anomaly_columns]
         else:
             df = pd.DataFrame([], columns=anomaly_columns)
@@ -241,14 +246,18 @@ class GenerateAnomalies:
             for metric_id, group in df.groupby("metric_id"):
                 trend_functions = self.specific[metric_id]
                 group = set_value_type(group)
-                for fun in trend_functions:
-                    outlier_data = trend_rules[fun](group.copy())
+                for fun, items in trend_functions.items():
+                    outlier_data = trend_rules[fun]["function"](group.copy())
                     if outlier_data.shape[0] > 0:
+                        outlier_data["severity"] = items.get("severity", np.NaN)
+                        outlier_data["trend_function_name"] = fun
                         all_rows.append(outlier_data)
-            data = pd.concat(all_rows).sort_values("date", ascending=False)
-            data["severity"] = np.NaN
-            data = data[anomaly_columns]
-            data.value = data.value.astype(str)
+            if len(all_rows) > 0:
+                data = pd.concat(all_rows).sort_values("date", ascending=False)
+                data = data[anomaly_columns]
+                data.value = data.value.astype(str)
+            else:
+                data = pd.DataFrame([], columns=anomaly_columns)
         else:
             data = pd.DataFrame([], columns=anomaly_columns)
         return data

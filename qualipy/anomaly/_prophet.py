@@ -8,9 +8,7 @@ from qualipy.anomaly.base import AnomalyModelImplementation
 
 
 class ProphetModel(AnomalyModelImplementation):
-    def __init__(
-        self, config_dir, metric_name, project_name=None, arguments=None
-    ):
+    def __init__(self, config_dir, metric_name, project_name=None, arguments=None):
         super(ProphetModel, self).__init__(
             config_dir, metric_name, project_name, arguments
         )
@@ -46,8 +44,8 @@ class ProphetModel(AnomalyModelImplementation):
         predicted["y"] = test_data["y"]
 
         predicted["outlier"] = 1
-        predicted["outlier"] = np.where(predicted.y < predicted.yhat_lower, -1, 1)
-        predicted["outlier"] = np.where(predicted.y > predicted.yhat_upper, -1, 1)
+        predicted["outlier"] = np.where(predicted.y < predicted.yhat_lower - .0001, -1, 1)
+        predicted["outlier"] = np.where(predicted.y > predicted.yhat_upper + .0001, -1, 1)
 
         predicted["importance"] = np.NaN
         predicted.loc[predicted.outlier == 1, "importance"] = (
@@ -88,8 +86,10 @@ class ProphetModel(AnomalyModelImplementation):
                 -1,
                 1,
             )
-            if predicted[predicted.outlier == -1].shape[0] > 0:
-                print(predicted.head())
+
+        if predicted[predicted.outlier == -1].shape[0] > 0:
+            print(predicted)
+        predicted["distance_from_expected"] = predicted.y - predicted.yhat
         return predicted.outlier.values, predicted.importance.values
 
     def train_predict(self, train_data):

@@ -7,6 +7,8 @@ def function(
     return_format: type = float,
     arguments: Dict[str, Any] = None,
     fail: bool = False,
+    display_name: str = None,
+    description: str = None,
 ) -> Callable:
     def inner_fun(method: Callable):
         method.allowed_arguments = (
@@ -18,6 +20,8 @@ def function(
         method.fail = fail
         method.valid_min_range = None
         method.valid_max_range = None
+        method.display_name = method.__name__ if display_name is None else display_name
+        method.description = "" if description is None else description
 
         @wraps(method)
         def wrapper(*args, **kwargs):

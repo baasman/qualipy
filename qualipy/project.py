@@ -57,6 +57,12 @@ class Project(object):
         if not re_init:
             self.columns = {}
         self.config_dir = config_dir
+        if not os.path.isdir(config_dir):
+            raise Exception(
+                f"""Directory {config_dir} does not exist. 
+                \nRun 'qualipy generate-config' before instantiating a project."""
+            )
+        self._write_default_config_if_not_exists()
         with open(os.path.join(self.config_dir, "config.json"), "rb") as f:
             config = json.load(f)
         engine = config.get("QUALIPY_DB")
@@ -75,6 +81,11 @@ class Project(object):
             self.sql_helper.create_table(self.engine, self.project_name)
             self.sql_helper.create_anomaly_table(self.engine, self.anomaly_table)
 
+        if not re_init:
+            self._functions_used_in_project = {}
+        else:
+            pass  # read from config
+
     def change_config_dir(self, config_dir):
         self._initialize(self.project_name, config_dir, True)
 
@@ -82,11 +93,32 @@ class Project(object):
         if isinstance(column, list):
             for col in column:
                 self._add_column(col)
+                self._get_unique_functions(col)
         else:
             if isinstance(column, Callable):
                 self._add_column_func(column, name)
             else:
                 self._add_column_class(column, name)
+        self._get_unique_functions(name)
+
+    def _get_unique_functions(self, name):
+        if name is None:
+            for column_name in self.columns:
+                column = self.columns[column_name]
+                for function in column["functions"] + column["extra_functions"]:
+                    if function[0] not in self._functions_used_in_project:
+                        self._functions_used_in_project[function[0]] = {
+                            "display_name": function[1].display_name,
+                            "description": function[1].description,
+                        }
+        else:
+            column = self.columns[name]
+            for function in column["functions"] + column["extra_functions"]:
+                if function[0] not in self._functions_used_in_project:
+                    self._functions_used_in_project[function[0]] = {
+                        "display_name": function[1].display_name,
+                        "description": function[1].description,
+                    }
 
     def add_table(self, table: Table, extract_sample=False) -> None:
         table._generate_columns(extract_sample=extract_sample)
@@ -146,6 +178,26 @@ class Project(object):
         projects.pop(self.project_name, None)
         with open(project_file_path, "w") as f:
             json.dump(projects, f)
+
+    def _write_default_config_if_not_exists(self):
+        with open(os.path.join(self.config_dir, "config.json"), "rb") as f:
+            config = json.load(f)
+        if self.project_name not in config:
+            config[self.project_name] = {}
+        with open(os.path.join(self.config_dir, "config.json"), "w") as f:
+            json.dump(config, f)
+
+    def write_functions_to_config(self):
+        config_file_path = os.path.join(self.config_dir, "config.json")
+        with open(config_file_path, "r") as f:
+            config = json.loads(f.read())
+        if "DISPLAY_NAMES" not in config[self.project_name]:
+            config[self.project_name]["DISPLAY_NAMES"] = {}
+        config[self.project_name]["DISPLAY_NAMES"][
+            "DEFAULT"
+        ] = self._functions_used_in_project
+        with open(config_file_path, "w") as f:
+            json.dump(config, f)
 
     def add_to_project_list(
         self, schema: Dict[str, Dict[str, Union[str, bool]]], reset_config: bool = False

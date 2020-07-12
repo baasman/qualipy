@@ -4,9 +4,8 @@
 Qualipy
 ========
 
-Qualipy is a data monitoring and quality library. Most data quality tools out
-there focus on monitoring the input and/or the output. Qualipy, on the other hand,
-is completely focused on understanding your data during a pipeline or data workflow.
+Qualipy is a library designed to track and monitor real-time data and provide automated
+anomaly detection, reporting, and analysis on that data. 
 
 
 What it looks like
@@ -14,10 +13,12 @@ What it looks like
 
 Take a look at the following example to get a view of what a qualipy pipeline looks like::
 
-    from qualipy import Column, function, Project, Qualipy
-    from qualipy.backend.pandas_backend.pandas_types import FloatType
-
-    import pandas as pd
+    from qualipy.reflect.column import column
+    from qualipy.reflect.function import function
+    from qualipy import Qualipy, Project
+    from qualipy.backends.pandas_backend.pandas_types import FloatType
+    from qualipy.backends.pandas_backend.dataset import PandasData
+    from qualipy.datasets import stocks
 
 
     @function(return_format=float)
@@ -25,50 +26,35 @@ Take a look at the following example to get a view of what a qualipy pipeline lo
         return data[column].mean()
 
 
-    class SepalLength(Column):
+    price_column = column(column_name="price", column_type=FloatType(), functions=[mean])
 
-        column_name = 'sepal.length'
-        column_type = FloatType()
-        force_type = True
-        null = False
-        force_null = False
-        unique = False
 
-        functions = [
-            {
-                'function': mean,
-                'parameters': {}
-            }
-        ]
+    project = Project(project_name="example", config_dir="/tmp/.qualipy")
+    project.add_column(price_column)
 
-    project = Project(project_name='iris')
-    project.add_column(SepalLength())
-
-    df = pd.read_csv('https://gist.githubusercontent.com/netj/8836201/raw/6f9306ad21398ea43cba4f7d537619d0e07d5ae3/iris.csv')
-
-    ds = DataSet(project=project, batch_name='test-batch')
-    ds.set_dataset(df)
-    ds.run()
+    qualipy = Qualipy(project=project)
+    stocks = PandasData(stocks)
+    stocks.set_stratify_rule("symbol")
+    qualipy.set_chunked_dataset(stocks, time_column="date", time_freq="1M")
+    qualipy.run(autocommit=True)
 
 
 What just happened?
 ====================
 
 First, we created a function called 'mean', using the function decorator. This establishes a numerical aggregator that
-returns the mean of a column, in a float format.
+returns the mean of a column, in a float format. This could now be applied to any live - numerical
+data and tracked.
 
-Second, we map a class called 'SepalLength' to the column 'sepal.length' by inheriting from the Column base class.
-Within that mapping, we specify:
-  - column_name: The column it refers to
-  - column_type: The type the column should adhere to
-  - force_type: If True, process fails if column type does not match
-  - null: Can column be null
-  - force_null: if null is False, process fails if null values found in column
-  - unique: Should uniqueness of column be enforced?
-  - functions: The arbitrary functions we'd like to call on the
+Second, we create a mapping between the column "price" of the stocks data and the 
+`price_column` object. This establishes the mapping, enforces a datatype, and specifies
+what metrics to track. Many more options are available.
 
-Third, we establish a Project. This project will be the overarching chapter to contain and store each batch's informations.
-Additionally, it allows us to specify where to store the resulting metadata and configuration.
+Third, we establish a Project. This project will be the overarching object that
+ persists each batch's aggregate data.
 
-Lastly, we specify a specific batch to the project. In this case, we'll be performing data quality measures on Iris,
-and give it a batch name to identify it in the dashboard.
+Now that we've set up the boilerplate of Qualipy, we can get to actually running it
+on some real data. All we need to do instantiate the Qualipy object and tie it to whatever
+project we want to track. We also need to instantiate our dataset, in this case a pandas
+dataset, and optionally define a way to stratify in incoming data. All that's left is to
+set the current dataset, and run. 

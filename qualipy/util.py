@@ -97,6 +97,7 @@ def get_project_data(project, timezone, latest_insert_only=False, floor_datetime
         data.date = pd.to_datetime(data.date)
     data.insert_time = pd.to_datetime(data.insert_time)
     data.value = data.value.fillna(np.NaN)
+    data["original_column_name"] = data["column_name"]
     data["column_name"] = data["column_name"] + "_" + data["run_name"]
     data.batch_name = np.where(
         data.batch_name == "from_chunked", data.date.astype(str), data.batch_name

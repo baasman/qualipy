@@ -171,6 +171,7 @@ class Qualipy(object):
     def commit(self):
         with self.project.engine.begin() as conn:
             self._write(conn=conn, measures=self.total_measures)
+        self.project.write_functions_to_config()
 
     def _generate_metrics(self, autocommit: bool = True) -> None:
         measures = []
