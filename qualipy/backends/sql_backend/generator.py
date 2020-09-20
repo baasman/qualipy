@@ -85,6 +85,9 @@ class BackendSQL(BackendBase):
             raise Exception(
                 f"Column: {column} not found in table {data._table.fullname}"
             )
+        except AttributeError:
+            raise Exception(f"A pandas dataframe was pass to a SQL backend")
+
         return str(col["type"])
 
     @staticmethod

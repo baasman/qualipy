@@ -45,9 +45,13 @@ def percentage_missing(data, column):
         return 1
 
 
-@function(return_format=int)
-def nunique(data, column):
-    return get_column(data, column).nunique()
+@function(
+    return_format=int,
+    display_name="Number of Unique Elements",
+    description="This is a raw count of the total number of unique elements in the column",
+)
+def number_of_unique(data, column):
+    return data[column].nunique()
 
 
 @function()

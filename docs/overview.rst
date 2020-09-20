@@ -1,12 +1,8 @@
 .. highlight:: sh
 
-========
-Qualipy
-========
-
-Qualipy is a library designed to track and monitor real-time data and provide automated
-anomaly detection, reporting, and analysis on that data. 
-
+=========
+Overview
+=========
 
 What it looks like
 ===================
@@ -50,8 +46,7 @@ Second, we create a mapping between the column "price" of the stocks data and th
 `price_column` object. This establishes the mapping, enforces a datatype, and specifies
 what metrics to track. Many more options are available.
 
-Third, we establish a Project. This project will be the overarching object that
- persists each batch's aggregate data.
+Third, we establish a Project. This project will be the overarching object that persists each batch's aggregate data.
 
 Now that we've set up the boilerplate of Qualipy, we can get to actually running it
 on some real data. All we need to do instantiate the Qualipy object and tie it to whatever

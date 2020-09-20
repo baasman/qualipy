@@ -6,14 +6,28 @@ import uuid
 
 
 class SQLData(BaseData):
+    """This is used when tracking a relational table
+    """
+
     def __init__(
         self,
-        engine=None,
-        table_name=None,
-        schema=None,
-        conn_string=None,
-        custom_select_sql=None,
+        engine: sa.engine.base.Engine = None,
+        table_name: str = None,
+        schema: str = None,
+        conn_string: str = None,
+        custom_select_sql: str = None,
     ):
+        """
+        Args:
+            engine: A sqlalchemy engine to the database containing the table we want to track
+            table_name: The name of the table we want to track
+            schema: The schema the table is in
+            conn_string: If engine is None, you can just pass the sqlalchemy database connection
+            custom_select_sql: Must be proper SQL for whatever DB you are using. This will instantiate
+                a temporary table that Qualipy will run against. This is useful if you dont need the
+                entire table, or need to run any joins before running Qualipy. However, often it 
+                might be better to just create a view of what you need.
+        """
         if engine is not None:
             self.engine = engine
         else:
@@ -27,7 +41,7 @@ class SQLData(BaseData):
             else:
                 table_name = f"tmp_{table_name}"
             self._create_temp_table(table_name, custom_select_sql, schema)
-            if self.dialect != 'oracle':
+            if self.dialect != "oracle":
                 schema = None
         self.table_name = table_name
 
@@ -76,7 +90,14 @@ class SQLData(BaseData):
     def _drop_temp_table(self):
         self._table.drop()
 
-    def set_custom_where(self, custom_where):
+    def set_custom_where(self, custom_where: str):
+        """Set this when you want a function to run on a subset of the table
+
+        Args:
+            custom_where: The where portion of a sql statement. This can then be used in
+                a function. See example in the documentation for more information
+
+        """
         self.custom_where = custom_where
 
     def _table_exists_fallback(self, table_name):

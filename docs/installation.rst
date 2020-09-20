@@ -1,7 +1,7 @@
 .. highlight:: sh
 
-Installation
-============
+Installation and Setup
+=======================
 
 
 To install using pip::
@@ -14,4 +14,6 @@ To install using git::
     $ cd qualipy
     $ pip install .
 
-Docker and docker-compose is recommended for running the webapp, although not necessary.
+By default, Qualipy will create a SQLite file to store and maintain all data. However,
+as data grows larger and more complex, Postgres becomes recommended. This is not a guide
+on running Postgres, but to get setup easily, docker is recommended.

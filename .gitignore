@@ -48,6 +48,8 @@ coverage.xml
 
 # Sphinx documentation
 docs/_build/
+docs/_static/
+docs/_templates/
 
 
 .idea/

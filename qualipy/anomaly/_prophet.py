@@ -40,6 +40,8 @@ class ProphetModel(AnomalyModelImplementation):
         )
         test_data.ds = test_data.ds.dt.tz_localize(None)
         predicted = self.model.predict(test_data)
+        # self.model.plot(predicted).savefig('/home/baasman/prop.png')
+
         predicted = predicted.set_index(test_data.index)
         predicted["y"] = test_data["y"]
 

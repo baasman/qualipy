@@ -5,7 +5,11 @@ import jinja2
 import numpy as np
 import pandas as pd
 
-from qualipy.reports.base import BaseJinjaView, DEFAULT_FUNCTION_DESCRIPTIONS
+from qualipy.reports.base import (
+    BaseJinjaView,
+    DEFAULT_FUNCTION_DESCRIPTIONS,
+    convert_to_markup,
+)
 from qualipy.project import Project
 from qualipy.util import (
     get_anomaly_data,
@@ -30,25 +34,6 @@ from qualipy.visualization.general import (
     missing_by_column_bar_altair,
     row_count_summary,
 )
-
-
-def convert_to_markup(
-    chart,
-    chart_id,
-    show_by_default=True,
-    button_name="Hide plot",
-    list_of_anomalies=None,
-):
-    show = "show" if show_by_default else ""
-    markup = jinja2.Markup(chart.to_json())
-    plot = {
-        "chart": markup,
-        "show_by_default": show,
-        "button_name": button_name,
-        "chart_id": chart_id,
-        "list_of_anomalies": list_of_anomalies,
-    }
-    return plot
 
 
 def list_anomalies(data, metric_id):
@@ -95,10 +80,10 @@ class AnomalyReport(BaseJinjaView):
         # limitation - type not part of anomaly table - same
         if self.anomaly_data.shape[0] > 0:
             # TODO: run_name is wrong on anomaly table - merging from project table for now
-            self.anomaly_data = self.anomaly_data.drop('run_name', axis=1)
+            self.anomaly_data = self.anomaly_data.drop("run_name", axis=1)
             self.anomaly_data = self.anomaly_data.merge(
                 self.project_data[
-                    ["metric_id", "type", "original_column_name", 'run_name']
+                    ["metric_id", "type", "original_column_name", "run_name"]
                 ].drop_duplicates(),
                 on="metric_id",
                 how="left",
@@ -109,7 +94,7 @@ class AnomalyReport(BaseJinjaView):
         if self.project_name not in config:
             raise Exception(
                 f"""Must specify {project_name} in your configuration file ({self.config_dir})
-                in order to generate an anomly report"""
+                in order to generate an anomaly report"""
             )
         self.project_specific_config = config[self.project_name]
         self._set_viz_config()
@@ -255,7 +240,9 @@ class AnomalyReport(BaseJinjaView):
             + r["description"]
             + '">'
             + r["display_name"]
-            + "</a>",
+            + "</a>"
+            if r["trend_function_name"] is not None
+            else "",
             axis=1,
         )
         anom_data = anom_data.drop(["display_name", "description"], axis=1)
@@ -473,6 +460,21 @@ class AnomalyReport(BaseJinjaView):
                     bchart = barchart_top_categories_altair(
                         var_met_data, var, top_n=20, show_notebook=False
                     )
-                    plots.append(jinja2.Markup(vchart.to_json()))
-                    plots.append(jinja2.Markup(bchart.to_json()))
+                    button_name = set_title_name(var_met_data)
+                    plots.append(
+                        convert_to_markup(
+                            chart=vchart,
+                            chart_id=var_met_data.metric_id.iloc[0] + "Trends",
+                            show_by_default=True,
+                            button_name=button_name + "-Trends",
+                        )
+                    )
+                    plots.append(
+                        convert_to_markup(
+                            chart=bchart,
+                            chart_id=var_met_data.metric_id.iloc[0] + "Bar",
+                            show_by_default=True,
+                            button_name=button_name + "-Bar",
+                        )
+                    )
         return plots

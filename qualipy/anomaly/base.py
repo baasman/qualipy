@@ -3,6 +3,7 @@ import json
 import os
 
 import joblib
+import jinja2
 
 
 def create_file_name(model_dir, metric_id):

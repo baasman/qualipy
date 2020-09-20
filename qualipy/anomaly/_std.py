@@ -6,12 +6,12 @@ from qualipy.anomaly.base import AnomalyModelImplementation
 
 
 class STDCheck(AnomalyModelImplementation):
-    def __init__(self, metric_name, kwargs):
-        self.multivariate = kwargs.pop("multivariate", True)
-        defaults = {"std": 4}
-        kwargs = {**defaults, **kwargs}
-        for k, v in kwargs.items():
-            setattr(self, k, v)
+    def __init__(
+        self, config_dir, metric_name, project_name=None, arguments=None,
+    ):
+        super(STDCheck, self).__init__(config_dir, metric_name, project_name, arguments)
+        self.multivariate = self.arguments.pop("multivariate", False)
+        self.std = self.arguments.pop("std", 4)
 
     def fit(self, train_data):
         self.model = None
@@ -27,11 +27,3 @@ class STDCheck(AnomalyModelImplementation):
             preds = [-1 if std == True else 1 for std in std_outliers]
 
         return np.array(preds), zscores
-
-    def train_predict(self, train_data, **kwargs):
-        if isinstance(train_data, pd.DataFrame):
-            self.model.fit(train_data)
-            return self.predict(train_data, **kwargs)
-        else:
-            self.model.fit(train_data.value.values.reshape((-1, 1)))
-            return self.predict(train_data.value.values.reshape((-1, 1)))

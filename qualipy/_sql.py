@@ -55,6 +55,7 @@ class SQL:
                 "date" DATETIME not null,
                 "metric" CHARACTER not null,
                 "arguments" CHARACTER null,
+                "trend_function_name" CHARACTER null,
                 "return_format" CHARACTER DEFAULT 'float',
                 "batch_name" CHARACTER null DEFAULT true,
                 "run_name" CHARACTER not null DEFAULT FALSE,
@@ -98,8 +99,8 @@ class SQL:
     ) -> None:
         schema = self.schema + "." if self.schema is not None else ""
         with engine.begin() as conn:
-            conn.execute(f"drop table {schema}{name} cascade")
-            conn.execute(f"drop table {schema}{anomaly_name} cascade")
+            conn.execute(f"drop table {schema}{name}")
+            conn.execute(f"drop table {schema}{anomaly_name}")
         if recreate:
             self.create_table(engine, name)
             self.create_anomaly_table(engine, anomaly_name)
@@ -221,10 +222,10 @@ class Postgres(SQL):
     ) -> None:
         schema = self.schema + "." if self.schema is not None else ""
         with engine.begin() as conn:
-            # conn.execute(f"drop table {schema}{name} cascade")
-            conn.execute(f"drop table {schema}{anomaly_name} cascade")
+            conn.execute(f"drop table {schema}{name}")
+            conn.execute(f"drop table {schema}{anomaly_name}")
         if recreate:
-            # self.create_table(engine, name)
+            self.create_table(engine, name)
             self.create_anomaly_table(engine, anomaly_name)
 
     def create_schema_if_not_exists(self, engine) -> None:

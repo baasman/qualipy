@@ -3,7 +3,7 @@ import json
 
 import jinja2
 
-from qualipy.reports.base import BaseJinjaView
+from qualipy.reports.base import BaseJinjaView, convert_to_markup
 from qualipy.project import Project
 from qualipy.util import get_project_data
 
@@ -27,14 +27,13 @@ class ComparisonReport(BaseJinjaView):
         self.comparison_name = comparison_name
         with open(os.path.join(config_dir, "config.json"), "rb") as config_file:
             config = json.load(config_file)
+        if "COMPARISONS" not in config:
+            raise Exception("No comparisons specified in the configuration")
         self.comparison_config = config["COMPARISONS"][comparison_name]
 
-        project_keys = sorted(
-            [i for i in self.comparison_config.keys() if "project" in i]
-        )
+        project_names = self.comparison_config["projects"]
         self.data = []
-        for project_key in project_keys:
-            project_name = self.comparison_config[project_key]
+        for project_name in project_names:
             project = Project(
                 project_name=project_name, config_dir=self.config_dir, re_init=True
             )
@@ -60,15 +59,38 @@ class ComparisonReport(BaseJinjaView):
         num_comparisons = self.comparison_config["num_metrics"]
         for comp in num_comparisons:
             chart = plot_diffs_altair(self.data, comp, time_freq, show_notebook=False)
-            plots.append(jinja2.Markup(chart.to_json()))
+            id_name = "-".join(comp)
+            plots.append(
+                convert_to_markup(
+                    chart,
+                    chart_id=id_name,
+                    show_by_default=True,
+                    button_name=id_name[:20],
+                )
+            )
         return plots
 
     def _create_cat_comparison_plot(self):
         plots = []
-        cat_comparisons = self.comparison_config["cat_metrics"]
+        cat_comparisons = self.comparison_config.get("cat_metrics", [])
         for comp in cat_comparisons:
             chart = bar_chart_comparison_altair(self.data, comp, show_notebook=False)
-            plots.append(jinja2.Markup(chart.to_json()))
+            id_name = "-".join(comp)
+            plots.append(
+                convert_to_markup(
+                    chart,
+                    chart_id=id_name + "Bar",
+                    show_by_default=True,
+                    button_name=id_name[:20] + " - Bar",
+                )
+            )
             chart = value_count_comparison_altair(self.data, comp, show_notebook=False)
-            plots.append(jinja2.Markup(chart.to_json()))
+            plots.append(
+                convert_to_markup(
+                    chart,
+                    chart_id=id_name + "Counts",
+                    show_by_default=True,
+                    button_name=id_name[:20] + " - Counts",
+                )
+            )
         return plots

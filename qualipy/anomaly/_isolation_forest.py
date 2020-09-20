@@ -10,8 +10,8 @@ class IsolationForestModel(AnomalyModelImplementation):
         super(IsolationForestModel, self).__init__(
             config_dir, metric_name, project_name, arguments
         )
-        self.multivariate = self.arguments.pop("multivariate", True)
-        self.check_for_std = self.arguments.pop("check_for_std", True)
+        self.multivariate = self.arguments.pop("multivariate", False)
+        self.check_for_std = self.arguments.pop("check_for_std", False)
         defaults = {"contamination": 0.05}
         self.arguments = {**self.arguments, **defaults}
         self.model = IsolationForest(**self.arguments)

@@ -11,6 +11,7 @@ from qualipy.util import HOME
 from qualipy._sql import DB_ENGINES
 from qualipy.reflect.column import Column
 from qualipy.reflect.table import Table
+from qualipy._schema import config_schema
 
 
 def _validate_project_name(project_name):
@@ -42,7 +43,21 @@ def inspect_db_connection(url):
 
 
 class Project(object):
-    def __init__(self, project_name: str, config_dir: str, re_init=False):
+    """The project class points to a specific configuration, and holds all mappings.
+
+    It also includes a lot of useful utility functions for working with the management
+    of projects
+    """
+
+    def __init__(self, project_name: str, config_dir: str, re_init: bool = False):
+        """
+        Args:
+            project_name: The name of the project. This will be important for referencing
+                in report generation later. The project_name can not be changed - as it used
+                internally when storing data
+            config_dir: A path to the configuration directory, as created using the CLI command ``qualipy generate-config``. 
+                See the (link here)``config`` section for more information
+        """
         self._initialize(
             project_name=project_name, config_dir=config_dir, re_init=re_init
         )
@@ -65,6 +80,7 @@ class Project(object):
         self._write_default_config_if_not_exists()
         with open(os.path.join(self.config_dir, "config.json"), "rb") as f:
             config = json.load(f)
+        self._validate_schema(config)
         engine = config.get("QUALIPY_DB")
         self.engine = create_engine(engine)
         self.db_schema = config.get("SCHEMA")
@@ -90,6 +106,24 @@ class Project(object):
         self._initialize(self.project_name, config_dir, True)
 
     def add_column(self, column: Column, name: str = None) -> None:
+        """Add a mapping to this project
+
+        This is the method to use when adding a column mapping to the project. Once added,
+        it will automatically be executed when running the pipeline.
+
+        Args:
+            column: The column object. Can either be created through the function method or class method.
+            name: This is useful when you don't want to run all mappings at once. Often, you'll do analysis
+                on different subsets of the same dataset. Use name to reference it later on and only execute
+                it for a specific subset.
+
+                This name is also essential if you want to analyze the same column, but in a different
+                subset of the data.
+
+        Returns:
+            None
+
+        """
         if isinstance(column, list):
             for col in column:
                 self._add_column(col)
@@ -119,6 +153,9 @@ class Project(object):
                         "display_name": function[1].display_name,
                         "description": function[1].description,
                     }
+
+    def _validate_schema(self, config):
+        config_schema.validate(config)
 
     def add_table(self, table: Table, extract_sample=False) -> None:
         table._generate_columns(extract_sample=extract_sample)
@@ -183,7 +220,43 @@ class Project(object):
         with open(os.path.join(self.config_dir, "config.json"), "rb") as f:
             config = json.load(f)
         if self.project_name not in config:
-            config[self.project_name] = {}
+            config[self.project_name] = {
+                "ANOMALY_ARGS": {
+                    "check_for_std": False,
+                    "importance_level": 1,
+                    "distance_from_bound": 1,
+                },
+                "ANOMALY_MODEL": "std",
+                "DATE_FORMAT": "%Y-%m-%d",
+                "NUM_SEVERITY_LEVEL": 1,
+                "CAT_SEVERITY_LEVEL": 1,
+                "VISUALIZATION": {
+                    "row_counts": {
+                        "include_bar_of_latest": {
+                            "use": True,
+                            "diff": False,
+                            "show_by_default": True,
+                        },
+                        "include_summary": {"use": True, "show_by_default": True},
+                    },
+                    "trend": {
+                        "include_bar_of_latest": {
+                            "use": True,
+                            "diff": False,
+                            "show_by_default": True,
+                        },
+                        "include_summary": {"use": True, "show_by_default": True},
+                        "sst": 10,
+                        "point": True,
+                        "n_steps": 10,
+                        "add_diff": {"shift": 1},
+                    },
+                    "missing": {
+                        "include_0": True,
+                        "include_bar_of_latest": {"use": True, "diff": False},
+                    },
+                },
+            }
         with open(os.path.join(self.config_dir, "config.json"), "w") as f:
             json.dump(config, f)
 

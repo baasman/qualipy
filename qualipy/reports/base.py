@@ -5,6 +5,7 @@ from jinja2 import (
     Environment,
     FileSystemLoader,
     select_autoescape,
+    Markup,
 )
 import altair as alt
 import numpy as np
@@ -19,6 +20,25 @@ DEFAULT_FUNCTION_DESCRIPTIONS = {
         "description": "A simple count of rows in the batch subset",
     }
 }
+
+
+def convert_to_markup(
+    chart,
+    chart_id,
+    show_by_default=True,
+    button_name="Hide plot",
+    list_of_anomalies=None,
+):
+    show = "show" if show_by_default else ""
+    markup = Markup(chart.to_json())
+    plot = {
+        "chart": markup,
+        "show_by_default": show,
+        "button_name": button_name,
+        "chart_id": chart_id,
+        "list_of_anomalies": list_of_anomalies,
+    }
+    return plot
 
 
 class BaseJinjaView:
@@ -51,8 +71,9 @@ class BaseJinjaView:
         include_0_missing=True,
     ):
         if anomaly_data.shape[0] > 0:
-            anomaly_data["keep"] = np.where(anomaly_data.type == "boolean", True, False)
-            anomaly_data["keep"] = np.where(anomaly_data.severity.isnull(), True, False)
+            anomaly_data["keep"] = True
+            # anomaly_data["keep"] = np.where(anomaly_data.type == "boolean", True, False)
+            # anomaly_data["keep"] = np.where(anomaly_data.severity.isnull(), True, False)
             if num_severity_level is not None:
                 anomaly_data.keep = np.where(
                     (
@@ -64,10 +85,10 @@ class BaseJinjaView:
                         )
                         & (
                             anomaly_data.severity.astype(float).abs()
-                            > num_severity_level
+                            < num_severity_level
                         )
                     ),
-                    True,
+                    False,
                     anomaly_data.keep,
                 )
 
@@ -78,10 +99,10 @@ class BaseJinjaView:
                         & ((anomaly_data.type == "categorical"))
                         & (
                             anomaly_data.severity.astype(float).abs()
-                            > cat_severity_level
+                            < cat_severity_level
                         )
                     ),
-                    True,
+                    False,
                     anomaly_data.keep,
                 )
             anomaly_data = anomaly_data[anomaly_data.keep == True].drop("keep", axis=1)

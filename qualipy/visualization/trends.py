@@ -86,7 +86,7 @@ def trend_line_altair(
         .mark_point(size=50)
         .encode(x=alt.X("date:T"), y=alt.Y("anom_val"), color=alt.value("red"))
     )
-    chart = value_line + band + anom_points
+    chart = value_line + anom_points
     charts = [chart]
     if sst is not None:
         try:

@@ -47,14 +47,31 @@ def _create_value(
 
 
 class Qualipy(object):
+    """
+    This is the main entrypoint to Qualipy. This is the object that will actually
+    execute on your data.
+    """
+
     def __init__(
         self,
         project: Project,
         backend: str = "pandas",
         time_of_run: Optional[datetime.datetime] = None,
         batch_name: str = None,
-        train_anomaly: bool = False,
     ):
+        """
+        Args:
+            project: Your defined qualipy.Project
+            backend: Can be either "pandas", "sql", or "spark" depending on what kind
+                of data you are tracking
+            time_of_run: If None, this will be the current datetime. Note, this is very important
+                for analysis, as time_of_run is essentially your x_axis in all time series analysis.
+                Being able to set it to a specific date can be useful when generating retrospective
+                statistics.
+            batch_name: Useful for comparing specific time points by name during analysis. By default it will
+                take the time_of_run as batch_name
+        """
+
         self.project = project
         self.time_of_run = (
             datetime.datetime.now() if time_of_run is None else time_of_run
@@ -65,7 +82,6 @@ class Qualipy(object):
         self.total_measures = []
         self.generator = GENERATORS[backend](project.config_dir)
 
-        self.train_anomaly = train_anomaly
         self.chunk = False
         self.run_n = 0
         self.schema = {}
@@ -73,9 +89,20 @@ class Qualipy(object):
         self.stratify = False
 
     def run(self, autocommit: bool = False) -> None:
+        """The method that runs the execution
+
+        Note: You must first set a dataset using either ``set_dataset`` or
+            ``set_chunked_dataset``
+
+        Args:
+            autocommit: If set to True, qualipy will automatically write to it's backend. If set
+                to False, the user will have to manually run the ``commit`` function.
+
+        Returns:
+            None
+        """
         if not self.chunk:
-            # TODO: still need to add stratification
-            self._generate_metrics(autocommit=autocommit)
+            self._run_with_optional_stratify(autocommit)
             self.run_n += 1
         else:
             for chunk in self.time_chunks:
@@ -85,27 +112,49 @@ class Qualipy(object):
                     self.current_data = self.fallback_data
                 self.batch_name = str(chunk["batch_name"])
                 self.time_of_run = chunk["batch_name"]
-                if self.stratify:
-                    self.original_data = self.current_data.copy()
-                    self.original_name = self.current_name
-                    for stratify_value in self.stratify_values:
-                        self.current_data = self.stratify_function(
-                            self.current_data, stratify_value
-                        )
-                        self.current_name = f"{self.current_name}_{stratify_value}"
-                        self._generate_metrics(autocommit=autocommit)
+                self._run_with_optional_stratify(autocommit)
 
-                        # turn back name and data
-                        self.current_name = self.original_name
-                        self.current_data = self.original_data
-                else:
-                    self._generate_metrics(autocommit=autocommit)
+    def _run_with_optional_stratify(self, autocommit):
+        if self.stratify:
+            self.original_data = self.current_data.copy()
+            self.original_name = self.current_name
+            for stratify_value in self.stratify_values:
+                self.current_data = self.stratify_function(
+                    self.current_data, stratify_value
+                )
+                self.current_name = f"{self.current_name}_{stratify_value}"
+                self._generate_metrics(autocommit=autocommit)
+
+                # turn back name and data
+                self.current_name = self.original_name
+                self.current_data = self.original_data
+        else:
+            self._generate_metrics(autocommit=autocommit)
 
     def set_dataset(
         self, df, columns: Optional[List[str]] = None, name: str = None
     ) -> None:
-        self._set_data(df)
+        """This specified the exact subset of data you want to run on.
+
+        Use this method when you don't have all of the data (a live process) and want
+        to only run on one batch of data.
+
+        Args:
+            df: Can be either PandasData, SQLData, or SparkData
+            columns: If you don't want to run all mappings on this specific subset
+                of data, you can specify just the columns you want to run. Note - this
+                corresponds to the ``name`` argument when adding a column to a project
+            name: If you're running metrics from a project on many different subsets any
+                iterations of the data, you might want to give each specific subset a
+                name. This is especially necessary when running aggregates on a column
+                where the column name itself stays the same, but the meaning changes based
+                on the subset.
+        Returns:
+            None
+        """
+        self._set_data(df, allowed_dataclasses=["SQLData", "PandasData", "SparkData"])
         self.current_name = name if name is not None else self.run_n
+        self._set_stratification(df)
         self.columns = self._set_columns(columns)
         self._set_schema(self.current_data)
 
@@ -117,7 +166,30 @@ class Qualipy(object):
         time_freq: str = "1D",
         time_column=None,
     ):
-        self._set_data(df)
+        """This specified the exact subset of data you want to run on.
+
+        Use this method when you already have all data available, and want to retrospectively
+        analyze all historical as if it was a live process. Note - There's nothing stopping you
+        from first running this on the available data and then running on a batch-per-batch basis
+        afterwards using regular ``set_dataset``.
+
+        Args:
+            df: Can be either PandasData, SQLData, or SparkData
+            columns: If you don't want to run all mappings on this specific subset
+                of data, you can specify just the columns you want to run. Note - this
+                corresponds to the ``name`` argument when adding a column to a project
+            name: If you're running metrics from a project on many different subsets any
+                iterations of the data, you might want to give each specific subset a
+                name. This is especially necessary when running aggregates on a column
+                where the column name itself stays the same, but the meaning changes based
+                on the subset.
+            time_freq: A pandas-like timeseries frequency term. Use this page to know what you
+                can use: https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#timeseries-offset-aliases (turn to link)
+            time_column: The time series column qualipy should use to chunk the data
+        Returns:
+            None
+        """
+        self._set_data(df, allowed_dataclasses=["SQLData", "PandasData", "SparkData"])
         self.current_name = name if name is not None else self.run_n
         self._set_stratification(df)
         self.columns = self._set_columns(columns)
@@ -135,15 +207,15 @@ class Qualipy(object):
             self.current_data, time_freq, time_column
         )
 
-    def _set_data(self, df):
-        if df.__class__.__name__ in ["SQLData", "PandasData", "SparkData"]:
+    def _set_data(self, df, allowed_dataclasses):
+        if df.__class__.__name__ in allowed_dataclasses:
             self.current_data = df.get_data()
             try:
                 self.fallback_data = df.set_fallback_data()
             except:
                 pass
         else:
-            self.current_data = df
+            raise Exception(f"{df.__class__.__name__} is not yet a supported datatype")
 
     def _set_stratification(self, df):
         # stratification only implemented in Pandas for now
@@ -178,19 +250,19 @@ class Qualipy(object):
         types = {float: "float", int: "int", bool: "bool", dict: "dict", str: "str"}
         for col, specs in self.project.columns.items():
 
-            # TODO: cant be based on column name - should be on project column name
             if col not in self.columns:
                 continue
 
             column_name = specs["name"]
 
             # enforce type for function
-            self.generator.check_type(
-                data=self.current_data,
-                column=column_name,
-                desired_type=specs["type"],
-                force=specs["force_type"],
-            )
+            if specs["type"] is not None:
+                self.generator.check_type(
+                    data=self.current_data,
+                    column=column_name,
+                    desired_type=specs["type"],
+                    force=specs["force_type"],
+                )
             overwrite_type = specs["overwrite_type"]
             if overwrite_type:
                 self.current_data = self.generator.overwrite_type(

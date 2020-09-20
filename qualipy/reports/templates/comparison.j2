@@ -12,9 +12,9 @@
         data-target=".numerical" aria-expanded="true" aria-controls=".numerical">
         View Numerical Trend Comparisons
     </button>
-    <div class='numerical collapse'>
+    <div class='numerical show'>
         {% for plot in num_plots %}
-        {{ util.plot_chart('num_vis' + loop.index|string, plot) }}
+        {{ util.plot_chart(plot) }}
         {% endfor %}
     </div>
 
@@ -23,9 +23,9 @@
         data-target=".categorical" aria-expanded="true" aria-controls=".categorical">
         View Categorical Trend Comparisons
     </button>
-    <div class='categorical collapse'>
+    <div class='categorical show'>
         {% for plot in cat_plots %}
-        {{ util.plot_chart('cat_vis' + loop.index|string, plot) }}
+        {{ util.plot_chart(plot) }}
         {% endfor %}
     </div>
 

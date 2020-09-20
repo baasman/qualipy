@@ -80,6 +80,37 @@ def column(
     functions: List[Union[Callable, Dict]] = None,
     extra_functions: Dict[str, Dict] = None,
 ):
+    """This allows us to map to a column of a data object.
+
+    This is one of the essential components of Qualipy. Using column ``allows`` us to map
+    to a specific column of whatever data object we are reflecting, and specify
+    what that column should look like - as well as apply any aggregate functions we've
+    defined.
+
+    Note - You must explicitly add it to the Project object in order for it to run.
+
+    Args:
+        column_name: The name of the column in the data object - Generally either the column name
+            in the pandas or SQL table.
+        column_type: Useful if you want to enforce types in a pandas DataFrame. See (link here) DataTypes section
+            for more information.
+        force_type: If column_type is used, should the type be enforced. Setting this to True means that
+            the entire process will halt if right type is not present.
+        overwrite_type: This is useful if the aggregate function requires a specific datatype for it to be
+            computed.
+        null: Can the column contain missing values
+        force_null: If null is set to False - should the process fail given there are missing values present.
+        unique: Should uniqueness in the column be enforced.
+        is_category: Denoting a column as a category has several consequences - including automatically
+            collecting counts for each category.
+        functions: A list of property defined functions.
+        extra_functions: If this mapping is used for multiple columns but want a function to be applied to
+            only one of the columns, use this. See example for more information.
+    
+    Returns:
+        A column object that can be added to a Project. See Project for more details.
+
+    """
     if functions is None:
         functions = []
     if extra_functions is None:

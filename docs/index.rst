@@ -6,7 +6,21 @@
 Qualipy (v0.1.0)
 ===================================
 
-Qualipy is a data monitoring and quality library.
+Qualipy is a library designed to track and monitor real-time data and provide automated
+anomaly detection, reporting, and analysis on that data.
+
+It does the following:
+  * Provide a library that allows you to:
+      * Create generic aggregate functions
+      * Reflect any column that aggregates can be tracked on (Currently Pandas Series, Spark Columns and SQL columns)
+      * Execute these aggregate functions as your data pipeline is running
+  * Track and maintain these aggregate values in a separate location (Either SQlite or Postgres)
+  * Generate reports describing your data in real time
+  * Run automated anomaly detection on all collected aggregates (and has an extendible anomaly detection model)
+  * Provide a command line interface to:
+      * Execute anomaly detection
+      * Produce anomaly or comparison reports
+      * Interact with the historical data
 
 Contents:
 
@@ -14,9 +28,11 @@ Contents:
    :maxdepth: 2
 
    installation.rst
-   quickstart.rst
-   using_the_package.rst
-   deployment.rst
+   overview.rst
+   user_guide.rst
+   configuration_file.rst
+   CLI.rst
+   anomaly_detection.rst
 
 
 
