@@ -10,3 +10,4 @@ tqdm
 altair
 sphinx-click
 click
+schema
