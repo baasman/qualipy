@@ -11,3 +11,4 @@ altair
 sphinx-click
 click
 schema
+banpei

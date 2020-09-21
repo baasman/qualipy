@@ -7,12 +7,10 @@ import warnings
 
 import qualipy
 from qualipy.util import set_value_type
-from plotly.subplots import make_subplots
 from qualipy.util import set_title_name
 
 import pandas as pd
 import numpy as np
-import plotly.graph_objects as go
 import altair as alt
 import banpei
 
@@ -59,7 +57,14 @@ def trend_line_altair(
 
     trend_data["mean_line"] = trend_data.value.mean()
     trend_data["median_line"] = trend_data.value.median()
-    td = trend_data[["date", "value", "mean_line", "median_line",]].melt("date")
+    td = trend_data[
+        [
+            "date",
+            "value",
+            "mean_line",
+            "median_line",
+        ]
+    ].melt("date")
 
     min_y = min(trend_data.value.min() - 0.001, trend_data["lower"].min() - 0.001)
     max_y = max(trend_data.value.max() + 0.001, trend_data["upper"].max() + 0.001)
@@ -79,7 +84,11 @@ def trend_line_altair(
     band = (
         alt.Chart(trend_data[["date", "lower", "upper"]])
         .mark_area(opacity=0.15)
-        .encode(x=alt.X("date:T"), y=alt.Y("lower"), y2=alt.Y2("upper"),)
+        .encode(
+            x=alt.X("date:T"),
+            y=alt.Y("lower"),
+            y2=alt.Y2("upper"),
+        )
     )
     anom_points = (
         alt.Chart(trend_data[["date", "anom_val"]])
@@ -175,7 +184,8 @@ def trend_summary(data, variables, axis="metric_id"):
     data["value_change"] = data.groupby("metric_id").value.diff()
     data["percentage_change"] = data.groupby("metric_id").value.pct_change()
     data = data.melt(
-        id_vars=[axis, "date"], value_vars=["percentage_change", "value_change"],
+        id_vars=[axis, "date"],
+        value_vars=["percentage_change", "value_change"],
     )
     trends = (
         alt.Chart(data)

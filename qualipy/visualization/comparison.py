@@ -1,7 +1,5 @@
 import pandas as pd
 import numpy as np
-import plotly.graph_objects as go
-from plotly.subplots import make_subplots
 import altair as alt
 
 from qualipy.util import set_value_type

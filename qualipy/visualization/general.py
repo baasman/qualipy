@@ -1,126 +1,9 @@
 import pandas as pd
 import numpy as np
-import plotly.graph_objects as go
 from qualipy.util import set_value_type
 from functools import reduce
 from collections import Counter
-from plotly.subplots import make_subplots
 import altair as alt
-
-
-def missing_by_column_bar(data, schema):
-    data.value = data.value.astype(float)
-    data = data.sort_values("value")
-    y = data.groupby("column_name").value.mean()
-    x = y.index
-    nullable_strings = [
-        "value: {}, null: {}".format(round(value, 2), str(schema[i]["nullable"]))
-        for value, i in zip(y, x)
-    ]
-    nullable_values = [
-        {"value": round(value, 2), "null": schema[i]["nullable"]}
-        for value, i in zip(y, x)
-    ]
-    colors = [
-        "rgb(11, 57, 142)" if null["null"] and null["value"] > 0 else "rgb(191, 11, 38)"
-        for null in nullable_values
-    ]
-
-    n_groups = y.shape[0] // 10
-    n = y.shape[0] // n_groups
-    y_groups = [y[i * n : (i + 1) * n] for i in range((len(y) + n - 1) // n)]
-    x_groups = [x[i * n : (i + 1) * n] for i in range((len(x) + n - 1) // n)]
-    nullable_string_groups = [
-        nullable_strings[i * n : (i + 1) * n]
-        for i in range((len(nullable_strings) + n - 1) // n)
-    ]
-    nullable_values_groups = [
-        nullable_values[i * n : (i + 1) * n]
-        for i in range((len(nullable_values) + n - 1) // n)
-    ]
-    colors_groups = [
-        colors[i * n : (i + 1) * n] for i in range((len(colors) + n - 1) // n)
-    ]
-    for x, y, nullable_strings, nullable_values, colors in zip(
-        x_groups,
-        y_groups,
-        nullable_string_groups,
-        nullable_values_groups,
-        colors_groups,
-    ):
-        plot = go.Figure(
-            data=[
-                go.Bar(
-                    y=x,
-                    x=y,
-                    width=0.5,
-                    orientation="h",
-                    hoverinfo="text",
-                    text=nullable_strings,
-                    marker={"color": colors},
-                )
-            ],
-            layout={
-                "title": {"text": "Percentage Missing"},
-                "width": 1000,
-                "xaxis": {
-                    "title": "Percentage Missing",
-                    "range": [0, 1],
-                    "automargin": True,
-                },
-                "yaxis": {"automargin": True},
-                "bargap": 0.5,
-            },
-        )
-        plot.show()
-
-
-def unique_columns_check(data, schema):
-    x = data["batch_name"]
-    traces = []
-    unique_vars = data["column_name"].unique()
-    for idx, var in enumerate(unique_vars, 1):
-        vals = data[data["column_name"] == var].value.values
-        uniques = [idx if i else np.NaN for i in vals]
-        non_uniques = [np.NaN if i else idx for i in vals]
-        traces.append(
-            go.Scatter(
-                x=x,
-                y=uniques,
-                mode="markers",
-                name="unique",
-                marker=dict(size=8, color="rgb(62, 239, 52)"),
-                showlegend=True if idx == 1 else False,
-            )
-        )
-        traces.append(
-            go.Scatter(
-                x=x,
-                y=non_uniques,
-                mode="markers",
-                name="not-unique",
-                marker=dict(size=8, color="rgb(234, 11, 11)"),
-                showlegend=True if idx == 1 else False,
-            )
-        )
-    plot = go.Figure(
-        data=traces,
-        layout={
-            "title": {"text": "Unique-ness checks"},
-            "height": 400,
-            "width": 800,
-            "yaxis": {
-                "showticklabels": True,
-                "showgrid": True,
-                "zeroline": False,
-                "tickvals": [1, unique_vars.shape[0]],
-                "ticktext": unique_vars,
-                "automargin": True,
-            },
-            "xaxis": {"tickvals": x},
-        },
-    )
-    plot.show()
 
 
 def row_count_view(data, anom_data=None, columns=None):
@@ -158,7 +41,10 @@ def row_count_view(data, anom_data=None, columns=None):
         title = "Row counts over time" if idx == 0 else None
         row_runs = df.column_name.unique()
         fig = make_subplots(
-            rows=row_runs.shape[0], cols=1, shared_xaxes=True, shared_yaxes=False,
+            rows=row_runs.shape[0],
+            cols=1,
+            shared_xaxes=True,
+            shared_yaxes=False,
         )
         for row, (name, group) in enumerate(df.groupby("column_name"), start=1):
             scat = go.Scatter(x=group.date, y=group.value.values, name=name)
