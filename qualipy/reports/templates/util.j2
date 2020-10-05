@@ -1,9 +1,11 @@
-{% macro plot_chart(json) -%}
+{% macro plot_chart(json, button=True) -%}
 <div class='trend_chart'>
-    <button class="btn btn-primary" type="button" data-toggle="collapse" 
-        data-target="#{{ json['chart_id'] }}" aria-expanded="true" aria-controls="{{ id }}">
-        {{ json['button_name'] }}
-    </button>
+    {% if button %}
+        <button class="btn btn-primary" type="button" data-toggle="collapse" 
+            data-target="#{{ json['chart_id'] }}" aria-expanded="true" aria-controls="{{ id }}">
+            {{ json['button_name'] }}
+        </button>
+    {% endif %}
     <div class="collapse collapse {{ json['show_by_default'] }}" id="{{ json['chart_id'] }}">
         <script type="text/javascript">
             var spec = {{ json['chart'] }}
@@ -30,4 +32,9 @@
         } );
     </script>
 </div>
+{%- endmacro %}
+
+
+{% macro plot_data(html_table, table_id) -%}
+    {{ html_table }}
 {%- endmacro %}

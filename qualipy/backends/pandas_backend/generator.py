@@ -3,6 +3,7 @@ from qualipy.util import get_column
 from qualipy.backends.base import BackendBase
 
 from qualipy.backends.pandas_backend.dataset import PandasData
+from qualipy.backends.pandas_backend.batch_profiler import PandasBatchProfiler
 from qualipy.exceptions import InvalidType
 from qualipy.backends.pandas_backend.functions import (
     is_unique,
@@ -110,7 +111,7 @@ class BackendPandas(BackendBase):
                 kwargs={},
                 return_format="dict",
             )
-            value_props = None if str(value_props['value']) == 'nan' else value_props
+            value_props = None if str(value_props["value"]) == "nan" else value_props
         else:
             value_props = None
         perc_missing = BackendPandas.generate_description(
@@ -143,3 +144,8 @@ class BackendPandas(BackendBase):
     def generate_data(data, config):
         data = PandasData(data, config)
         return data.get_data()
+
+    @staticmethod
+    def profile_batch(data, batch_name, run_name, columns, config_dir):
+        profiler = PandasBatchProfiler(data, batch_name, run_name, columns, config_dir)
+        profiler.profile()

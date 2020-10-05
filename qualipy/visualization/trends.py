@@ -93,7 +93,12 @@ def trend_line_altair(
     anom_points = (
         alt.Chart(trend_data[["date", "anom_val"]])
         .mark_point(size=50)
-        .encode(x=alt.X("date:T"), y=alt.Y("anom_val"), color=alt.value("red"))
+        .encode(
+            x=alt.X("date:T"),
+            y=alt.Y("anom_val"),
+            color=alt.value("red"),
+            tooltip=["anom_val"],
+        )
     )
     chart = value_line + anom_points
     charts = [chart]
@@ -128,7 +133,7 @@ def trend_line_altair(
         value_diff = (
             alt.Chart(d)
             .mark_line(point=point)
-            .encode(x="date:T", y="value_diff:Q", tooltip=["value_diff"])
+            .encode(x="date:T", y="value_diff:Q", tooltip=["value_diff", "date"])
             .properties(height=100, width=800)
         )
         charts.append(value_diff)
@@ -190,7 +195,9 @@ def trend_summary(data, variables, axis="metric_id"):
     trends = (
         alt.Chart(data)
         .mark_line(point=True)
-        .encode(x="date:T", y=alt.Y("value:Q"), color=axis, tooltip=["value"])
+        .encode(
+            x="date:T", y=alt.Y("value:Q"), color=axis, tooltip=["value", "date", axis]
+        )
         .properties(width=800, height=200)
     )
     trends = trends.facet(

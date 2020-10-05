@@ -18,7 +18,11 @@ DEFAULT_FUNCTION_DESCRIPTIONS = {
     "count": {
         "display_name": "count",
         "description": "A simple count of rows in the batch subset",
-    }
+    },
+    "perc_missing": {
+        "display_name": "Percentage Missing",
+        "description": "Percentage of values that are NaN",
+    },
 }
 
 
@@ -129,7 +133,8 @@ class BaseJinjaView:
                     'You specified "only_show_anomaly" but no anomalies were found'
                 )
             project_data = project_data.merge(
-                anomaly_data[["column_name", "metric"]], on=["column_name", "metric"],
+                anomaly_data[["column_name", "metric"]],
+                on=["column_name", "metric"],
             ).drop_duplicates()
         if key_columns is not None:
             project_data = project_data[project_data.column_name.isin(key_columns)]
@@ -137,7 +142,9 @@ class BaseJinjaView:
 
     def _run_anomaly_detection(self, project_name, config_dir, retrain_anomaly):
         _run_anomaly(
-            project_name=project_name, config_dir=config_dir, retrain=retrain_anomaly,
+            project_name=project_name,
+            config_dir=config_dir,
+            retrain=retrain_anomaly,
         )
 
     def _get_template(self, template=None):

@@ -12,3 +12,5 @@ sphinx-click
 click
 schema
 banpei
+pystan==2.19.1.1
+fbprophet

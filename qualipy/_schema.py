@@ -84,7 +84,7 @@ config_schema = Schema(
                 Optional("proportion"): {},
             },
             Optional("DISPLAY_NAMES"): {
-                "DEFAULT": {str: {"display_name": str, "description": str}},
+                "DEFAULT": {Optional(str): {"display_name": str, "description": str}},
                 Optional("CUSTOM"): {str: {"display_name": str, "description": str}},
             },
         },

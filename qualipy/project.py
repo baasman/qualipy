@@ -26,7 +26,7 @@ def set_default_config(config_dir, db_url=None):
     return conf
 
 
-def create_qualipy_folder(config_dir, db_url=None):
+def generate_config(config_dir, db_url=None):
     if not os.path.exists(config_dir):
         os.makedirs(config_dir, exist_ok=True)
         with open(os.path.join(config_dir, "config.json"), "w") as f:
@@ -34,6 +34,7 @@ def create_qualipy_folder(config_dir, db_url=None):
         with open(os.path.join(config_dir, "projects.json"), "w") as f:
             json.dump({}, f)
         os.makedirs(os.path.join(config_dir, "models"), exist_ok=True)
+        os.makedirs(os.path.join(config_dir, "profile_data"), exist_ok=True)
 
 
 def inspect_db_connection(url):
@@ -55,7 +56,7 @@ class Project(object):
             project_name: The name of the project. This will be important for referencing
                 in report generation later. The project_name can not be changed - as it used
                 internally when storing data
-            config_dir: A path to the configuration directory, as created using the CLI command ``qualipy generate-config``. 
+            config_dir: A path to the configuration directory, as created using the CLI command ``qualipy generate-config``.
                 See the (link here)``config`` section for more information
         """
         self._initialize(
@@ -63,7 +64,10 @@ class Project(object):
         )
 
     def _initialize(
-        self, project_name: str, config_dir: str, re_init: bool = False,
+        self,
+        project_name: str,
+        config_dir: str,
+        re_init: bool = False,
     ):
         self.project_name = project_name
         self.value_table = "{}_values".format(self.project_name)
@@ -226,7 +230,7 @@ class Project(object):
                     "importance_level": 1,
                     "distance_from_bound": 1,
                 },
-                "ANOMALY_MODEL": "std",
+                "ANOMALY_MODEL": "prophet",
                 "DATE_FORMAT": "%Y-%m-%d",
                 "NUM_SEVERITY_LEVEL": 1,
                 "CAT_SEVERITY_LEVEL": 1,

@@ -88,7 +88,7 @@ class Qualipy(object):
         self.from_step = None
         self.stratify = False
 
-    def run(self, autocommit: bool = False) -> None:
+    def run(self, autocommit: bool = False, profile_batch=False) -> None:
         """The method that runs the execution
 
         Note: You must first set a dataset using either ``set_dataset`` or
@@ -97,14 +97,18 @@ class Qualipy(object):
         Args:
             autocommit: If set to True, qualipy will automatically write to it's backend. If set
                 to False, the user will have to manually run the ``commit`` function.
+            profile_batch: If set to True, Qualipy will generate metadata used to construct
+                a batch report by using the ``produce_batch_report`` CLI command.
 
         Returns:
             None
         """
         if not self.chunk:
-            self._run_with_optional_stratify(autocommit)
+            self._run_with_optional_stratify(autocommit, profile_batch=True)
             self.run_n += 1
         else:
+            if profile_batch:
+                raise Exception("Can only profile batch without chunking data")
             for chunk in self.time_chunks:
                 print(f"Running on chunk: {chunk['batch_name']}")
                 self.current_data = chunk["chunk"]
@@ -114,7 +118,7 @@ class Qualipy(object):
                 self.time_of_run = chunk["batch_name"]
                 self._run_with_optional_stratify(autocommit)
 
-    def _run_with_optional_stratify(self, autocommit):
+    def _run_with_optional_stratify(self, autocommit, profile_batch=False):
         if self.stratify:
             self.original_data = self.current_data.copy()
             self.original_name = self.current_name
@@ -123,16 +127,18 @@ class Qualipy(object):
                     self.current_data, stratify_value
                 )
                 self.current_name = f"{self.current_name}_{stratify_value}"
-                self._generate_metrics(autocommit=autocommit)
+                self._generate_metrics(
+                    autocommit=autocommit, profile_batch=profile_batch
+                )
 
                 # turn back name and data
                 self.current_name = self.original_name
                 self.current_data = self.original_data
         else:
-            self._generate_metrics(autocommit=autocommit)
+            self._generate_metrics(autocommit=autocommit, profile_batch=profile_batch)
 
     def set_dataset(
-        self, df, columns: Optional[List[str]] = None, name: str = None
+        self, df, columns: Optional[List[str]] = None, run_name: str = None
     ) -> None:
         """This specified the exact subset of data you want to run on.
 
@@ -144,16 +150,16 @@ class Qualipy(object):
             columns: If you don't want to run all mappings on this specific subset
                 of data, you can specify just the columns you want to run. Note - this
                 corresponds to the ``name`` argument when adding a column to a project
-            name: If you're running metrics from a project on many different subsets any
+            run_name: If you're running metrics from a project on many different subsets any
                 iterations of the data, you might want to give each specific subset a
                 name. This is especially necessary when running aggregates on a column
                 where the column name itself stays the same, but the meaning changes based
-                on the subset.
+                on the subset. By default, this will take the value of '0'
         Returns:
             None
         """
         self._set_data(df, allowed_dataclasses=["SQLData", "PandasData", "SparkData"])
-        self.current_name = name if name is not None else self.run_n
+        self.current_name = run_name if run_name is not None else self.run_n
         self._set_stratification(df)
         self.columns = self._set_columns(columns)
         self._set_schema(self.current_data)
@@ -162,7 +168,7 @@ class Qualipy(object):
         self,
         df,
         columns: Optional[List[str]] = None,
-        name: str = None,
+        run_name: str = None,
         time_freq: str = "1D",
         time_column=None,
     ):
@@ -178,11 +184,11 @@ class Qualipy(object):
             columns: If you don't want to run all mappings on this specific subset
                 of data, you can specify just the columns you want to run. Note - this
                 corresponds to the ``name`` argument when adding a column to a project
-            name: If you're running metrics from a project on many different subsets any
+            run_name: If you're running metrics from a project on many different subsets any
                 iterations of the data, you might want to give each specific subset a
                 name. This is especially necessary when running aggregates on a column
                 where the column name itself stays the same, but the meaning changes based
-                on the subset.
+                on the subset. By default, this will take the value of '0'
             time_freq: A pandas-like timeseries frequency term. Use this page to know what you
                 can use: https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#timeseries-offset-aliases (turn to link)
             time_column: The time series column qualipy should use to chunk the data
@@ -190,7 +196,7 @@ class Qualipy(object):
             None
         """
         self._set_data(df, allowed_dataclasses=["SQLData", "PandasData", "SparkData"])
-        self.current_name = name if name is not None else self.run_n
+        self.current_name = run_name if run_name is not None else self.run_n
         self._set_stratification(df)
         self.columns = self._set_columns(columns)
         self._set_schema(self.current_data)
@@ -245,7 +251,9 @@ class Qualipy(object):
             self._write(conn=conn, measures=self.total_measures)
         self.project.write_functions_to_config()
 
-    def _generate_metrics(self, autocommit: bool = True) -> None:
+    def _generate_metrics(
+        self, autocommit: bool = True, profile_batch: bool = False
+    ) -> None:
         measures = []
         types = {float: "float", int: "int", bool: "bool", dict: "dict", str: "str"}
         for col, specs in self.project.columns.items():
@@ -312,6 +320,14 @@ class Qualipy(object):
         measures = self._get_general_info(measures)
         measures = [{**m, **{"run_name": self.current_name}} for m in measures]
         self._add_to_total_measures(measures)
+        if profile_batch:
+            self.generator.profile_batch(
+                self.current_data,
+                self.batch_name,
+                self.current_name,
+                self.columns,
+                self.project.config_dir,
+            )
         if autocommit:
             self.commit()
 

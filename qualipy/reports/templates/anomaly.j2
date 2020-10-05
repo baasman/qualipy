@@ -1,14 +1,32 @@
 {% extends "base.j2" %}
 
+{% block nav %}
+<nav class="navbar navbar-expand-lg navbar-light bg-light fixed-top">
+  <a class="navbar-brand" href="#">Qualipy</a>
+  <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNavAltMarkup" aria-controls="navbarNavAltMarkup" aria-expanded="false" aria-label="Toggle navigation">
+    <span class="navbar-toggler-icon"></span>
+  </button>
+  <div class="collapse navbar-collapse" id="navbarNavAltMarkup">
+    <div class="navbar-nav">
+      <a class="nav-item nav-link active" href="#">Home <span class="sr-only">(current)</span></a>
+      <a class="nav-item nav-link" href="#batch_size_section">Batch Size</a>
+      <a class="nav-item nav-link" href="#numerical_aggregates_section">Numerical Aggregates</a>
+      <a class="nav-item nav-link" href="#categorical_section">Categorical Analysis</a>
+      <a class="nav-item nav-link" href="#missing_section">Missing</a>
+    </div>
+  </div>
+</nav>
+{% endblock %}
+
 {% block content %}
 
     {% import 'util.j2' as util %}
 
-    <h2>{{ project_name }}</h2>
-    <h3> Anomalies and Failed Checks </h3>
+    <h2 id="home_section">{{ project_name }}</h2>
+    <h3 id="anomaly_log"> Anomalies and Failed Checks </h3>
     {{ util.plot_table(anomaly_table, project_name, js_config['sort_by']) }}
 
-    <h3>Result Set Size</h3>
+    <h3 id="batch_size_section">Result Set Size</h3>
     <button class="btn btn-primary" type="button" data-toggle="collapse" 
         data-target=".row_counts" aria-expanded="true" aria-controls=".row_counts">
         View Row Count Results
@@ -19,7 +37,7 @@
         {% endfor %}
     </div>
 
-    <h3>Trends and Numerical Aggregates</h3>
+    <h3 id="numerical_aggregates_section">Trends and Numerical Aggregates</h3>
     <button class="btn btn-primary" type="button" data-toggle="collapse" 
         data-target=".trends" aria-expanded="true" aria-controls=".trends">
         View Numerical Trends
@@ -31,7 +49,7 @@
     </div>
 
 
-    <h3>Categorical Data and Proportional Trends</h3>
+    <h3 id="categorical_section">Categorical Data and Proportional Trends</h3>
     <button class="btn btn-primary" type="button" data-toggle="collapse" 
         data-target=".categorical" aria-expanded="true" aria-controls=".categorical">
         View Categorical Trends
@@ -42,7 +60,7 @@
         {% endfor %}
     </div>
 
-    <h3>Missingness</h3>
+    <h3 id="missing_section">Missingness</h3>
     <button class="btn btn-primary" type="button" data-toggle="collapse" 
         data-target=".missingness" aria-expanded="true" aria-controls=".missingness">
         View Missingness

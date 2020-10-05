@@ -4,9 +4,10 @@ import json
 import click
 from qualipy.anomaly.anomaly import _run_anomaly
 from qualipy.backends.pandas_backend.generator import BackendPandas
-from qualipy.project import create_qualipy_folder, Project
+from qualipy.project import generate_config as generate_config_, Project
 from qualipy.reports.anomaly import AnomalyReport
 from qualipy.reports.comparison import ComparisonReport
+from qualipy.reports.batch import BatchReport
 
 
 # DEPLOYMENT_OPTIONS = {"flask": FlaskDeploy, "gunicorn": GUnicornDeploy}
@@ -39,7 +40,7 @@ def generate_config(config_dir_path):
         * models - This folder will store binary versions of your anomaly models used for all projects
             specified in the config
     """
-    create_qualipy_folder(config_dir=config_dir_path)
+    generate_config_(config_dir=config_dir_path)
 
 
 @qualipy.command()
@@ -58,7 +59,7 @@ def generate_config(config_dir_path):
     help="If set to true, will clear all models and stored anomaly data, and retrain each model",
 )
 def run_anomaly(project_name, config_dir, retrain):
-    """ 
+    """
     Runs the anomaly models for a specific project, based on the config
     """
     _run_anomaly(project_name, config_dir, retrain)
@@ -123,7 +124,7 @@ def produce_anomaly_report(
 ):
     """
     CONFIG_DIR: The path to the stored directory
-    
+
     PROJECT_NAME: Name of the project you want to run an anomaly report on
     """
     view = AnomalyReport(
@@ -148,14 +149,19 @@ def produce_anomaly_report(
 @click.argument("comparison_name", default=None, type=str)
 @click.option("--out_file", default=None, type=str, help="The name of the output file")
 def produce_comparison_report(
-    config_dir, comparison_name, out_file,
+    config_dir,
+    comparison_name,
+    out_file,
 ):
     """
     CONFIG_DIR: The path to the stored directory
-    
+
     COMPARISON_NAME: Name of the as specified in the configuration file
     """
-    view = ComparisonReport(config_dir=config_dir, comparison_name=comparison_name,)
+    view = ComparisonReport(
+        config_dir=config_dir,
+        comparison_name=comparison_name,
+    )
     rendered_page = view.render(
         template=f"comparison.j2",
         title="Comparison Report",
@@ -163,6 +169,45 @@ def produce_comparison_report(
     )
     if out_file is None:
         out_file = f"comparison_report_{comparison_name}.html"
+    rendered_page.dump(out_file)
+
+
+@qualipy.command()
+@click.argument("config_dir", default=None)
+@click.argument("project_name", default=None, type=str)
+@click.argument("batch_name", default=None, type=str)
+@click.option("--run_name", default=None, type=str)
+@click.option("--out_file", default=None, type=str, help="The name of the output file")
+def produce_batch_report(
+    config_dir,
+    project_name,
+    batch_name,
+    run_name,
+    out_file,
+):
+    """
+    CONFIG_DIR: The path to the stored directory
+
+    PROJECT_NAME: Name of the batch you want to report on. Must be present in profile_data
+
+    BATCH_NAME: Name of the batch you want to report on. Must be present in profile_data
+    """
+
+    if run_name is None:
+        run_name = "0"
+    view = BatchReport(
+        config_dir=config_dir,
+        project_name=project_name,
+        batch_name=batch_name,
+        run_name=run_name,
+    )
+    rendered_page = view.render(
+        template=f"batch.j2",
+        title="Batch Report",
+        project_name=project_name,
+    )
+    if out_file is None:
+        out_file = f"batch_report_{batch_name}.html"
     rendered_page.dump(out_file)
 
 
@@ -216,4 +261,4 @@ if __name__ == "__main__":
 
     sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
 
-    produce_anomaly_report(sys.argv[1:])  # pylint: disable=no-value-for-parameter
+    produce_batch_report(sys.argv[1:])  # pylint: disable=no-value-for-parameter

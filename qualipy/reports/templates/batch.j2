@@ -1,0 +1,121 @@
+{% extends "base.j2" %}
+
+{% block style %}
+
+    .thead {
+        display:none;
+    }
+
+    .numerical_information {
+       overflow: hidden; 
+    }
+     
+    .num_table {
+        width: 200px;
+        float: left;
+        margin-right: 200px;
+    }
+
+    .num_hist {
+        overflow: hidden;
+        margin-left: 200px;
+    }
+
+    .categorical_information {
+       overflow: hidden; 
+    }
+
+    .cat_table {
+        width: 200px;
+        float: left;
+        margin-right: 200px;
+    }
+
+    .cat_bar {
+        overflow: hidden;
+        margin-left: 200px;
+    }
+
+
+
+{% endblock %}
+
+{% block nav %}
+<nav class="navbar navbar-expand-lg navbar-light bg-light fixed-top">
+  <a class="navbar-brand" href="#">Qualipy</a>
+  <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNavAltMarkup" aria-controls="navbarNavAltMarkup" aria-expanded="false" aria-label="Toggle navigation">
+    <span class="navbar-toggler-icon"></span>
+  </button>
+  <div class="collapse navbar-collapse" id="navbarNavAltMarkup">
+    <div class="navbar-nav">
+      <a class="nav-item nav-link active" href="#">Home <span class="sr-only">(current)</span></a>
+      <a class="nav-item nav-link" href="#numerical_aggregates_section">Numerical Aggregates</a>
+      <a class="nav-item nav-link" href="#numerical_information_section">Numerical Information</a>
+      <a class="nav-item nav-link" href="#categorical_information_section">Categorical Information</a>
+      <a class="nav-item nav-link" href="#numerical_correlation_section">Numerical Correlation</a>
+      <a class="nav-item nav-link" href="#categorical_correlation_section">Categorical Correlation</a>
+      <a class="nav-item nav-link" href="#missing_section">Missing</a>
+      <a class="nav-item nav-link" href="#head_section">Head</a>
+      <a class="nav-item nav-link" href="#duplicate_section">Duplicates</a>
+    </div>
+  </div>
+</nav>
+{% endblock %}
+
+{% block content %}
+
+    {% import 'util.j2' as util %}
+
+    <h2>{{ project_name }}</h2>
+    <h2>{{ batch_name }}</h2>
+
+    <h3 id="numerical_aggregates_section"> Numerical Aggregates </h3>
+    {% for plot in num_batch_info %}
+        {{ util.plot_chart(plot, button=False) }}
+    {% endfor %}
+
+    <h3 id="numerical_information_section"> Numerical Info </h3>
+    {% for var, values in num_info.items() %}
+        <p>{{ var }}</p>
+        <div class='numerical_information'>
+            <div class='num_table'>
+                {{ util.plot_data(values[0], var) }}
+            </div>
+            <div class='num_hist'>
+                {{ util.plot_chart(values[1], button=False) }}
+            </div>
+        </div>
+    {% endfor %}
+
+    <h3 id="categorical_information_section"> Categorical Info </h3>
+    {% for var, values in cat_info.items() %}
+        <p>{{ var }}</p>
+        <div class='categorical_information'>
+            <div class='cat_table'>
+                {{ util.plot_data(values[0], var) }}
+            </div>
+            <div class='cat_bar'>
+                {{ util.plot_chart(values[1], button=False) }}
+            </div>
+        </div>
+    {% endfor %}
+
+    <h3 id="numerical_correlation_section"> Numerical Correlation </h3>
+    {{ util.plot_chart(num_corr) }}
+
+    <h3 id="categorical_correlation_section"> Categorical Correlation </h3>
+    {{ util.plot_chart(cat_corr) }}
+
+    <h3 id="missing_section"> Missing </h3>
+    {{ util.plot_chart(missing['missing_bar_plot']) }}
+    {{ util.plot_chart(missing['missing_corr_plot']) }}
+
+    <h3 id="head_section"> Head </h3>
+    {{ util.plot_data(head, 'data_head') }}
+
+    <h3 id="duplicate_section"> Duplicates </h3>
+    <p>Number of duplicates: {{duplicates['number_of_duplicates']}}</p>
+    <p>Percentage of duplicates: {{duplicates['percentage_of_duplicates']}}</p>
+    {{ util.plot_data(duplicates['head_of_dups'], 'data_duplicates') }}
+
+{% endblock %}
