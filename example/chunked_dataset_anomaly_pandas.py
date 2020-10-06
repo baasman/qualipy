@@ -1,11 +1,13 @@
 import subprocess
 
 from qualipy.backends.pandas_backend.pandas_types import FloatType, ObjectType
-from qualipy.datasets import stocks
 import qualipy as qpy
 
 # generate config, can also be done through "qualipy generate-config"
 qpy.generate_config("/tmp/stocks")
+
+# load data
+stocks = qpy.datasets.load_dataset("stocks")
 
 # Define a simple function
 @qpy.function(return_format=float)

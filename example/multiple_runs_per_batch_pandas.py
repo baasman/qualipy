@@ -71,6 +71,6 @@ qualipy.commit()
 
 # generate anomaly report
 subprocess.check_output(
-    "qualipy produce-anomaly-report /tmp/flat_data flat_data --run_anomaly true --out_file ~/qpy-output/flat.html",
+    "qualipy produce-anomaly-report /tmp/flat_data flat_data --run_anomaly true --out_file ~/flat.html",
     shell=True,
 )
