@@ -50,6 +50,6 @@ qualipy.run(autocommit=True, profile_batch=True)
 
 # generate the batch report. See qualipy produce-batch-report -h for more help
 subprocess.check_output(
-    "qualipy produce-batch-report /tmp/eye-state eye_state eye-state-run-0 --run_name full-run --out_file ~/qpy-output/eye-state-report.html",
+    "qualipy produce-batch-report /tmp/eye-state eye_state eye-state-run-0 --run_name full-run --out_file ~/eye-state-report.html",
     shell=True,
 )
