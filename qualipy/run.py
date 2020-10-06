@@ -327,6 +327,7 @@ class Qualipy(object):
                 self.current_name,
                 self.columns,
                 self.project.config_dir,
+                self.project.project_name,
             )
         if autocommit:
             self.commit()

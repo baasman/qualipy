@@ -65,19 +65,6 @@ def run_anomaly(project_name, config_dir, retrain):
     _run_anomaly(project_name, config_dir, retrain)
 
 
-# @qualipy.command()
-# @click.option("--config_dir", default=None)
-# @click.option("--retrain", default=False, type=bool)
-# def schedule_anomaly(config_dir, retrain):
-#     with open(os.path.join(config_dir, "config.json"), "rb") as cf:
-#         config = json.load(cf)
-
-#     scheduler_conf = config["ANOMALY_SCHEDULER"]
-#     project_names = scheduler_conf["PROJECTS"]
-#     for project_name in project_names:
-#         _run_anomaly(project_name, config_dir, retrain)
-
-
 @qualipy.command()
 @click.argument("config_dir", default=None)
 @click.argument("project_name", default=None, type=str)
@@ -226,33 +213,6 @@ def clear_data(config_dir, project_name, recreate):
         project.delete_data(recreate=recreate)
         project.delete_from_project_config()
 
-
-# @qualipy.command()
-# @click.option("--port", default=5005)
-# @click.option("--host", default="127.0.0.1")
-# @click.option("--config_dir", default=None)
-# @click.option("--engine", default="flask")
-# @click.option(
-#     "--train_anomaly",
-#     default=False,
-#     type=bool,
-#     help="Run anomaly models if not preloaded",
-# )
-# def run(port, host, config_dir, train_anomaly, engine):
-#     if config_dir is None:
-#         config_dir = os.environ["QUALIPY_CONFIG_DIR"]
-#     _Config.config_dir = config_dir
-#     _Config.train_anomaly = train_anomaly
-
-#     host = os.getenv("QUALIPY_HOST", host)
-#     port = os.getenv("QUALIPY_PORT", port)
-#     engine = os.getenv("QUALIPY_ENGINE", engine)
-#     train_anomaly = os.getenv("QUALIPY_TRAIN_ANOMALY", train_anomaly)
-
-#     deployer = DEPLOYMENT_OPTIONS[engine](
-#         config_dir=config_dir, host=host, port=port, train_anomaly=train_anomaly
-#     )
-#     deployer.run()
 
 if __name__ == "__main__":
     # I do the following to debug cli commands, ignore

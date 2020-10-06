@@ -146,6 +146,8 @@ class BackendPandas(BackendBase):
         return data.get_data()
 
     @staticmethod
-    def profile_batch(data, batch_name, run_name, columns, config_dir):
-        profiler = PandasBatchProfiler(data, batch_name, run_name, columns, config_dir)
+    def profile_batch(data, batch_name, run_name, columns, config_dir, project_name):
+        profiler = PandasBatchProfiler(
+            data, batch_name, run_name, columns, config_dir, project_name
+        )
         profiler.profile()

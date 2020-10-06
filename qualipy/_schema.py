@@ -28,6 +28,10 @@ config_schema = Schema(
             }
         },
         Optional(str): {
+            Optional("PROFILE_ARGS"): {
+                Optional("facet_categorical_by"): str,
+                Optional("facet_numerical_by"): str,
+            },
             Optional("ANOMALY_ARGS"): {
                 Optional("check_for_std"): bool,
                 Optional("importance_level"): Or(float, int),

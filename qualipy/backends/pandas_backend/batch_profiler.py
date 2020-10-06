@@ -33,7 +33,7 @@ def cramers_corrected_stat(confusion_matrix, correction: bool = True) -> float:
 
 
 class PandasBatchProfiler:
-    def __init__(self, data, batch_name, run_name, columns, config_dir):
+    def __init__(self, data, batch_name, run_name, columns, config_dir, project_name):
         self.data = data
         self.batch_name = batch_name
         self.columns = columns
@@ -41,6 +41,12 @@ class PandasBatchProfiler:
         self.config_dir = config_dir
         self.run_name = run_name
         self.data = self.data.fillna(np.NaN)
+        self.project_name = project_name
+
+    def _read_config(self):
+        with open(os.path.join(self.config_dir, "config.json"), "rb") as f:
+            config = json.load(f)
+        profile_args = config.get(self.project_name)
 
     def profile(self):
         head = self._head()

@@ -12,5 +12,4 @@ sphinx-click
 click
 schema
 banpei
-pystan==2.18
-fbprophet
+matplotlib

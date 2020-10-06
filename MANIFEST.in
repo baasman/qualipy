@@ -1,3 +1,4 @@
 include requirements.txt
-graft qualipy/web/app/templates
+graft qualipy/reports/templates
+graft qualipy/reports/static
 graft qualipy/datasets
