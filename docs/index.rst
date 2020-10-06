@@ -29,6 +29,7 @@ Contents:
 
    installation.rst
    overview.rst
+   tutorials.rst
    user_guide.rst
    configuration_file.rst
    CLI.rst

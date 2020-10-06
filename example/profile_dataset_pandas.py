@@ -6,6 +6,7 @@ import qualipy as qpy
 import pandas as pd
 
 
+# set up the config
 qpy.generate_config("/tmp/eye-state")
 
 # Define a simple function
@@ -17,10 +18,14 @@ def mean(data, column):
 # create mappings
 my_mappings = []
 
+# Create a mapping for each variable. There are 14 float type variables, for which
+# we want to collect the mean, and one categorical variable.
 for col in [f"V{i}" for i in range(1, 15)]:
     my_mappings.append(
         qpy.column(column_name=col, column_type=FloatType(), functions=[mean])
     )
+# To denote a variable as categorical, make sure to set is_category=True. By default
+# Qualipy will assume numeric type when collecting batch information
 my_mappings.append(
     qpy.column(column_name="Class", column_type=ObjectType(), is_category=True)
 )
@@ -39,9 +44,11 @@ eye_state = qpy.datasets.load_dataset("eye_state")
 eye_state = qpy.backends.pandas_backend.dataset.PandasData(eye_state)
 qualipy.set_dataset(eye_state, run_name="full-run")
 
+# By setting profile_batch=True, Qualipy will store meta information for this batch,
+# allowing us to construct the batch report by referring to the specific batch and run name
 qualipy.run(autocommit=True, profile_batch=True)
 
-# generate the batch report
+# generate the batch report. See qualipy produce-batch-report -h for more help
 subprocess.check_output(
     "qualipy produce-batch-report /tmp/eye-state eye_state eye-state-run-0 --run_name full-run --out_file ~/qpy-output/eye-state-report.html",
     shell=True,

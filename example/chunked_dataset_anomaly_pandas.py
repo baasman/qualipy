@@ -31,10 +31,12 @@ stocks.set_stratify_rule("symbol")
 
 # since we already have all of the data, we will "chunk" the dataset by time,
 # and simulate the data as if we were examing 6 hour batches
-qualipy.set_chunked_dataset(stocks, time_column="date", time_freq="6M", name="stocks")
+qualipy.set_chunked_dataset(
+    stocks, time_column="date", time_freq="6M", run_name="stocks"
+)
 qualipy.run(autocommit=True)
 
-# generate the anomaly report
+# generate the anomaly report. See qualipy produce-anomaly-report -h for more info
 subprocess.check_output(
     "qualipy produce-anomaly-report /tmp/stocks stocks --run_anomaly true --out_file ~/stocks.html",
     shell=True,
