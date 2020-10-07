@@ -51,7 +51,7 @@ def numeric_batch_profile(data, title):
     return final_chart
 
 
-def histogram_from_custom_bins(data):
+def histogram_from_custom_bins(data, num_facets):
     histd = pd.DataFrame({"counts": data[0]})
     histd["bin_min"] = data[1][:-1]
     histd["bin_max"] = data[1][1:]
@@ -65,11 +65,34 @@ def histogram_from_custom_bins(data):
             tooltip=["counts", "bin_min", "bin_max"],
         )
     )
-    chart = chart.properties(height=200, width=400)
+    chart = chart.properties(height=200, width=400, title="Full Batch")
+    if num_facets:
+        hists = []
+        for key in list(num_facets.keys()):
+            sub_hist = pd.DataFrame({"counts": num_facets[key][0]})
+            sub_hist["bin_min"] = num_facets[key][1][:-1]
+            sub_hist["bin_max"] = num_facets[key][1][1:]
+            sub_hist["category"] = key
+            hists.append(sub_hist)
+        facet_hist = pd.concat(hists)
+
+        facet_chart = (
+            alt.Chart(facet_hist)
+            .mark_bar(opacity=0.5)
+            .encode(
+                x=alt.X("bin_min", bin="binned", axis=alt.Axis(title="Value")),
+                x2="bin_max",
+                y="counts",
+                color="category:N",
+                tooltip=["counts", "bin_min", "bin_max"],
+            )
+        )
+        facet_chart = facet_chart.properties(height=200, width=400, title=f"Faceted")
+        chart = alt.vconcat(chart, facet_chart)
     return chart
 
 
-def barchart_top_categories_from_value_counts(data, frequencies):
+def barchart_top_categories_from_value_counts(data, frequencies, cat_facets=None):
     data = pd.DataFrame({"Variable": list(data.keys()), "Count": list(data.values())})
     freqs = pd.DataFrame(
         {"Variable": list(frequencies.keys()), "Freq": list(frequencies.values())}
@@ -88,6 +111,28 @@ def barchart_top_categories_from_value_counts(data, frequencies):
     )
     text = chart.mark_text(align="left", baseline="middle", dx=3).encode(text="Freq:Q")
     chart = chart + text
+    if cat_facets:
+        facets = (
+            pd.DataFrame(cat_facets)
+            .T.reset_index()
+            .rename(columns={"index": "Variable"})
+        )
+        facets = facets.melt(
+            id_vars="Variable",
+            value_vars=[col for col in facets.columns if col != "Variable"],
+        ).rename(columns={"variable": "facet"})
+        faceted_chart = (
+            alt.Chart(facets)
+            .mark_bar()
+            .encode(
+                x="sum(value)",
+                y=alt.Y("Variable", sort="x"),
+                tooltip=["facet", "Variable", "sum(value)"],
+                color="facet",
+            )
+        )
+        faceted_chart = faceted_chart.properties(title="Faceted by variable", width=400)
+        chart = alt.vconcat(chart, faceted_chart)
     return chart
 
 

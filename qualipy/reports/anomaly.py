@@ -54,6 +54,7 @@ class AnomalyReport(BaseJinjaView):
         custom_styles_directory=None,
     ):
         super(AnomalyReport, self).__init__(custom_styles_directory)
+        config_dir = os.path.expanduser(config_dir)
         self.config_dir = config_dir
         with open(os.path.join(config_dir, "config.json"), "rb") as cf:
             config = json.load(cf)
@@ -391,7 +392,10 @@ class AnomalyReport(BaseJinjaView):
                 )
             if main and self.trend["include_summary"].get("use", False):
                 conf = self.trend["include_summary"]
-                chart = trend_summary(num_data, variables=conf.get("variables"),)
+                chart = trend_summary(
+                    num_data,
+                    variables=conf.get("variables"),
+                )
                 plots.append(
                     convert_to_markup(
                         chart,

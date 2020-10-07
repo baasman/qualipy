@@ -7,7 +7,7 @@ import pandas as pd
 
 
 # set up the config
-qpy.generate_config("/tmp/eye-state")
+qpy.generate_config("~/eye-state")
 
 # Define a simple function
 @qpy.function(return_format=float)
@@ -31,7 +31,7 @@ my_mappings.append(
 )
 
 # set up project and add all mappings
-project = qpy.Project(project_name="eye_state", config_dir="/tmp/eye-state")
+project = qpy.Project(project_name="eye_state", config_dir="~/eye-state")
 for mapping in my_mappings:
     project.add_column(mapping)
 
@@ -50,6 +50,6 @@ qualipy.run(autocommit=True, profile_batch=True)
 
 # generate the batch report. See qualipy produce-batch-report -h for more help
 subprocess.check_output(
-    "qualipy produce-batch-report /tmp/eye-state eye_state eye-state-run-0 --run_name full-run --out_file ~/eye-state-report.html",
+    "qualipy produce-batch-report ~/eye-state eye_state eye-state-run-0 --run_name full-run --out_file ~/eye-state-report.html",
     shell=True,
 )

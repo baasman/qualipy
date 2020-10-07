@@ -32,6 +32,12 @@ def cramers_corrected_stat(confusion_matrix, correction: bool = True) -> float:
     return corr
 
 
+def generate_hist(column_data, bins):
+    histogram = hist(column_data, bins=30)
+    histogram = [histogram[0].tolist(), histogram[1].tolist()]
+    return histogram
+
+
 class PandasBatchProfiler:
     def __init__(self, data, batch_name, run_name, columns, config_dir, project_name):
         self.data = data
@@ -42,11 +48,14 @@ class PandasBatchProfiler:
         self.run_name = run_name
         self.data = self.data.fillna(np.NaN)
         self.project_name = project_name
+        self._read_config()
 
     def _read_config(self):
         with open(os.path.join(self.config_dir, "config.json"), "rb") as f:
             config = json.load(f)
-        profile_args = config.get(self.project_name)
+        profile_args = config[self.project_name].get("PROFILE_ARGS", {})
+        self.facet_categorical_by = profile_args.get("facet_categorical_by")
+        self.facet_numerical_by = profile_args.get("facet_numerical_by")
 
     def profile(self):
         head = self._head()
@@ -82,8 +91,17 @@ class PandasBatchProfiler:
         for column in num_data.columns:
             description = num_data[column].describe().to_dict()
             distinct = num_data[column].nunique()
-            histogram = hist(num_data[column], bins=30)
-            histogram = [histogram[0].tolist(), histogram[1].tolist()]
+            histogram = generate_hist(num_data[column], bins=30)
+            if self.facet_numerical_by is not None:
+                num_facets = {}
+                for cat in self.data[self.facet_numerical_by].unique():
+                    num_facets[str(cat)] = generate_hist(
+                        self.data[self.data[self.facet_numerical_by] == cat][column],
+                        bins=30,
+                    )
+            else:
+                num_facets = {}
+
             num_info[column] = {
                 "mean": description["mean"],
                 "min": description["min"],
@@ -95,6 +113,7 @@ class PandasBatchProfiler:
                 ),
                 "skewness": stats.skew(num_data[num_data[column].notnull()][column]),
                 "histogram": histogram,
+                "num_facets": num_facets,
             }
         return num_info
 
@@ -122,6 +141,21 @@ class PandasBatchProfiler:
                     & (~cat_data[column].isin(top_groups.index))
                 ].shape[0]
             }
+            if self.facet_categorical_by is not None:
+                cat_facets = {}
+                for cat in top_groups.index:
+                    cat_facets[cat] = (
+                        cat_data[
+                            (cat_data[column].notnull()) & (cat_data[column] == cat)
+                        ][self.facet_categorical_by]
+                        .value_counts()
+                        .sort_values(ascending=False)
+                        .head(10)
+                        .to_dict()
+                    )
+            else:
+                cat_facets = {}
+
             top_groups_freq = (
                 top_groups / cat_data[cat_data[column].notnull()].shape[0]
             ).to_dict()
@@ -141,6 +175,7 @@ class PandasBatchProfiler:
                 "missing": cat_data[column].isna().sum() / cat_data.shape[0],
                 "top_groups": top_groups,
                 "top_groups_freq": top_groups_freq,
+                "cat_facets": cat_facets,
             }
         return cat_info
 

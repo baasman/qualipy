@@ -130,10 +130,15 @@ class BatchReport(BaseJinjaView):
             column: (
                 pd.DataFrame(
                     pd.Series(
-                        {k: v for k, v in values.items() if k != "histogram"}
+                        {
+                            k: v
+                            for k, v in values.items()
+                            if k not in ["histogram", "num_facets"]
+                        }
                     ).round(2)
                 ).rename(columns={0: "value"}),
                 values["histogram"],
+                values["num_facets"],
             )
             for column, values in info.items()
         }
@@ -147,7 +152,8 @@ class BatchReport(BaseJinjaView):
                     escape=False,
                 ),
                 convert_to_markup(
-                    histogram_from_custom_bins(data[1]), chart_id=f"{column}_histogram"
+                    histogram_from_custom_bins(data[1], data[2]),
+                    chart_id=f"{column}_histogram",
                 ),
             )
             for column, data in info.items()
@@ -163,12 +169,13 @@ class BatchReport(BaseJinjaView):
                         {
                             k: v
                             for k, v in values.items()
-                            if k not in ["top_groups", "top_groups_freq"]
+                            if k not in ["top_groups", "top_groups_freq", "cat_facets"]
                         }
                     ).round(3)
                 ).rename(columns={0: "value"}),
                 values["top_groups"],
                 values["top_groups_freq"],
+                values["cat_facets"],
             )
             for column, values in info.items()
         }
@@ -182,7 +189,9 @@ class BatchReport(BaseJinjaView):
                     escape=False,
                 ),
                 convert_to_markup(
-                    barchart_top_categories_from_value_counts(data[1], data[2]),
+                    barchart_top_categories_from_value_counts(
+                        data[1], data[2], data[3]
+                    ),
                     chart_id=f"{column}_bar_chart",
                 ),
             )

@@ -27,6 +27,7 @@ def set_default_config(config_dir, db_url=None):
 
 
 def generate_config(config_dir, db_url=None):
+    config_dir = os.path.expanduser(config_dir)
     if not os.path.exists(config_dir):
         os.makedirs(config_dir, exist_ok=True)
         with open(os.path.join(config_dir, "config.json"), "w") as f:
@@ -75,6 +76,7 @@ class Project(object):
         self.anomaly_table = "{}_anomaly".format(self.project_name)
         if not re_init:
             self.columns = {}
+        config_dir = os.path.expanduser(config_dir)
         self.config_dir = config_dir
         if not os.path.isdir(config_dir):
             raise Exception(

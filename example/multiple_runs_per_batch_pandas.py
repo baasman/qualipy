@@ -7,7 +7,7 @@ import qualipy as qpy
 df = qpy.datasets.load_dataset("flat_data")
 
 # generate config, can also be done through "qualipy generate-config"
-qpy.generate_config("/tmp/flat_data")
+qpy.generate_config("~/flat_data")
 
 # Define a simple function
 @qpy.function(return_format=float)
@@ -26,7 +26,7 @@ value_cat_column = qpy.column(
 )
 
 # set up project and add all mappings
-project = qpy.Project(project_name="flat_data", config_dir="/tmp/flat_data")
+project = qpy.Project(project_name="flat_data", config_dir="~/flat_data")
 project.add_column(value_column, name="num_col")
 project.add_column(value_cat_column, name="cat_col")
 
@@ -71,6 +71,6 @@ qualipy.commit()
 
 # generate anomaly report
 subprocess.check_output(
-    "qualipy produce-anomaly-report /tmp/flat_data flat_data --run_anomaly true --out_file ~/flat.html",
+    "qualipy produce-anomaly-report ~/flat_data flat_data --run_anomaly true --out_file ~/flat.html",
     shell=True,
 )

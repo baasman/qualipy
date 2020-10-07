@@ -4,7 +4,7 @@ from qualipy.backends.pandas_backend.pandas_types import FloatType, ObjectType
 import qualipy as qpy
 
 # generate config, can also be done through "qualipy generate-config"
-qpy.generate_config("/tmp/stocks")
+qpy.generate_config("~/stocks")
 
 # load data
 stocks = qpy.datasets.load_dataset("stocks")
@@ -21,7 +21,7 @@ price_column = qpy.column(
 )
 
 # set up project and add all mappings
-project = qpy.Project(project_name="stocks", config_dir="/tmp/stocks")
+project = qpy.Project(project_name="stocks", config_dir="~/stocks")
 project.add_column(price_column)
 
 # instantiate qualipy object
@@ -40,6 +40,6 @@ qualipy.run(autocommit=True)
 
 # generate the anomaly report. See qualipy produce-anomaly-report -h for more info
 subprocess.check_output(
-    "qualipy produce-anomaly-report /tmp/stocks stocks --run_anomaly true --out_file ~/stocks.html",
+    "qualipy produce-anomaly-report ~/stocks stocks --run_anomaly true --out_file ~/stocks.html",
     shell=True,
 )
