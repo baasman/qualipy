@@ -8,16 +8,17 @@ def plot_correlation(corr_data, title, strongest_only=True):
         strongest = corr_data.sort_values("Correlation", ascending=False)
         strongest = strongest[strongest["Variable 1"] != strongest["Variable 2"]]
         corr_data = corr_data[
-            (corr_data["Variable 1"].isin(strongest["Variable 1"].head(20).unique()))
-            & (corr_data["Variable 2"].isin(strongest["Variable 1"].head(20).unique()))
+            (corr_data["Variable 1"].isin(strongest["Variable 1"].unique()[:20]))
+            & (corr_data["Variable 2"].isin(strongest["Variable 1"].unique()[:20]))
         ]
+        corr_data.Correlation = corr_data.Correlation.round(2)
 
     base = (
         alt.Chart(corr_data)
         .encode(
             x="Variable 2:O", y="Variable 1:O", tooltip=["Variable 1", "Variable 2"]
         )
-        .properties(height=500, width=500, title=title)
+        .properties(height=600, width=600, title=title)
     )
 
     text = base.mark_text().encode(

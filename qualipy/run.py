@@ -14,9 +14,10 @@ from qualipy.project import Project
 try:
     from qualipy.backends.spark_backend.generator import BackendSpark
 except Exception as e:
-    print(e)
-    warnings.warn("Unable to import pyspark")
     BackendSpark = None
+
+# supress numpy future warning for now
+warnings.simplefilter(action="ignore", category=FutureWarning)
 
 
 HOME = os.path.expanduser("~")
@@ -104,7 +105,7 @@ class Qualipy(object):
             None
         """
         if not self.chunk:
-            self._run_with_optional_stratify(autocommit, profile_batch=True)
+            self._run_with_optional_stratify(autocommit, profile_batch=profile_batch)
             self.run_n += 1
         else:
             if profile_batch:

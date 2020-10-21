@@ -3,7 +3,11 @@ import os
 import datetime
 import pandas as pd
 from typing import List, Union, Dict
-from collections import Callable
+
+try:
+    from collections.abc import Callable
+except ImportError:
+    from collections import Callable
 
 from sqlalchemy import create_engine
 
@@ -36,6 +40,10 @@ def generate_config(config_dir, db_url=None):
             json.dump({}, f)
         os.makedirs(os.path.join(config_dir, "models"), exist_ok=True)
         os.makedirs(os.path.join(config_dir, "profile_data"), exist_ok=True)
+        os.makedirs(os.path.join(config_dir, "reports"), exist_ok=True)
+        os.makedirs(os.path.join(config_dir, "reports", "anomaly"), exist_ok=True)
+        os.makedirs(os.path.join(config_dir, "reports", "profiler"), exist_ok=True)
+        os.makedirs(os.path.join(config_dir, "reports", "comparison"), exist_ok=True)
 
 
 def inspect_db_connection(url):
@@ -252,7 +260,7 @@ class Project(object):
                             "show_by_default": True,
                         },
                         "include_summary": {"use": True, "show_by_default": True},
-                        "sst": 10,
+                        "sst": 3,
                         "point": True,
                         "n_steps": 10,
                         "add_diff": {"shift": 1},

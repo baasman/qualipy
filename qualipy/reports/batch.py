@@ -36,9 +36,12 @@ class BatchReport(BaseJinjaView):
         project = Project(
             project_name=project_name, config_dir=self.config_dir, re_init=True
         )
-        data = get_project_data(project, time_zone, latest_insert_only=True)
-        data = data[data.batch_name == batch_name]
-        self.data = data
+        try:
+            data = get_project_data(project, time_zone, latest_insert_only=True)
+            data = data[data.batch_name == batch_name]
+            self.data = data
+        except AttributeError:
+            self.data = pd.DataFrame()
 
         with open(
             os.path.join(config_dir, "profile_data", f"{batch_name}-{run_name}.json"),
@@ -72,18 +75,19 @@ class BatchReport(BaseJinjaView):
         return kwargs
 
     def _create_num_batch_plots(self):
-        num_data = self.data[(self.data.type == "numerical")]
         plots = []
-        for metric in num_data.metric.unique():
-            df = num_data[num_data.metric == metric]
-            plots.append(
-                convert_to_markup(
-                    numeric_batch_profile(df, title=metric),
-                    chart_id=f"{metric}",
-                    show_by_default=True,
-                    button_name=metric,
+        if self.data.shape[0] > 0:
+            num_data = self.data[(self.data.type == "numerical")]
+            for metric in num_data.metric.unique():
+                df = num_data[num_data.metric == metric]
+                plots.append(
+                    convert_to_markup(
+                        numeric_batch_profile(df, title=metric),
+                        chart_id=f"{metric}",
+                        show_by_default=True,
+                        button_name=metric,
+                    )
                 )
-            )
         return plots
 
     def _create_head(self):
@@ -142,23 +146,41 @@ class BatchReport(BaseJinjaView):
             )
             for column, values in info.items()
         }
-        info = {
-            column: (
-                data[0].to_html(
-                    index=True,
-                    columns=data[0].columns,
-                    table_id=f"{column}_num_info num_info",
-                    classes=["table table-striped"],
-                    escape=False,
-                ),
-                convert_to_markup(
+        # info = {
+        #     column: (
+        #         data[0].to_html(
+        #             index=True,
+        #             columns=data[0].columns,
+        #             table_id=f"{column}_num_info num_info",
+        #             classes=["table table-striped"],
+        #             escape=False,
+        #         ),
+        #         convert_to_markup(
+        #             histogram_from_custom_bins(data[1], data[2]),
+        #             chart_id=f"{column}_histogram",
+        #         ),
+        #     )
+        #     for column, data in info.items()
+        # }
+        num_info = {}
+        for column, data in info.items():
+            table = data[0].to_html(
+                index=True,
+                columns=data[0].columns,
+                table_id=f"{column}_num_info num_info",
+                classes=["table table-striped"],
+                escape=False,
+            )
+            try:
+                plot = convert_to_markup(
                     histogram_from_custom_bins(data[1], data[2]),
                     chart_id=f"{column}_histogram",
-                ),
-            )
-            for column, data in info.items()
-        }
-        return info
+                )
+            except TypeError:
+                plot = None
+            num_info[column] = (table, plot)
+
+        return num_info
 
     def _create_categorical_info(self):
         info = self.batch_data["cat_info"]
@@ -201,35 +223,39 @@ class BatchReport(BaseJinjaView):
 
     def _create_numerical_corr_plot(self):
         corr = pd.DataFrame(self.batch_data["num_corr"])
-        corr.Correlation = corr.Correlation.round(3)
-        strongest_only = True if corr["Variable 1"].nunique() > 20 else False
-        plot = plot_correlation(
-            corr,
-            title="Correlation (Pearson) between numerical variables",
-            strongest_only=strongest_only,
-        )
-        return convert_to_markup(
-            plot,
-            chart_id="num_correlation",
-            show_by_default=True,
-            button_name="Numerical Correlation",
-        )
+        if corr.shape[0] > 0:
+            corr.Correlation = corr.Correlation.round(3)
+            strongest_only = True if corr["Variable 1"].nunique() > 20 else False
+            plot = plot_correlation(
+                corr,
+                title="Correlation (Pearson) between numerical variables",
+                strongest_only=strongest_only,
+            )
+            return convert_to_markup(
+                plot,
+                chart_id="num_correlation",
+                show_by_default=True,
+                button_name="Numerical Correlation",
+            )
+        return None
 
     def _create_categorical_corr_plot(self):
         corr = pd.DataFrame(self.batch_data["cat_corr"])
-        corr.Correlation = corr.Correlation.round(3)
-        strongest_only = True if corr["Variable 1"].nunique() > 20 else False
-        plot = plot_correlation(
-            corr,
-            title="Correlation (Cramer's V) between categorical variables",
-            strongest_only=strongest_only,
-        )
-        return convert_to_markup(
-            plot,
-            chart_id="cat_correlation",
-            show_by_default=True,
-            button_name="Categorical Correlation",
-        )
+        if corr.shape[0] > 0:
+            corr.Correlation = corr.Correlation.round(3)
+            strongest_only = True if corr["Variable 1"].nunique() > 20 else False
+            plot = plot_correlation(
+                corr,
+                title="Correlation (Cramer's V) between categorical variables",
+                strongest_only=strongest_only,
+            )
+            return convert_to_markup(
+                plot,
+                chart_id="cat_correlation",
+                show_by_default=True,
+                button_name="Categorical Correlation",
+            )
+        return None
 
     def _create_missing_info(self):
         missing_counts = self.batch_data["missing"]["missing_counts"]

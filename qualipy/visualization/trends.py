@@ -75,7 +75,7 @@ def trend_line_altair(
     value_line = base.mark_line(point=point).encode(
         x=alt.X("date:T"),
         y=alt.Y("value:Q", scale=alt.Scale(domain=[min_y, max_y])),
-        tooltip=["value"],
+        tooltip=["value", "date"],
         color="variable:N",
         opacity=alt.condition(
             alt.datum.variable == "value", alt.value(1), alt.value(0.3)
@@ -97,7 +97,7 @@ def trend_line_altair(
             x=alt.X("date:T"),
             y=alt.Y("anom_val"),
             color=alt.value("red"),
-            tooltip=["anom_val"],
+            tooltip=["anom_val", "date"],
         )
     )
     chart = value_line + anom_points
@@ -167,7 +167,7 @@ def trend_bar_lateset(data, diff=False, variables=None, axis="metric_id", domain
                     "latest_value:Q",
                     axis=alt.Axis(title="Value Difference" if diff else "Latest Value"),
                 ),
-                tooltip=["latest_value:Q"],
+                tooltip=["latest_value:Q", axis],
             )
             .properties(width=700, title=f"{domain}: Total count for {batch_name}")
         )

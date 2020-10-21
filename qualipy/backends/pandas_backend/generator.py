@@ -76,14 +76,11 @@ class BackendPandas(BackendBase):
         is_equal = desired_type.check_approximate_type(data[column].dtype)
         if is_equal:
             return
-        elif force and not is_equal:
+        if force and not is_equal:
             raise InvalidType(
                 "Incorrect type for column {}. Expected {}, "
                 "got {}".format(column, desired_type, data[column].dtype)
             )
-        elif not force and not is_equal:
-            # TODO: make warning message more useful
-            warnings.warn("Type is not equal")
 
     @staticmethod
     def generate_column_general_info(specs, data, time_of_run):

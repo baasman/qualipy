@@ -1,5 +1,6 @@
 import os
 import json
+import datetime
 
 import click
 from qualipy.anomaly.anomaly import _run_anomaly
@@ -127,7 +128,10 @@ def produce_anomaly_report(
         template=f"anomaly.j2", title="Anomaly Report", project_name=project_name
     )
     if out_file is None:
-        out_file = f"anomaly_report_{project_name}.html"
+        time_of_run = datetime.datetime.now().strftime("%Y-%d-%mT%H")
+        out_file = os.path.join(
+            config_dir, "reports", "anomaly", f"{project_name}-{time_of_run}.html"
+        )
     rendered_page.dump(out_file)
 
 
@@ -154,8 +158,16 @@ def produce_comparison_report(
         title="Comparison Report",
         project_name=comparison_name,
     )
+
     if out_file is None:
-        out_file = f"comparison_report_{comparison_name}.html"
+        time_of_run = datetime.datetime.now().strftime("%Y-%d-%mT%H")
+        out_file = os.path.join(
+            config_dir,
+            "reports",
+            "comparison",
+            f"{comparison_name}-{time_of_run}.html",
+        )
+
     rendered_page.dump(out_file)
 
 
@@ -194,7 +206,13 @@ def produce_batch_report(
         project_name=project_name,
     )
     if out_file is None:
-        out_file = f"batch_report_{batch_name}.html"
+        time_of_run = datetime.datetime.now().strftime("%Y-%d-%mT%H")
+        out_file = os.path.join(
+            config_dir,
+            "reports",
+            "profiler",
+            f"{project_name}-{batch_name}-{time_of_run}.html",
+        )
     rendered_page.dump(out_file)
 
 

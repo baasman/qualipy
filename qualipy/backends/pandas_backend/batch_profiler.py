@@ -33,8 +33,11 @@ def cramers_corrected_stat(confusion_matrix, correction: bool = True) -> float:
 
 
 def generate_hist(column_data, bins):
-    histogram = hist(column_data, bins=30)
-    histogram = [histogram[0].tolist(), histogram[1].tolist()]
+    try:
+        histogram = hist(column_data, bins=30)
+        histogram = [histogram[0].tolist(), histogram[1].tolist()]
+    except ValueError:
+        histogram = None
     return histogram
 
 
@@ -181,20 +184,23 @@ class PandasBatchProfiler:
 
     def _get_num_correlation(self):
         numeric_columns = [k for k, v in self.columns.items() if not v["is_category"]]
-        num_data = self.data[numeric_columns]
-        corr = num_data.corr(method="spearman")
-        corr = (
-            corr.stack()
-            .reset_index()
-            .rename(
-                columns={
-                    "level_0": "Variable 1",
-                    "level_1": "Variable 2",
-                    0: "Correlation",
-                }
+        if len(numeric_columns) > 0:
+            num_data = self.data[numeric_columns]
+            corr = num_data.corr(method="spearman")
+            corr = (
+                corr.stack()
+                .reset_index()
+                .rename(
+                    columns={
+                        "level_0": "Variable 1",
+                        "level_1": "Variable 2",
+                        0: "Correlation",
+                    }
+                )
             )
-        )
-        return corr.to_dict(orient="records")
+            return corr.to_dict(orient="records")
+        else:
+            return None
 
     def _get_cat_correlation(self):
         category_columns = [
@@ -204,36 +210,39 @@ class PandasBatchProfiler:
             and self.data[k].nunique() > 1
             and self.data[k].nunique() < 50
         ]
-        cat_data = self.data[category_columns]
+        if len(category_columns) > 0:
+            cat_data = self.data[category_columns]
 
-        correlation_matrix = pd.DataFrame(
-            np.ones((cat_data.shape[1], cat_data.shape[1])),
-            index=cat_data.columns,
-            columns=cat_data.columns,
-        )
-        categoricals = {
-            column_name: cat_data[column_name] for column_name in cat_data.columns
-        }
-        for (name1, data1), (name2, data2) in itertools.combinations(
-            categoricals.items(), 2
-        ):
-            confusion_matrix = pd.crosstab(data1, data2)
-            correlation_matrix.loc[name2, name1] = correlation_matrix.loc[
-                name1, name2
-            ] = cramers_corrected_stat(confusion_matrix)
-
-        correlation_matrix = (
-            correlation_matrix.stack()
-            .reset_index()
-            .rename(
-                columns={
-                    "level_0": "Variable 1",
-                    "level_1": "Variable 2",
-                    0: "Correlation",
-                }
+            correlation_matrix = pd.DataFrame(
+                np.ones((cat_data.shape[1], cat_data.shape[1])),
+                index=cat_data.columns,
+                columns=cat_data.columns,
             )
-        )
-        return correlation_matrix.to_dict(orient="records")
+            categoricals = {
+                column_name: cat_data[column_name] for column_name in cat_data.columns
+            }
+            for (name1, data1), (name2, data2) in itertools.combinations(
+                categoricals.items(), 2
+            ):
+                confusion_matrix = pd.crosstab(data1, data2)
+                correlation_matrix.loc[name2, name1] = correlation_matrix.loc[
+                    name1, name2
+                ] = cramers_corrected_stat(confusion_matrix)
+
+            correlation_matrix = (
+                correlation_matrix.stack()
+                .reset_index()
+                .rename(
+                    columns={
+                        "level_0": "Variable 1",
+                        "level_1": "Variable 2",
+                        0: "Correlation",
+                    }
+                )
+            )
+            return correlation_matrix.to_dict(orient="records")
+        else:
+            return None
 
     def _get_mixed_correlation(self):
         cat_columns = [
