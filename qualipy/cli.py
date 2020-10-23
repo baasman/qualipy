@@ -66,6 +66,36 @@ def run_anomaly(project_name, config_dir, retrain):
     _run_anomaly(project_name, config_dir, retrain)
 
 
+def produce_anomaly_report_cli(
+    config_dir,
+    project_name,
+    run_anomaly=False,
+    clear_anomaly=False,
+    only_show_anomaly=False,
+    t1=None,
+    t2=None,
+    out_file=None,
+):
+    view = AnomalyReport(
+        config_dir=config_dir,
+        project_name=project_name,
+        run_anomaly=run_anomaly,
+        retrain_anomaly=clear_anomaly,
+        only_show_anomaly=only_show_anomaly,
+        t1=t1,
+        t2=t2,
+    )
+    rendered_page = view.render(
+        template=f"anomaly.j2", title="Anomaly Report", project_name=project_name
+    )
+    if out_file is None:
+        time_of_run = datetime.datetime.now().strftime("%Y-%d-%mT%H")
+        out_file = os.path.join(
+            config_dir, "reports", "anomaly", f"{project_name}-{time_of_run}.html"
+        )
+    rendered_page.dump(out_file)
+
+
 @qualipy.command()
 @click.argument("config_dir", default=None)
 @click.argument("project_name", default=None, type=str)
@@ -115,24 +145,16 @@ def produce_anomaly_report(
 
     PROJECT_NAME: Name of the project you want to run an anomaly report on
     """
-    view = AnomalyReport(
-        config_dir=config_dir,
-        project_name=project_name,
-        run_anomaly=run_anomaly,
-        retrain_anomaly=clear_anomaly,
-        only_show_anomaly=only_show_anomaly,
-        t1=t1,
-        t2=t2,
+    produce_anomaly_report_cli(
+        config_dir,
+        project_name,
+        run_anomaly,
+        clear_anomaly,
+        only_show_anomaly,
+        t1,
+        t2,
+        out_file,
     )
-    rendered_page = view.render(
-        template=f"anomaly.j2", title="Anomaly Report", project_name=project_name
-    )
-    if out_file is None:
-        time_of_run = datetime.datetime.now().strftime("%Y-%d-%mT%H")
-        out_file = os.path.join(
-            config_dir, "reports", "anomaly", f"{project_name}-{time_of_run}.html"
-        )
-    rendered_page.dump(out_file)
 
 
 @qualipy.command()
@@ -171,27 +193,9 @@ def produce_comparison_report(
     rendered_page.dump(out_file)
 
 
-@qualipy.command()
-@click.argument("config_dir", default=None)
-@click.argument("project_name", default=None, type=str)
-@click.argument("batch_name", default=None, type=str)
-@click.option("--run_name", default=None, type=str)
-@click.option("--out_file", default=None, type=str, help="The name of the output file")
-def produce_batch_report(
-    config_dir,
-    project_name,
-    batch_name,
-    run_name,
-    out_file,
+def produce_batch_report_cli(
+    config_dir, project_name, batch_name, run_name=None, out_file=None
 ):
-    """
-    CONFIG_DIR: The path to the stored directory
-
-    PROJECT_NAME: Name of the batch you want to report on. Must be present in profile_data
-
-    BATCH_NAME: Name of the batch you want to report on. Must be present in profile_data
-    """
-
     if run_name is None:
         run_name = "0"
     view = BatchReport(
@@ -214,6 +218,29 @@ def produce_batch_report(
             f"{project_name}-{batch_name}-{time_of_run}.html",
         )
     rendered_page.dump(out_file)
+
+
+@qualipy.command()
+@click.argument("config_dir", default=None)
+@click.argument("project_name", default=None, type=str)
+@click.argument("batch_name", default=None, type=str)
+@click.option("--run_name", default=None, type=str)
+@click.option("--out_file", default=None, type=str, help="The name of the output file")
+def produce_batch_report(
+    config_dir,
+    project_name,
+    batch_name,
+    run_name,
+    out_file,
+):
+    """
+    CONFIG_DIR: The path to the stored directory
+
+    PROJECT_NAME: Name of the batch you want to report on. Must be present in profile_data
+
+    BATCH_NAME: Name of the batch you want to report on. Must be present in profile_data
+    """
+    produce_batch_report_cli(config_dir, project_name, batch_name, run_name, out_file)
 
 
 @qualipy.command()

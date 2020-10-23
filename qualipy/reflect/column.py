@@ -77,6 +77,7 @@ def column(
     force_null: bool = False,
     unique: bool = False,
     is_category: bool = False,
+    is_date: bool = False,
     functions: List[Union[Callable, Dict]] = None,
     extra_functions: Dict[str, Dict] = None,
 ):
@@ -106,7 +107,7 @@ def column(
         functions: A list of property defined functions.
         extra_functions: If this mapping is used for multiple columns but want a function to be applied to
             only one of the columns, use this. See example for more information.
-    
+
     Returns:
         A column object that can be added to a Project. See Project for more details.
 
@@ -126,6 +127,7 @@ def column(
             "force_null": force_null,
             "unique": unique,
             "is_category": is_category,
+            "is_date": is_date,
             "functions": _get_functions(functions, column_name=name),
             "extra_functions": _get_functions(extra_functions, column_name=name),
         }

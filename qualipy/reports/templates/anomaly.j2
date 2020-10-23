@@ -33,7 +33,7 @@
     </button>
     <div class='row_counts collapse show'>
         {% for r in row_plots %}
-        {{ util.plot_chart(r) }}
+        {{ util.plot_chart(r, button=False) }}
         {% endfor %}
     </div>
 
@@ -44,7 +44,7 @@
     </button>
     <div class='trends collapse show'>
         {% for trend in trend_plots %}
-        {{ util.plot_chart(trend) }}
+        {{ util.plot_chart(trend, button=False) }}
         {% endfor %}
     </div>
 
@@ -56,7 +56,7 @@
     </button>
     <div class='categorical collapse show'>
         {% for cat in cat_plots %}
-        {{ util.plot_chart(cat) }}
+        {{ util.plot_chart(cat, button=False) }}
         {% endfor %}
     </div>
 
@@ -67,7 +67,7 @@
     </button>
     <div class='missingness collapse show'>
         {% for m in missing_plots %}
-        {{ util.plot_chart(m) }}
+        {{ util.plot_chart(m, button=False) }}
         {% endfor %}
     </div>
 

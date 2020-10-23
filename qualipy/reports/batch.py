@@ -13,6 +13,7 @@ from qualipy.visualization.batch import (
     histogram_from_custom_bins,
     barchart_top_categories_from_value_counts,
     barchart_from_dict,
+    barchart_from_dict_on_dates,
 )
 
 
@@ -55,6 +56,7 @@ class BatchReport(BaseJinjaView):
         duplicates = self._create_duplicates()
         num_info = self._create_numeric_info()
         cat_info = self._create_categorical_info()
+        date_info = self._create_date_info()
         num_corr = self._create_numerical_corr_plot()
         cat_corr = self._create_categorical_corr_plot()
         missing = self._create_missing_info()
@@ -68,6 +70,7 @@ class BatchReport(BaseJinjaView):
             "duplicates": duplicates,
             "num_info": num_info,
             "cat_info": cat_info,
+            "date_info": date_info,
             "num_corr": num_corr,
             "cat_corr": cat_corr,
             "missing": missing,
@@ -146,22 +149,6 @@ class BatchReport(BaseJinjaView):
             )
             for column, values in info.items()
         }
-        # info = {
-        #     column: (
-        #         data[0].to_html(
-        #             index=True,
-        #             columns=data[0].columns,
-        #             table_id=f"{column}_num_info num_info",
-        #             classes=["table table-striped"],
-        #             escape=False,
-        #         ),
-        #         convert_to_markup(
-        #             histogram_from_custom_bins(data[1], data[2]),
-        #             chart_id=f"{column}_histogram",
-        #         ),
-        #     )
-        #     for column, data in info.items()
-        # }
         num_info = {}
         for column, data in info.items():
             table = data[0].to_html(
@@ -220,6 +207,39 @@ class BatchReport(BaseJinjaView):
             for column, data in info.items()
         }
         return info
+
+    def _create_date_info(self):
+        info = self.batch_data["date_info"]
+        info = {
+            column: (
+                pd.DataFrame(
+                    pd.Series(
+                        {k: v for k, v in values.items() if k not in ["distribution"]}
+                    )
+                ).rename(columns={0: "value"}),
+                values["distribution"],
+            )
+            for column, values in info.items()
+        }
+        num_info = {}
+        for column, data in info.items():
+            table = data[0].to_html(
+                index=True,
+                columns=data[0].columns,
+                table_id=f"{column}_num_info num_info",
+                classes=["table table-striped"],
+                escape=False,
+            )
+            try:
+                plot = convert_to_markup(
+                    barchart_from_dict_on_dates(data[1]),
+                    chart_id=f"{column}_histogram",
+                )
+            except TypeError:
+                plot = None
+            num_info[column] = (table, plot)
+
+        return num_info
 
     def _create_numerical_corr_plot(self):
         corr = pd.DataFrame(self.batch_data["num_corr"])

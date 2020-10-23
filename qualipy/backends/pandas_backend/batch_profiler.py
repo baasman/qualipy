@@ -1,6 +1,7 @@
 import json
 import os
 import itertools
+from operator import eq
 
 import pandas as pd
 import numpy as np
@@ -65,17 +66,25 @@ class PandasBatchProfiler:
         dups = self._duplicated()
         num_info = self._num_info()
         cat_info = self._cat_info()
+        date_info = self._date_info()
         num_corrs = self._get_num_correlation()
         cat_corrs = self._get_cat_correlation()
         missing_info = self._get_missing_info()
         # unable to install phik
         # mixed_corrs = self._get_mixed_correlation()
         self._serialize_to_json(
-            head, dups, num_info, cat_info, num_corrs, cat_corrs, missing_info
+            head,
+            dups,
+            num_info,
+            cat_info,
+            date_info,
+            num_corrs,
+            cat_corrs,
+            missing_info,
         )
 
     def _head(self):
-        return self.data.head().to_dict(orient="records")
+        return self.data.head().astype(str).to_dict(orient="records")
 
     def _duplicated(self):
         duplicated_records = self.data.duplicated(keep="last")
@@ -88,7 +97,11 @@ class PandasBatchProfiler:
         }
 
     def _num_info(self):
-        numeric_columns = [k for k, v in self.columns.items() if not v["is_category"]]
+        numeric_columns = [
+            k
+            for k, v in self.columns.items()
+            if not v["is_category"] and not v["is_date"]
+        ]
         num_data = self.data[numeric_columns]
         num_info = {}
         for column in num_data.columns:
@@ -181,6 +194,32 @@ class PandasBatchProfiler:
                 "cat_facets": cat_facets,
             }
         return cat_info
+
+    def _date_info(self):
+        date_columns = [k for k, v in self.columns.items() if v["is_date"]]
+        date_data = self.data[date_columns].copy()
+        date_info = {}
+        for column in date_data.columns:
+            if not eq(date_data[column].dtype, np.datetime64):
+                date_data[column] = pd.to_datetime(date_data[column], errors="coerce")
+            description = date_data[column].describe().astype(str)
+            hist_counts = date_data[[column]].copy()
+            hist_counts["dummy"] = 1
+            hist_counts = hist_counts.set_index(column)
+            hist_counts = hist_counts.dummy.resample("3M").count().reset_index()
+            hist_counts = {
+                str(i[column]): i["dummy"]
+                for i in hist_counts.to_dict(orient="records")
+            }
+
+            date_info[column] = {
+                "first": description["first"],
+                "last": description["last"],
+                "distinct": description["unique"],
+                "missing": date_data[column].isna().sum() / date_data.shape[0],
+                "distribution": hist_counts,
+            }
+        return date_info
 
     def _get_num_correlation(self):
         numeric_columns = [k for k, v in self.columns.items() if not v["is_category"]]
@@ -285,13 +324,14 @@ class PandasBatchProfiler:
         }
 
     def _serialize_to_json(
-        self, head, dups, num_info, cat_info, num_corr, cat_corr, missing
+        self, head, dups, num_info, cat_info, date_info, num_corr, cat_corr, missing
     ):
         data = {
             "head": head,
             "duplicates": dups,
             "numerical_info": num_info,
             "cat_info": cat_info,
+            "date_info": date_info,
             "num_corr": num_corr,
             "cat_corr": cat_corr,
             "missing": missing,

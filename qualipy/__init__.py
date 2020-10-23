@@ -4,3 +4,4 @@ from qualipy.reflect.function import function
 from qualipy.reflect.table import SQLTable, PandasTable
 from qualipy.reflect.column import Column, column
 from qualipy import datasets
+from qualipy import cli

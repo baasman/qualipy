@@ -150,3 +150,21 @@ def barchart_from_dict(data):
         .properties(width=400)
     )
     return chart
+
+
+def barchart_from_dict_on_dates(data):
+    data = pd.DataFrame({"Variable": list(data.keys()), "Count": list(data.values())})
+    mid_index = data[data.Count == data.Count.max()].index.values[0]
+    min_index = max(0, mid_index - 20)
+    max_index = min(mid_index + 20, data.shape[0])
+    data = data.iloc[min_index:max_index]
+    chart = (
+        alt.Chart(data)
+        .mark_bar()
+        .encode(
+            y=alt.Y("Count:Q"),
+            x=alt.X("Variable:N"),
+            tooltip=["Variable", "Count"],
+        )
+    ).properties(height=200, width=600)
+    return chart

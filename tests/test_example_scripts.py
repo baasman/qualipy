@@ -8,6 +8,8 @@ import json
 import pytest
 import sqlalchemy as sa
 
+from qualipy.cli import produce_batch_report_cli
+
 
 def get_module_from_path(path):
     spec = importlib.util.spec_from_file_location("test_path.test_script", path)
@@ -29,9 +31,8 @@ def test_profile_dataset_pandas():
     test_script = get_module_from_path(test_path)
     test_script.qualipy_pipeline(tmp_config_path)
 
-    subprocess.check_output(
-        f"qualipy produce-batch-report {tmp_config_path} eye_state eye-state-run-0 --run_name full-run",
-        shell=True,
+    produce_batch_report_cli(
+        tmp_config_path, "eye_state", "eye-state-run-0", run_name="full-run"
     )
 
     reports_dir = os.path.join(tmp_config_path, "reports", "profiler")
