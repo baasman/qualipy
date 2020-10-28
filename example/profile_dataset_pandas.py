@@ -58,7 +58,9 @@ if __name__ == "__main__":
     config_dir = "~/eye-state"
     qualipy_pipeline(config_dir)
     # generate the batch report. See qualipy produce-batch-report -h for more help
-    subprocess.check_output(
-        f"qualipy produce-batch-report {config_dir} eye_state eye-state-run-0 --run_name full-run",
-        shell=True,
+    qpy.cli.produce_batch_report_cli(
+        config_dir=config_dir,
+        project_name="eye_state",
+        batch_name="eye-state-run-0",
+        run_name="full-run",
     )

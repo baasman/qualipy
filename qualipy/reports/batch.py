@@ -27,11 +27,14 @@ class BatchReport(BaseJinjaView):
         time_zone="US/Eastern",
         custom_styles_directory=None,
     ):
+        # TODO: make sure it works if column names have spaces or start with numbers
+        # TODO: make it possible to filter out run names
+        # confirm project dir structure is correct if it exists
         super(BatchReport, self).__init__(custom_styles_directory)
-        self.config_dir = config_dir
+        self.config_dir = os.path.expanduser(config_dir)
         self.project_name = project_name
         self.batch_name = batch_name
-        with open(os.path.join(config_dir, "config.json"), "rb") as config_file:
+        with open(os.path.join(self.config_dir, "config.json"), "rb") as config_file:
             config = json.load(config_file)
 
         project = Project(
@@ -45,7 +48,9 @@ class BatchReport(BaseJinjaView):
             self.data = pd.DataFrame()
 
         with open(
-            os.path.join(config_dir, "profile_data", f"{batch_name}-{run_name}.json"),
+            os.path.join(
+                self.config_dir, "profile_data", f"{batch_name}-{run_name}.json"
+            ),
             "r",
         ) as f:
             self.batch_data = json.load(f)
@@ -280,7 +285,8 @@ class BatchReport(BaseJinjaView):
     def _create_missing_info(self):
         missing_counts = self.batch_data["missing"]["missing_counts"]
         missing_bar_plot = convert_to_markup(
-            barchart_from_dict(missing_counts), chart_id="missing_bar_plot"
+            barchart_from_dict(missing_counts, x_limits=[0, 1]),
+            chart_id="missing_bar_plot",
         )
         missing_corr = pd.DataFrame(self.batch_data["missing"]["missing_correlation"])
         if missing_corr.shape[0] > 0:

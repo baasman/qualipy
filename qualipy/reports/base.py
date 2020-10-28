@@ -35,6 +35,9 @@ def convert_to_markup(
 ):
     show = "show" if show_by_default else ""
     markup = Markup(chart.to_json())
+    chart_id = chart_id.replace(" ", "_")
+    if chart_id[0].isnumeric():
+        chart_id = "_" + chart_id
     plot = {
         "chart": markup,
         "show_by_default": show,

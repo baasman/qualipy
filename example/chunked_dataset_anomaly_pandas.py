@@ -46,7 +46,4 @@ if __name__ == "__main__":
     qualipy_pipeline(config_dir)
 
     # generate the anomaly report. See qualipy produce-anomaly-report -h for more info
-    subprocess.check_output(
-        f"qualipy produce-anomaly-report {config_dir} stocks --run_anomaly true",
-        shell=True,
-    )
+    qpy.cli.produce_anomaly_report_cli(config_dir, "stocks", run_anomaly=True)

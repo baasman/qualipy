@@ -84,7 +84,4 @@ if __name__ == "__main__":
     config_dir = "~/flat_data"
     qualipy_pipeline(config_dir)
     # generate anomaly report
-    subprocess.check_output(
-        f"qualipy produce-anomaly-report {config_dir} flat_data --run_anomaly true",
-        shell=True,
-    )
+    qpy.cli.produce_anomaly_report_cli(config_dir, "flat_data", run_anomaly=True)

@@ -196,6 +196,7 @@ def produce_comparison_report(
 def produce_batch_report_cli(
     config_dir, project_name, batch_name, run_name=None, out_file=None
 ):
+    config_dir = os.path.expanduser(config_dir)
     if run_name is None:
         run_name = "0"
     view = BatchReport(

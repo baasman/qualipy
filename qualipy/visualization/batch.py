@@ -137,14 +137,15 @@ def barchart_top_categories_from_value_counts(data, frequencies, cat_facets=None
     return chart
 
 
-def barchart_from_dict(data):
+def barchart_from_dict(data, x_limits: list = None):
     data = pd.DataFrame({"Variable": list(data.keys()), "Count": list(data.values())})
+    x_scale = alt.Scale(domain=x_limits) if x_limits is not None else None
     chart = (
         alt.Chart(data)
         .mark_bar()
         .encode(
             y=alt.Y("Variable:N", sort="-x"),
-            x=alt.X("Count:Q"),
+            x=alt.X("Count:Q", scale=x_scale),
             tooltip=["Variable", "Count"],
         )
         .properties(width=400)

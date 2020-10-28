@@ -32,6 +32,7 @@ def set_default_config(config_dir, db_url=None):
 
 def generate_config(config_dir, db_url=None):
     config_dir = os.path.expanduser(config_dir)
+    # check to make sure directory is right format if it does exist
     if not os.path.exists(config_dir):
         os.makedirs(config_dir, exist_ok=True)
         with open(os.path.join(config_dir, "config.json"), "w") as f:
