@@ -32,7 +32,6 @@ def set_default_config(config_dir, db_url=None):
 
 def generate_config(config_dir, db_url=None):
     config_dir = os.path.expanduser(config_dir)
-    # check to make sure directory is right format if it does exist
     if not os.path.exists(config_dir):
         os.makedirs(config_dir, exist_ok=True)
         with open(os.path.join(config_dir, "config.json"), "w") as f:
@@ -45,6 +44,11 @@ def generate_config(config_dir, db_url=None):
         os.makedirs(os.path.join(config_dir, "reports", "anomaly"), exist_ok=True)
         os.makedirs(os.path.join(config_dir, "reports", "profiler"), exist_ok=True)
         os.makedirs(os.path.join(config_dir, "reports", "comparison"), exist_ok=True)
+    else:
+        if not os.path.exists(os.path.join(config_dir, "config.json")):
+            raise Exception(
+                "Error: Make sure directory follows proper Qualipy structure"
+            )
 
 
 def inspect_db_connection(url):

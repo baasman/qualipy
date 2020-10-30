@@ -167,5 +167,5 @@ def barchart_from_dict_on_dates(data):
             x=alt.X("Variable:N"),
             tooltip=["Variable", "Count"],
         )
-    ).properties(height=200, width=600)
+    ).properties(height=200, width=400)
     return chart

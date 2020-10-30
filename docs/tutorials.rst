@@ -1,8 +1,8 @@
 .. highlight:: sh
 
-==========
-Tutorials
-==========
+======================
+Tutorials and Recipes
+======================
 
 For beginners getting into using Qualipy, I'd recommend following these tutorials in order
 
@@ -59,3 +59,12 @@ Concepts:
 4. Using reference names for columns to refer to them at different times
 5. Working with numerical and categorical data
 6. Simulate a time series by chunking the input data
+
+
+Recipe 1
+---------
+Use this to analyze a pandas dataframe. All you need to fill in is the numeric, categorical,
+and datetime columns, and the rest should work like magic!
+
+.. _Recipe_1: https://github.com/baasman/qualipy/blob/qualipy-0.1.1/recipes/pandas_dataframe.py
+

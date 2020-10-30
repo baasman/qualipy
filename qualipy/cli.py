@@ -76,6 +76,7 @@ def produce_anomaly_report_cli(
     t2=None,
     out_file=None,
 ):
+    config_dir = os.path.expanduser(config_dir)
     view = AnomalyReport(
         config_dir=config_dir,
         project_name=project_name,
@@ -244,20 +245,29 @@ def produce_batch_report(
     produce_batch_report_cli(config_dir, project_name, batch_name, run_name, out_file)
 
 
-@qualipy.command()
-@click.argument("config_dir")
-@click.argument("project_name")
-@click.option("--recreate", default=True, type=bool)
-def clear_data(config_dir, project_name, recreate):
+def clear_data_cli(config_dir, project_name, recreate=True, confirm=True):
     project = Project(config_dir=config_dir, project_name=project_name, re_init=True)
     print(
         f"Preparing to delete table {project_name} as specified in config dir {config_dir}"
     )
-    if click.confirm(
-        "Do you wish to continue? Warning - this will permanently delete data"
-    ):
+    if confirm:
+        if click.confirm(
+            "Do you wish to continue? Warning - this will permanently delete data"
+        ):
+            project.delete_data(recreate=recreate)
+            project.delete_from_project_config()
+    else:
         project.delete_data(recreate=recreate)
         project.delete_from_project_config()
+
+
+@qualipy.command()
+@click.argument("config_dir")
+@click.argument("project_name")
+@click.option("--recreate", default=True, type=bool)
+@click.option("--confirm", default=True, type=bool)
+def clear_data(config_dir, project_name, recreate, confirm):
+    clear_data_cli(config_dir, project_name, recreate, confirm)
 
 
 if __name__ == "__main__":
@@ -267,4 +277,4 @@ if __name__ == "__main__":
 
     sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
 
-    produce_batch_report(sys.argv[1:])  # pylint: disable=no-value-for-parameter
+    produce_anomaly_report(sys.argv[1:])  # pylint: disable=no-value-for-parameter

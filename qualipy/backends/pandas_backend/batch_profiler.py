@@ -44,6 +44,8 @@ def generate_hist(column_data, bins):
 
 class PandasBatchProfiler:
     def __init__(self, data, batch_name, run_name, columns, config_dir, project_name):
+        if data.shape[0] == 0:
+            raise Exception("Error: data is empty")
         self.data = data
         self.batch_name = batch_name
         self.columns = columns
@@ -89,11 +91,17 @@ class PandasBatchProfiler:
     def _duplicated(self):
         duplicated_records = self.data.duplicated(keep="last")
         dups = self.data[duplicated_records].head(10)
+        if dups.shape[0] > 0:
+            percentage_of_duplicates = (
+                sum(duplicated_records) / duplicated_records.shape[0]
+            )
+        else:
+            percentage_of_duplicates = 0
+
         return {
-            "head_of_dups": dups.to_dict(orient="records"),
+            "head_of_dups": dups.astype(str).to_dict(orient="records"),
             "number_of_duplicates": sum(duplicated_records),
-            "percentage_of_duplicates": sum(duplicated_records)
-            / duplicated_records.shape[0],
+            "percentage_of_duplicates": percentage_of_duplicates,
         }
 
     def _num_info(self):

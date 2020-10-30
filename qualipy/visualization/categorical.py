@@ -18,7 +18,11 @@ def barchart_top_categories_altair(data, column, top_n=20, show_notebook=True):
     chart = (
         alt.Chart(d)
         .mark_bar()
-        .encode(x=alt.X("category:N", sort="-y"), y=alt.Y(f"{column}:Q"))
+        .encode(
+            x=alt.X("category:N", sort="-y"),
+            y=alt.Y(f"{column}:Q"),
+            tooltip=["category", column],
+        )
         .properties(title="All Categories", width=600)
     )
     if show_notebook:
@@ -49,7 +53,10 @@ def value_count_chart_altair(data, var, anom_data, top_n=20, show_notebook=True)
         title=f"{var} - {metric}: Proportion over time", width=600
     )
     area = base.mark_area().encode(
-        x=alt.X("date:T"), y=alt.Y("value:Q", stack="normalize"), color="variable:N"
+        x=alt.X("date:T"),
+        y=alt.Y("value:Q", stack="normalize"),
+        color="variable:N",
+        tooltip=["value", "date", "variable"],
     )
     anom_line = (
         alt.Chart(df).mark_rule(color="red").encode(x="date:T", y=alt.Y("anom:Q"))
