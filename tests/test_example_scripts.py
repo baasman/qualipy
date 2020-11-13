@@ -51,6 +51,39 @@ def test_profile_dataset_pandas():
     shutil.rmtree(tmp_config_path)
 
 
+def test_table_dataset_pandas():
+    test_path = os.path.join(
+        os.path.dirname(os.path.realpath(__file__)),
+        os.pardir,
+        "example",
+        "pandas_table.py",
+    )
+    tmp_config_path = os.path.join(
+        tempfile.gettempdir(), next(tempfile._get_candidate_names())
+    )
+    test_script = get_module_from_path(test_path)
+    test_script.qualipy_pipeline(tmp_config_path)
+
+    produce_batch_report_cli(
+        tmp_config_path, "eye_state", "eye-state-run-0", run_name="full-run"
+    )
+
+    reports_dir = os.path.join(tmp_config_path, "reports", "profiler")
+    reports = list(os.listdir(reports_dir))
+    assert len(reports) > 0
+
+    with open(os.path.join(tmp_config_path, "config.json"), "r") as f:
+        config = json.load(f)
+
+    engine = sa.create_engine(config["QUALIPY_DB"])
+    with engine.connect() as conn:
+        ret = conn.execute("select * from eye_state limit 1").fetchall()
+
+    assert len(ret) > 0
+
+    shutil.rmtree(tmp_config_path)
+
+
 def test_chunked_dataset_anomaly_pandas():
     test_path = os.path.join(
         os.path.dirname(os.path.realpath(__file__)),

@@ -35,7 +35,7 @@ setup(
         "Programming Language :: Python :: 3",
     ],
     keywords="data quality machine learning",
-    packages=find_packages(exclude=["contrib", "docs", "examples", "tests"]),
+    packages=find_packages(exclude=["contrib", "docs", "examples", "example", "tests"]),
     install_requires=required,
     entry_points="""
             [console_scripts]

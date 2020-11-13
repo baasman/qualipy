@@ -214,7 +214,7 @@ class PandasBatchProfiler:
             hist_counts = date_data[[column]].copy()
             hist_counts["dummy"] = 1
             hist_counts = hist_counts.set_index(column)
-            hist_counts = hist_counts.dummy.resample("3M").count().reset_index()
+            hist_counts = hist_counts.dummy.resample("1M").count().reset_index()
             hist_counts = {
                 str(i[column]): i["dummy"]
                 for i in hist_counts.to_dict(orient="records")

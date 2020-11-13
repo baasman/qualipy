@@ -176,17 +176,9 @@ class Project(object):
     def _validate_schema(self, config):
         config_schema.validate(config)
 
-    def add_table(self, table: Table, extract_sample=False) -> None:
-        table._generate_columns(extract_sample=extract_sample)
-        self.time_column = table.time_column
-        for column in table._columns:
-            imported_functions = []
-            for function in column.functions:
-                imported_functions.append((function, table._import_function(function)))
-            column.functions = imported_functions
-            self.columns[column.column_name] = column._as_dict(
-                column.column_name, read_functions=False
-            )
+    def add_table(self, table: Table) -> None:
+        for column in table.columns:
+            self.add_column(column)
 
     def _add_column_class(
         self, column: Union[Column, List[Column]], name: str = None

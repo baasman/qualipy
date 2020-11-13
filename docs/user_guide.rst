@@ -14,8 +14,8 @@ Creating Functions
 
 Example 1 - A simple function with no additional arguments::
 
-    from qualipy.reflect.function import function
-    @function(return_format=float)
+    import qualipy as qpy
+    @qpy.function(return_format=float)
     def mean(data, column):
         return data[column].mean()
 
@@ -26,7 +26,7 @@ Additionally, the method ``mean`` returns a float value, which is consistent wit
 
 Example 2 - A simple function with additional arguments::
 
-    @function(return_format=int, allowed_arguments=["standard_deviations"])
+    @qpy.function(return_format=int, allowed_arguments=["standard_deviations"])
     def std_over_limit(data, column, standard_deviations):
         mean = data[column].mean()
         std = data[column].std()
@@ -39,7 +39,7 @@ Example 2 - A simple function with additional arguments::
 
 Example 3 - A function when running SQL as backend::
 
-    @function(return_format=float)
+    @qpy.function(return_format=float)
     def mean(data, column):
         return data.engine.execute(
             sa.select([sa.func.avg(sa.column(column))]).select_from(data._table)
@@ -55,14 +55,14 @@ Creating a mapping
 
 Example 1 - Reflect a pandas column with one function::
 
-    price = column(column_name="price", column_type=FloatType(), functions=[mean])
+    price = qpy.column(column_name="price", column_type=FloatType(), functions=[mean])
 
 Here, ``price`` is the name of the pandas column. We want to column to be of float type,
 and we're collecting the mean of the price.
 
 Example 2 - Reflect a column, and call a function with arguments::
 
-    price = column(
+    price = qpy.column(
         column_name="price",
         column_type=FloatType(),
         functions=[{"function": std_over_limit, "parameters": {"standard_deviations": 3}}],
@@ -70,7 +70,7 @@ Example 2 - Reflect a column, and call a function with arguments::
 
 Example 3 - Reflect multiple columns, and call a function on just one of them::
 
-    num_columns = column(
+    num_columns = qpy.column(
         column_name=["price", "some_other_column"],
         column_type=FloatType(),
         functions=[mean],
@@ -96,15 +96,15 @@ Project
 
 Example 1 - Instantiate a project::
 
-    from qualipy.project import Project
+    import qualipy as qpy
 
-    project = Project(project_name='stocks', config_dir='/tmp/.config')
+    project = qpy.Project(project_name='stocks', config_dir='/tmp/.config')
 
 Example 2 - Instantiate a project and add a column to it::
 
-    from qualipy.project import Project
+    import qualipy as qpy
 
-    project = Project(project_name='stocks', config_dir='/tmp/.config')
+    project = qpy.Project(project_name='stocks', config_dir='/tmp/.config')
     # using the price column defined above
     project.add_column(column=price, name='price_analysis')
 
@@ -185,3 +185,6 @@ For pandas, these include
     * `NumericTypeType` - will match with any numeric subtype
     * `ObjectType`
     * `BoolType`
+
+For SQL and SPARK backends, these are generally less important as type is usually
+enforced by the framework itself, reducing the need for type checking.

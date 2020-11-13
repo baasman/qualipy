@@ -9,11 +9,12 @@ def function(
     fail: bool = False,
     display_name: str = None,
     description: str = None,
+    input_format: type = float,
 ) -> Callable:
     """Define a function that can be applied to a qualipy dataset
 
     Use this decorator to specify a qualipy function, and describe
-    how it will function when executed. Whatever function this decorator 
+    how it will function when executed. Whatever function this decorator
     is used for must abide by three rules:
 
     1) The first argument must be `data` - This is the data object you pass to Qualipy
@@ -46,6 +47,7 @@ def function(
         method.arguments = {} if arguments is None else arguments
         method.has_decorator = True
         method.return_format = return_format
+        method.input_format = input_format
         method.fail = fail
         method.valid_min_range = None
         method.valid_max_range = None
