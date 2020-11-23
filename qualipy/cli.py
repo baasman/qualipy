@@ -1,6 +1,7 @@
 import os
 import json
 import datetime
+from functools import reduce
 
 import click
 from qualipy.anomaly.anomaly import _run_anomaly
@@ -75,6 +76,7 @@ def produce_anomaly_report_cli(
     t1=None,
     t2=None,
     out_file=None,
+    run_name=None
 ):
     config_dir = os.path.expanduser(config_dir)
     view = AnomalyReport(
@@ -85,6 +87,7 @@ def produce_anomaly_report_cli(
         only_show_anomaly=only_show_anomaly,
         t1=t1,
         t2=t2,
+        run_name=run_name
     )
     rendered_page = view.render(
         template=f"anomaly.j2", title="Anomaly Report", project_name=project_name
@@ -130,6 +133,12 @@ def produce_anomaly_report_cli(
     type=str,
     help="If set, all visualizations in the report will be prior to this date",
 )
+@click.option(
+    "--run_name",
+    default=None,
+    type=str,
+    help="",
+)
 @click.option("--out_file", default=None, type=str, help="Location of the output")
 def produce_anomaly_report(
     config_dir,
@@ -139,6 +148,7 @@ def produce_anomaly_report(
     only_show_anomaly,
     t1,
     t2,
+    run_name,
     out_file,
 ):
     """
@@ -200,6 +210,7 @@ def produce_batch_report_cli(
     config_dir = os.path.expanduser(config_dir)
     if run_name is None:
         run_name = "0"
+
     view = BatchReport(
         config_dir=config_dir,
         project_name=project_name,

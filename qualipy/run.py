@@ -275,7 +275,7 @@ class Qualipy(object):
             overwrite_type = specs["overwrite_type"]
             if overwrite_type:
                 self.current_data = self.generator.overwrite_type(
-                    self.current_data, column_name, specs["type"]
+                    self.current_data.copy(), column_name, specs["type"]
                 )
 
             # get default column info
@@ -287,8 +287,6 @@ class Qualipy(object):
 
                 should_fail = function.fail
                 arguments = function.arguments
-                valid_min_range = function.valid_min_range
-                valid_max_range = function.valid_max_range
                 return_format = function.return_format
                 return_format_repr = types[return_format]
                 viz_type = self._set_viz_type(function, function_name)

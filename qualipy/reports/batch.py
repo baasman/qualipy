@@ -1,5 +1,6 @@
 import os
 import json
+from functools import reduce
 
 import jinja2
 import pandas as pd
@@ -34,6 +35,7 @@ class BatchReport(BaseJinjaView):
         self.config_dir = os.path.expanduser(config_dir)
         self.project_name = project_name
         self.batch_name = batch_name
+        self.run_name = run_name
         with open(os.path.join(self.config_dir, "config.json"), "rb") as config_file:
             config = json.load(config_file)
 
@@ -47,13 +49,16 @@ class BatchReport(BaseJinjaView):
         except AttributeError:
             self.data = pd.DataFrame()
 
-        with open(
-            os.path.join(
-                self.config_dir, "profile_data", f"{batch_name}-{run_name}.json"
-            ),
-            "r",
-        ) as f:
-            self.batch_data = json.load(f)
+        if isinstance(run_name, list):
+            self.batch_data = self.combine_profile_reports(run_name)
+        else:
+            with open(
+                os.path.join(
+                    self.config_dir, "profile_data", f"{batch_name}-{run_name}.json"
+                ),
+                "r",
+            ) as f:
+                self.batch_data = json.load(f)
 
     def _create_template_vars(self) -> dict:
         num_batch_plots = self._create_num_batch_plots()
@@ -247,40 +252,56 @@ class BatchReport(BaseJinjaView):
         return num_info
 
     def _create_numerical_corr_plot(self):
-        corr = pd.DataFrame(self.batch_data["num_corr"])
-        if corr.shape[0] > 0:
-            corr.Correlation = corr.Correlation.round(3)
-            strongest_only = True if corr["Variable 1"].nunique() > 20 else False
-            plot = plot_correlation(
-                corr,
-                title="Correlation (Pearson) between numerical variables",
-                strongest_only=strongest_only,
-            )
-            return convert_to_markup(
-                plot,
-                chart_id="num_correlation",
-                show_by_default=True,
-                button_name="Numerical Correlation",
-            )
-        return None
+        if isinstance(self.batch_data["num_corr"], dict):
+            corr_data = {
+                k: pd.DataFrame(v) for k, v in self.batch_data["num_corr"].items()
+            }
+        else:
+            corr_data = {self.run_name: pd.DataFrame(self.batch_data["num_corr"])}
+        all_corrs = []
+        for run_name, corr in corr_data.items():
+            if corr.shape[0] > 0:
+                corr.Correlation = corr.Correlation.round(3)
+                strongest_only = True if corr["Variable 1"].nunique() > 20 else False
+                plot = plot_correlation(
+                    corr,
+                    title=f"{run_name} - Correlation (Pearson) between numerical variables",
+                    strongest_only=strongest_only,
+                )
+                corr_plot = convert_to_markup(
+                    plot,
+                    chart_id=f"{run_name}_num_correlation",
+                    show_by_default=True,
+                    button_name="Numerical Correlation",
+                )
+                all_corrs.append(corr_plot)
+        return all_corrs
 
     def _create_categorical_corr_plot(self):
-        corr = pd.DataFrame(self.batch_data["cat_corr"])
-        if corr.shape[0] > 0:
-            corr.Correlation = corr.Correlation.round(3)
-            strongest_only = True if corr["Variable 1"].nunique() > 20 else False
-            plot = plot_correlation(
-                corr,
-                title="Correlation (Cramer's V) between categorical variables",
-                strongest_only=strongest_only,
-            )
-            return convert_to_markup(
-                plot,
-                chart_id="cat_correlation",
-                show_by_default=True,
-                button_name="Categorical Correlation",
-            )
-        return None
+        if isinstance(self.batch_data["cat_corr"], dict):
+            corr_data = {
+                k: pd.DataFrame(v) for k, v in self.batch_data["cat_corr"].items()
+            }
+        else:
+            corr_data = {self.run_name: pd.DataFrame(self.batch_data["cat_corr"])}
+        all_corrs = []
+        for run_name, corr in corr_data.items():
+            if corr.shape[0] > 0:
+                corr.Correlation = corr.Correlation.round(3)
+                strongest_only = True if corr["Variable 1"].nunique() > 20 else False
+                plot = plot_correlation(
+                    corr,
+                    title=f"{run_name} - Correlation (Cramer's V) between categorical variables",
+                    strongest_only=strongest_only,
+                )
+                corr_plot = convert_to_markup(
+                    plot,
+                    chart_id=f"{run_name}_cat_correlation",
+                    show_by_default=True,
+                    button_name="Categorical Correlation",
+                )
+                all_corrs.append(corr_plot)
+        return all_corrs
 
     def _create_missing_info(self):
         missing_counts = self.batch_data["missing"]["missing_counts"]
@@ -288,23 +309,127 @@ class BatchReport(BaseJinjaView):
             barchart_from_dict(missing_counts, x_limits=[0, 1]),
             chart_id="missing_bar_plot",
         )
-        missing_corr = pd.DataFrame(self.batch_data["missing"]["missing_correlation"])
-        if missing_corr.shape[0] > 0:
-            strongest_only = (
-                True if missing_corr["Variable 1"].nunique() > 20 else False
-            )
-            missing_corr.Correlation = missing_corr.Correlation.round(3)
-            missing_corr_plot = convert_to_markup(
-                plot_correlation(
-                    missing_corr,
-                    strongest_only=strongest_only,
-                    title="Correlation between missingness",
-                ),
-                chart_id="missing_correlation_plot",
-            )
+        if isinstance(self.batch_data["missing"]["missing_correlation"], dict):
+            corr_data = {
+                k: pd.DataFrame(v)
+                for k, v in self.batch_data["missing"]["missing_correlation"].items()
+            }
         else:
-            missing_corr_plot = None
+            corr_data = {
+                self.run_name: pd.DataFrame(
+                    self.batch_data["missing"]["missing_correlation"]
+                )
+            }
+        all_corrs = []
+        for run_name, corr in corr_data.items():
+            if corr.shape[0] > 0:
+                strongest_only = True if corr["Variable 1"].nunique() > 20 else False
+                corr.Correlation = corr.Correlation.round(3)
+                corr_plot = convert_to_markup(
+                    plot_correlation(
+                        corr,
+                        strongest_only=strongest_only,
+                        title=f"{run_name} - Correlation between missingness",
+                    ),
+                    chart_id=f"{run_name}correlation_plot",
+                )
+                all_corrs.append(corr_plot)
         return {
             "missing_bar_plot": missing_bar_plot,
-            "missing_corr_plot": missing_corr_plot,
+            "missing_corr_plot": all_corrs,
         }
+
+    def combine_profile_reports(self, run_name: list) -> dict:
+        all_runs = []
+        for name in run_name:
+            with open(
+                os.path.join(
+                    self.config_dir, "profile_data", f"{self.batch_name}-{name}.json"
+                ),
+                "r",
+            ) as f:
+                batch_data = json.load(f)
+            reconstructed = {}
+            for key, item in batch_data.items():
+                if item is None:
+                    reconstructed[key] = item
+                elif key in ["cat_info", "numerical_info", "date_info"]:
+                    item = {f"{k}_{name}": v for k, v in item.items()}
+                    reconstructed[key] = item
+                elif key in ["head", "duplicates"]:
+                    reconstructed[key] = item
+                elif key in ["num_corr", "cat_corr"]:
+                    reconstructed[key] = {name: item}
+                elif key in ["missing"]:
+                    item["missing_counts"] = {
+                        f"{k}_{name}": v for k, v in item["missing_counts"].items()
+                    }
+                    item["missing_correlation"] = {name: item["missing_correlation"]}
+                    reconstructed[key] = item
+            all_runs.append(reconstructed)
+
+        total_reconstructed = {}
+
+        # numerical_info
+        num_info = [i["numerical_info"] for i in all_runs]
+        num_info = reduce(lambda x, y: {**x, **y}, num_info)
+        total_reconstructed["numerical_info"] = num_info
+
+        # catergorical info
+        cat_info = [i["cat_info"] for i in all_runs]
+        cat_info = reduce(lambda x, y: {**x, **y}, cat_info)
+        total_reconstructed["cat_info"] = cat_info
+
+        # date info
+        date_info = [i["date_info"] for i in all_runs]
+        date_info = reduce(lambda x, y: {**x, **y}, date_info)
+        total_reconstructed["date_info"] = date_info
+
+        # head
+        total_reconstructed["head"] = all_runs[0]["head"]
+
+        # duplicates
+        dups = [i["duplicates"] for i in all_runs]
+        heads_of_dups = [i["head_of_dups"] for i in dups]
+        heads_of_dups = [item for sublist in heads_of_dups for item in sublist]
+        number_of_duplicates = sum([i["number_of_duplicates"] for i in dups])
+        percentage_of_duplicates = sum(
+            [i["percentage_of_duplicates"] for i in dups]
+        ) / len(dups)
+        total_reconstructed["duplicates"] = {
+            "head_of_dups": heads_of_dups,
+            "number_of_duplicates": number_of_duplicates,
+            "percentage_of_duplicates": percentage_of_duplicates,
+        }
+
+        # num corr
+        num_corr = [i["num_corr"] for i in all_runs if i["num_corr"] is not None]
+        if len(num_corr) > 0:
+            num_corr = reduce(lambda x, y: {**x, **y}, num_corr)
+        else:
+            num_corr = {}
+        total_reconstructed["num_corr"] = num_corr
+
+        # cat corr
+        cat_corr = [i["cat_corr"] for i in all_runs if i["cat_corr"] is not None]
+        if len(cat_corr) > 0:
+            cat_corr = reduce(lambda x, y: {**x, **y}, cat_corr)
+        else:
+            cat_corr = {}
+        total_reconstructed["cat_corr"] = cat_corr
+
+        # missing
+        missing = [i["missing"] for i in all_runs]
+        miss_corr = [i["missing_correlation"] for i in missing]
+        if len(miss_corr) > 0:
+            miss_corr = reduce(lambda x, y: {**x, **y}, miss_corr)
+        else:
+            miss_corr = {}
+        miss_counts = [i["missing_counts"] for i in missing]
+        miss_counts = reduce(lambda x, y: {**x, **y}, miss_counts)
+        total_reconstructed["missing"] = {
+            "missing_correlation": miss_corr,
+            "missing_counts": miss_counts,
+        }
+
+        return total_reconstructed

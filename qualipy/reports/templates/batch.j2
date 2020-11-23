@@ -158,14 +158,32 @@
         </div>
     {% endfor %}
     <h3 id="numerical_correlation_section"> Numerical Correlation </h3>
-    {{ util.plot_chart(num_corr, button=False) }}
+    {% for values in num_corr %}
+        <div class='num_cat border'>
+            <div class='num_corr_plot'>
+                {{ util.plot_chart(values, button=False) }}
+            </div>
+        </div>
+    {% endfor %}
 
     <h3 id="categorical_correlation_section"> Categorical Correlation </h3>
-    {{ util.plot_chart(cat_corr, button=False) }}
+    {% for values in cat_corr %}
+        <div class='cat_corr border'>
+            <div class='cat_corr_plot'>
+                {{ util.plot_chart(values, button=False) }}
+            </div>
+        </div>
+    {% endfor %}
 
     <h3 id="missing_section"> Missing </h3>
     {{ util.plot_chart(missing['missing_bar_plot'], button=False) }}
-    {{ util.plot_chart(missing['missing_corr_plot'], button=False) }}
+    {% for values in missing['missing_corr_plot'] %}
+        <div class='missing_corr border'>
+            <div class='missing_corr_plot'>
+                {{ util.plot_chart(values, button=False) }}
+            </div>
+        </div>
+    {% endfor %}
 
     <h3 id="head_section"> Head </h3>
     {{ util.plot_data(head, 'data_head') }}

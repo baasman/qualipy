@@ -45,6 +45,7 @@ class AnomalyReport(BaseJinjaView):
         self,
         config_dir,
         project_name,
+        run_name=None,
         run_anomaly=False,
         retrain_anomaly=False,
         only_show_anomaly=False,
@@ -65,6 +66,7 @@ class AnomalyReport(BaseJinjaView):
         )
 
         if run_anomaly:
+            # TODO: should be subset by run name in case of chunking
             self._run_anomaly_detection(
                 project_name=self.project_name,
                 config_dir=self.config_dir,
@@ -77,6 +79,11 @@ class AnomalyReport(BaseJinjaView):
             latest_insert_only=True,
             floor_datetime=True,
         )
+        if run_name is not None:
+            # TODO: this should be much better
+            self.project_data = self.project_data[
+                self.project_data.run_name.str.contains(run_name)
+            ]
         self.anomaly_data = get_anomaly_data(self.project, timezone=time_zone)
         # limitation - type not part of anomaly table - same
         if self.anomaly_data.shape[0] > 0:
@@ -465,20 +472,22 @@ class AnomalyReport(BaseJinjaView):
                         var_met_data, var, top_n=20, show_notebook=False
                     )
                     button_name = set_title_name(var_met_data)
-                    plots.append(
-                        convert_to_markup(
-                            chart=vchart,
-                            chart_id=var_met_data.metric_id.iloc[0] + "Trends",
-                            show_by_default=True,
-                            button_name=button_name + "-Trends",
+                    if vchart is not None:
+                        plots.append(
+                            convert_to_markup(
+                                chart=vchart,
+                                chart_id=var_met_data.metric_id.iloc[0] + "Trends",
+                                show_by_default=True,
+                                button_name=button_name + "-Trends",
+                            )
                         )
-                    )
-                    plots.append(
-                        convert_to_markup(
-                            chart=bchart,
-                            chart_id=var_met_data.metric_id.iloc[0] + "Bar",
-                            show_by_default=True,
-                            button_name=button_name + "-Bar",
+                    if bchart is not None:
+                        plots.append(
+                            convert_to_markup(
+                                chart=bchart,
+                                chart_id=var_met_data.metric_id.iloc[0] + "Bar",
+                                show_by_default=True,
+                                button_name=button_name + "-Bar",
+                            )
                         )
-                    )
         return plots

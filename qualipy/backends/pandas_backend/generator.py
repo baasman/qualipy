@@ -3,6 +3,7 @@ from qualipy.util import get_column
 from qualipy.backends.base import BackendBase
 
 from qualipy.backends.pandas_backend.dataset import PandasData
+from qualipy.backends.pandas_backend.pandas_types import FloatType, IntType
 from qualipy.backends.pandas_backend.batch_profiler import PandasBatchProfiler
 from qualipy.exceptions import InvalidType
 from qualipy.backends.pandas_backend.functions import (
@@ -134,13 +135,15 @@ class BackendPandas(BackendBase):
 
     @staticmethod
     def overwrite_type(data, col, type):
-        data[col] = data[col].astype(type.str_name)
+        if isinstance(type, FloatType) or isinstance(type, IntType):
+            data[col] = pd.to_numeric(data[col], errors="coerce")
+        else:
+            data[col] = data[col].astype(type.str_name)
         return data
 
     @staticmethod
     def generate_data(data, config):
-        data = PandasData(data, config)
-        return data.get_data()
+        return
 
     @staticmethod
     def profile_batch(data, batch_name, run_name, columns, config_dir, project_name):

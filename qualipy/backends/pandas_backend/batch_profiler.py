@@ -230,7 +230,11 @@ class PandasBatchProfiler:
         return date_info
 
     def _get_num_correlation(self):
-        numeric_columns = [k for k, v in self.columns.items() if not v["is_category"]]
+        numeric_columns = [
+            k
+            for k, v in self.columns.items()
+            if not v["is_category"] and not v["is_date"]
+        ]
         if len(numeric_columns) > 0:
             num_data = self.data[numeric_columns]
             corr = num_data.corr(method="spearman")
