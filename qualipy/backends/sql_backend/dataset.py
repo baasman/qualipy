@@ -1,13 +1,14 @@
 from qualipy.backends.base import BaseData
+from qualipy.backends.pandas_backend.dataset import PandasData
 
 import sqlalchemy as sa
+import pandas as pd
 
 import uuid
 
 
 class SQLData(BaseData):
-    """This is used when tracking a relational table
-    """
+    """This is used when tracking a relational table"""
 
     def __init__(
         self,
@@ -16,6 +17,7 @@ class SQLData(BaseData):
         schema: str = None,
         conn_string: str = None,
         custom_select_sql: str = None,
+        create_temp: bool = False,
     ):
         """
         Args:
@@ -25,7 +27,7 @@ class SQLData(BaseData):
             conn_string: If engine is None, you can just pass the sqlalchemy database connection
             custom_select_sql: Must be proper SQL for whatever DB you are using. This will instantiate
                 a temporary table that Qualipy will run against. This is useful if you dont need the
-                entire table, or need to run any joins before running Qualipy. However, often it 
+                entire table, or need to run any joins before running Qualipy. However, often it
                 might be better to just create a view of what you need.
         """
         if engine is not None:
@@ -33,7 +35,8 @@ class SQLData(BaseData):
         else:
             self.engine = sa.create_engine(conn_string)
         self.dialect = self.engine.dialect.name.lower()
-        if custom_select_sql is not None:
+        self.custom_select_sql = custom_select_sql
+        if custom_select_sql is not None and create_temp:
             if table_name is None:
                 table_name = str(uuid.uuid4())[:8]
             if self.dialect == "mssql":
@@ -50,7 +53,17 @@ class SQLData(BaseData):
         self.table_reflection = insp.get_columns(table_name, schema=schema)
         self.custom_where = None
 
-    def get_data(self):
+        # TODO: implement stratify logic. icluding when converted to pandas
+        self.stratify = False
+
+    def get_data(self, backend_used="sql"):
+        if backend_used == "pandas":
+            if not self.custom_select_sql:
+                query = f"select * from {self.table_name}"
+            else:
+                query = self.custom_select_sql
+            data = pd.read_sql(query, self.engine)
+            return data
         return self
 
     def _create_temp_table(self, table_name, sql_statement, schema=None, truncate=True):

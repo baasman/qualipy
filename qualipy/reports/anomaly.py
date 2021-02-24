@@ -227,14 +227,15 @@ class AnomalyReport(BaseJinjaView):
             labels = [i[0] for i in levels]
             anom_data["severity"] = pd.cut(anom_data.severity, bins, labels=labels)
 
-        anom_data.column_name = anom_data.apply(
-            lambda r: '<a href="#'
-            + r["metric_id"]
-            + '">'
-            + r["original_column_name"]
-            + "</a>",
-            axis=1,
-        )
+        if not anom_data.empty:
+            anom_data.column_name = anom_data.apply(
+                lambda r: '<a href="#'
+                + r["metric_id"]
+                + '">'
+                + r["original_column_name"]
+                + "</a>",
+                axis=1,
+            )
         trend_rules_descriptions = (
             pd.DataFrame.from_dict(trend_rules, orient="index")
             .reset_index()[["index", "display_name", "description"]]
@@ -243,26 +244,28 @@ class AnomalyReport(BaseJinjaView):
         anom_data = anom_data.merge(
             trend_rules_descriptions, how="left", on="trend_function_name"
         )
-        anom_data.trend_function_name = anom_data.apply(
-            lambda r: '<a href="#" data-toggle="tooltip" title="'
-            + r["description"]
-            + '">'
-            + r["display_name"]
-            + "</a>"
-            if r["trend_function_name"] is not None
-            else "",
-            axis=1,
-        )
+        if not anom_data.empty:
+            anom_data.trend_function_name = anom_data.apply(
+                lambda r: '<a href="#" data-toggle="tooltip" title="'
+                + r["description"]
+                + '">'
+                + r["display_name"]
+                + "</a>"
+                if r["trend_function_name"] is not None
+                else "",
+                axis=1,
+            )
         anom_data = anom_data.drop(["display_name", "description"], axis=1)
         anom_data = anom_data.merge(self.display_names, how="left", on="metric")
-        anom_data.metric = anom_data.apply(
-            lambda r: '<a href="#" data-toggle="tooltip" title="'
-            + r["description"]
-            + '">'
-            + r["display_name"]
-            + "</a>",
-            axis=1,
-        )
+        if not anom_data.empty:
+            anom_data.metric = anom_data.apply(
+                lambda r: '<a href="#" data-toggle="tooltip" title="'
+                + r["description"]
+                + '">'
+                + r["display_name"]
+                + "</a>",
+                axis=1,
+            )
 
         anom_data.value = np.where(
             anom_data.value.str.len() > 30,

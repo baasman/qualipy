@@ -36,7 +36,7 @@ class BaseData(object):
         self.data = data
         self.stratify = stratify
 
-    def get_data(self):
+    def get_data(self, backend_used=None):
         return self.data
 
     def set_fallback_data(self):

@@ -11,22 +11,32 @@ from qualipy.reflect.function import function
 # numeric
 
 
-@function(return_format=float)
+@function(return_format=float, input_format=float)
 def mean(data, column):
     return data[column].mean()
 
 
-@function(return_format=float)
+@function(return_format=float, input_format=float)
+def count(data, column):
+    return data.shape[0]
+
+
+@function(return_format=float, input_format=float)
 def std(data, column):
     return data[column].std()
 
 
-@function()
+@function(return_format=float, input_format=float)
+def max(data, column):
+    return data[column].max()
+
+
+@function(return_format=float, input_format=float)
 def min(data, column):
     return data[column].min()
 
 
-@function(allowed_arguments=["quantile"], return_format=float)
+@function(allowed_arguments=["quantile"], return_format=float, input_format=float)
 def quantile(data, column, quantile=0.5):
     return data[column].quantile(quantile)
 

@@ -36,6 +36,7 @@ def _create_value(
     date: datetime.datetime,
     type: str,
     return_format: str,
+    run_name,
 ):
     return {
         "value": value,
@@ -44,6 +45,7 @@ def _create_value(
         "metric": metric,
         "type": type,
         "return_format": return_format,
+        "run_name": run_name,
     }
 
 
@@ -88,6 +90,7 @@ class Qualipy(object):
         self.schema = {}
         self.from_step = None
         self.stratify = False
+        self.backend = backend
 
     def run(self, autocommit: bool = False, profile_batch=False) -> None:
         """The method that runs the execution
@@ -159,6 +162,8 @@ class Qualipy(object):
         Returns:
             None
         """
+        # NOTE: if sqldata but pandas backend, should pull data and work on that!
+        # also give option of query or taking last x rows
         self._set_data(df, allowed_dataclasses=["SQLData", "PandasData", "SparkData"])
         self.current_name = run_name if run_name is not None else self.run_n
         self._set_stratification(df)
@@ -196,6 +201,7 @@ class Qualipy(object):
         Returns:
             None
         """
+
         self._set_data(df, allowed_dataclasses=["SQLData", "PandasData", "SparkData"])
         self.current_name = run_name if run_name is not None else self.run_n
         self._set_stratification(df)
@@ -216,7 +222,7 @@ class Qualipy(object):
 
     def _set_data(self, df, allowed_dataclasses):
         if df.__class__.__name__ in allowed_dataclasses:
-            self.current_data = df.get_data()
+            self.current_data = df.get_data(backend_used=self.backend)
             try:
                 self.fallback_data = df.set_fallback_data()
             except:
@@ -226,7 +232,7 @@ class Qualipy(object):
 
     def _set_stratification(self, df):
         # stratification only implemented in Pandas for now
-        if df.__class__.__name__ in ["PandasData"]:
+        if self.backend == "pandas":
             if df.stratify:
                 self.stratify = True
                 self.stratify_values = df.stratify_values
@@ -238,14 +244,19 @@ class Qualipy(object):
 
     def _set_columns(self, columns: Optional[List[str]]):
         if columns is None:
-            columns = self.project.columns
+            ret_columns = self.project.columns
         else:
-            columns = {
-                col: items
-                for col, items in self.project.columns.items()
-                if col in columns
-            }
-        return columns
+            # columns = {
+            #     col: items
+            #     for col, items in self.project.columns.items()
+            #     if col in columns
+            # }
+            ret_columns = {}
+            for col, items in self.project.columns.items():
+                stage_name = items.get("column_stage_collection_name")
+                if stage_name in columns:
+                    ret_columns[col] = items
+        return ret_columns
 
     def commit(self):
         with self.project.engine.begin() as conn:
@@ -262,21 +273,34 @@ class Qualipy(object):
             if col not in self.columns:
                 continue
 
-            column_name = specs["name"]
+            if specs["split_on"] is not None:
+                column_name = specs["name"].split("||")[0]
+                self.data_view = self.generator.return_split_subset(
+                    self.current_data, specs["split_on"][0], specs["split_on"][1]
+                )
+                self.current_name_view = f"{self.current_name}-{specs['split_on'][1]}"
+            else:
+                column_name = specs['name']
+                self.data_view = self.generator.return_data_copy(self.current_data)
+                self.current_name_view = self.current_name
 
             # enforce type for function
-            if specs["type"] is not None:
-                self.generator.check_type(
-                    data=self.current_data,
-                    column=column_name,
-                    desired_type=specs["type"],
-                    force=specs["force_type"],
-                )
-            overwrite_type = specs["overwrite_type"]
-            if overwrite_type:
-                self.current_data = self.generator.overwrite_type(
-                    self.current_data.copy(), column_name, specs["type"]
-                )
+            # TODO: fix types when sql data is converted to pandas data
+            try:
+                if specs["type"] is not None:
+                    self.generator.check_type(
+                        data=self.data_view,
+                        column=column_name,
+                        desired_type=specs["type"],
+                        force=specs["force_type"],
+                    )
+                overwrite_type = specs["overwrite_type"]
+                if overwrite_type:
+                    self.data_view = self.generator.overwrite_type(
+                        self.data_view, column_name, specs["type"]
+                    )
+            except AttributeError:
+                pass
 
             # get default column info
             measures = self._get_column_specific_general_info(specs, measures)
@@ -294,7 +318,7 @@ class Qualipy(object):
                 # generate result row
                 result = self.generator.generate_description(
                     function=function,
-                    data=self.current_data,
+                    data=self.data_view,
                     column=column_name,
                     function_name=function_name,
                     date=self.time_of_run,
@@ -302,6 +326,7 @@ class Qualipy(object):
                     return_format=return_format_repr,
                     kwargs=arguments,
                 )
+                result["run_name"] = self.current_name_view
 
                 # set value type
                 result["value"] = self.generator.set_return_value_type(
@@ -317,13 +342,13 @@ class Qualipy(object):
                 measures.append(result)
 
         measures = self._get_general_info(measures)
-        measures = [{**m, **{"run_name": self.current_name}} for m in measures]
+        # measures = [{**m, **{"run_name": self.current_name_view}} for m in measures]
         self._add_to_total_measures(measures)
         if profile_batch:
             self.generator.profile_batch(
-                self.current_data,
+                self.data_view,
                 self.batch_name,
-                self.current_name,
+                self.current_name_view,
                 self.columns,
                 self.project.config_dir,
                 self.project.project_name,
@@ -337,7 +362,7 @@ class Qualipy(object):
     def _get_column_specific_general_info(self, specs, measures: Measure):
         col_name = specs["name"]
         unique, perc_missing, value_props = self.generator.generate_column_general_info(
-            specs, self.current_data, self.time_of_run
+            specs, self.data_view, self.time_of_run, self.current_name_view
         )
         if unique is not None:
             measures.append(unique)
@@ -352,26 +377,39 @@ class Qualipy(object):
             )
         measures.append(
             _create_value(
-                str(self.generator.get_dtype(self.current_data, col_name)),
+                str(self.generator.get_dtype(self.data_view, col_name)),
                 "dtype",
                 col_name,
                 self.time_of_run,
                 "data-characteristic",
                 "str",
+                self.current_name_view,
             )
         )
         return measures
 
     def _get_general_info(self, measures: Measure) -> Measure:
-        rows, cols = self.generator.get_shape(self.current_data)
+        rows, cols = self.generator.get_shape(self.data_view)
         measures.append(
             _create_value(
-                rows, "count", "rows", self.time_of_run, "data-characteristic", "int"
+                rows,
+                "count",
+                "rows",
+                self.time_of_run,
+                "data-characteristic",
+                "int",
+                self.current_name,
             )
         )
         measures.append(
             _create_value(
-                cols, "count", "columns", self.time_of_run, "data-characteristic", "int"
+                cols,
+                "count",
+                "columns",
+                self.time_of_run,
+                "data-characteristic",
+                "int",
+                self.current_name,
             )
         )
         return measures

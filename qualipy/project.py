@@ -83,6 +83,7 @@ class Project(object):
         config_dir: str,
         re_init: bool = False,
     ):
+        # need to come up with way that project does not need to redefined and re-imported
         self.project_name = project_name
         self.value_table = "{}_values".format(self.project_name)
         self.value_custom_table = "{}_values_custom".format(self.project_name)
@@ -124,7 +125,9 @@ class Project(object):
     def change_config_dir(self, config_dir):
         self._initialize(self.project_name, config_dir, True)
 
-    def add_column(self, column: Column, name: str = None) -> None:
+    def add_column(
+        self, column: Column, name: str = None, column_stage_collection_name: str = None
+    ) -> None:
         """Add a mapping to this project
 
         This is the method to use when adding a column mapping to the project. Once added,
@@ -200,7 +203,13 @@ class Project(object):
             for n in name:
                 self.columns[n] = column(name=n)
         else:
+            con_inst = column(name)
+            if con_inst["split_on"] is not None:
+                name = f'{name}||{con_inst["split_on"][1]}'
             self.columns[name] = column(name)
+
+    def add_external_columns(self, columns):
+        self.columns = {**self.columns, **columns}
 
     def get_project_table(self) -> pd.DataFrame:
         return self.sql_helper.get_project_table(self.engine, self.project_name)

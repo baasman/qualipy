@@ -6,8 +6,7 @@ import pandas as pd
 
 
 class PandasData(BaseData):
-    """PandasData must be instantiated when tracking pandas data
-    """
+    """PandasData must be instantiated when tracking pandas data"""
 
     def __init__(self, data: pd.DataFrame):
         """
@@ -21,8 +20,11 @@ class PandasData(BaseData):
     def set_fallback_data(self):
         return self.data.head(0)
 
+    def get_data(self, backend_used="pandas"):
+        return self.data
+
     def set_stratify_rule(self, column: str, values: List[str] = None) -> None:
-        """ Use this when you want to run all functions on separate stratifications
+        """Use this when you want to run all functions on separate stratifications
 
         Currently, only equality based stratification is possible. In the future, comparison
         based stratifications will be available.
@@ -31,7 +33,7 @@ class PandasData(BaseData):
             column: The name of the column you want to stratify on.
             values: If you only want to include a subset of values within ``column``,
                 specify them here
-        
+
         Returns:
             None
         """

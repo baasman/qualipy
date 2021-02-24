@@ -78,6 +78,8 @@ def column(
     unique: bool = False,
     is_category: bool = False,
     is_date: bool = False,
+    split_on: str = None,
+    column_stage_collection_name: str = None,
     functions: List[Union[Callable, Dict]] = None,
     extra_functions: Dict[str, Dict] = None,
 ):
@@ -128,6 +130,8 @@ def column(
             "unique": unique,
             "is_category": is_category,
             "is_date": is_date,
+            "split_on": split_on,
+            "column_stage_collection_name": column_stage_collection_name,
             "functions": _get_functions(functions, column_name=name),
             "extra_functions": _get_functions(extra_functions, column_name=name),
         }

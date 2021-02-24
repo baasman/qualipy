@@ -66,3 +66,4 @@ docker-compose-example.yaml
 tests/.ipynb_checkpoints/qualipy-example-checkpoint.ipynb
 Pipfile.lock
 .qualipy/
+.history/

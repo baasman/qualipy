@@ -84,7 +84,7 @@ class BackendPandas(BackendBase):
             )
 
     @staticmethod
-    def generate_column_general_info(specs, data, time_of_run):
+    def generate_column_general_info(specs, data, time_of_run, run_name):
         col_name = specs["name"]
         if specs["unique"]:
             unique = BackendPandas.generate_description(
@@ -96,6 +96,7 @@ class BackendPandas(BackendBase):
                 viz_type="data-characteristic",
                 kwargs={},
             )
+            unique["run_name"] = run_name
         else:
             unique = None
         if specs["is_category"]:
@@ -110,6 +111,7 @@ class BackendPandas(BackendBase):
                 return_format="dict",
             )
             value_props = None if str(value_props["value"]) == "nan" else value_props
+            value_props["run_name"] = run_name
         else:
             value_props = None
         perc_missing = BackendPandas.generate_description(
@@ -121,6 +123,7 @@ class BackendPandas(BackendBase):
             viz_type="data-characteristic",
             kwargs={},
         )
+        perc_missing["run_name"] = run_name
         return unique, perc_missing, value_props
 
     @staticmethod
@@ -151,3 +154,12 @@ class BackendPandas(BackendBase):
             data, batch_name, run_name, columns, config_dir, project_name
         )
         profiler.profile()
+
+    @staticmethod
+    def return_split_subset(data, split_var, split_value):
+        data = data[data[split_var] == split_value].copy()
+        return data
+
+    @staticmethod
+    def return_data_copy(data):
+        return data.copy()

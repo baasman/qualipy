@@ -173,10 +173,15 @@ def trend_bar_lateset(data, diff=False, variables=None, axis="metric_id", domain
         )
         chart = bars
         all_domains.append(chart)
+    # final_chart = (
+    #     alt.vconcat(*all_domains)
+    #     .configure_axis(labelLimit=400)
+    #     .resolve_scale(x="shared")
+    # )
     final_chart = (
         alt.vconcat(*all_domains)
         .configure_axis(labelLimit=400)
-        .resolve_scale(x="shared")
+        .resolve_scale(x="independent")
     )
     return final_chart
 

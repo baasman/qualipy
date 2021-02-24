@@ -27,6 +27,9 @@ class Table:
         self.table_name = table_name
         self.columns = columns
 
+    def add_table(self, table):
+        self.columns.extend(table.columns)
+
 
 def pandas_table(
     columns: Union[str, List[str]] = "all",
@@ -38,6 +41,8 @@ def pandas_table(
     int_as_cat: Union[bool, int] = 25,
     overwrite_type: bool = False,
     functions: List = None,
+    split_on: str = None,
+    column_stage_collection_name: str = None,
     extra_functions: Dict = None,
     sample_dataset: pd.DataFrame = None,
 ):
@@ -99,7 +104,7 @@ def pandas_table(
                     col_type = pObjectType()
                 else:
                     n_unique = sample_dataset[col_name].nunique()
-                    col_type = pIntType() if n_unique > int_as_cat else pObjectType()
+                    col_type = pIntType() if n_unique < int_as_cat else pObjectType()
             elif "bool" in sample_dataset[col_name].dtype.name and bool_as_cat is True:
                 col_type = pObjectType()
             else:
@@ -123,6 +128,8 @@ def pandas_table(
             force_null=False,
             is_category=is_cat,
             is_date=is_date,
+            split_on=split_on,
+            column_stage_collection_name=column_stage_collection_name,
             functions=column_functions,
             extra_functions=extra_functions.get(col_name, None),
         )
@@ -139,7 +146,6 @@ def sql_table(
     columns: Union[str, List[str]] = "all",
     infer_schema: bool = True,
     ignore: List[str] = None,
-    types: Dict = None,
     bool_as_cat: bool = True,
     int_as_cat: Union[bool, int] = 25,
     functions: List = None,
@@ -162,7 +168,6 @@ def sql_table(
         overwrite_type: This is useful if the aggregate function requires a specific datatype for it to be
             computed.
         ignore: List of columns you don't want to map. Usefull if you specified "all" for columns.
-        types: Dictionary of column name to Qualipy type
         bool_as_cat: Should boolean columns be interpreted as categorical data
         int_as_cat: if set to True, all integer columns will be interpreted as categories.
             If set to an integer, only integer values with a number of unique values less than
@@ -189,8 +194,6 @@ def sql_table(
         extra_functions = {}
     if ignore is None:
         ignore = []
-    if types is None:
-        types = {}
     if functions is None:
         functions = []
     if columns == "all":
@@ -203,24 +206,17 @@ def sql_table(
         }
 
     for col_name, reflection in all_columns.items():
-        if col_name in types:
-            col_type = types[col_name]
-        elif infer_schema:
-            if "int" in str(reflection["type"]).lower() and (
-                int_as_cat is True or isinstance(int_as_cat, int)
-            ):
-                if isinstance(int_as_cat, bool):
-                    col_type = pObjectType()
-                else:
-                    n_unique = sample_dataset[col_name].nunique()
-                    col_type = pIntType() if n_unique > int_as_cat else pObjectType()
-            elif "bool" in sample_dataset[col_name].dtype.name and bool_as_cat is True:
-                col_type = pObjectType()
-            else:
-                # need to add more here, should be way smarter
-                col_type = PANDAS_INFER_TYPES[sample_dataset[col_name].dtype.name]()
-        is_cat = isinstance(col_type, pObjectType)
-        is_date = isinstance(col_type, pDateTimeType)
+        col_type = str(reflection["type"]).lower()
+        if "int" in col_type and int_as_cat:
+            is_cat = True
+        elif col_type in ["varchar", "string"]:
+            is_cat = True
+        else:
+            is_cat = False
+        if col_type in ["timestamp", "date", "datetime"]:
+            is_date = True
+        else:
+            is_date = False
         column_functions = []
         for function in functions:
             if function.input_format in [int, float] and not (is_cat or is_date):

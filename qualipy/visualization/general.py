@@ -6,62 +6,6 @@ from collections import Counter
 import altair as alt
 
 
-def row_count_view(data, anom_data=None, columns=None):
-    if columns is not None:
-        data = data[data.column_name.isin(columns)]
-    data = data[
-        (data["column_name"].str.contains("rows")) & (data["metric"] == "count")
-    ]
-    data.value = data.value.astype(float)
-
-    if anom_data is not None:
-        anom_data = anom_data[
-            (anom_data["column_name"].str.contains("rows"))
-            & (anom_data["metric"] == "count")
-        ]
-        data = data.merge(
-            anom_data[["column_name", "metric", "batch_name", "value"]].rename(
-                columns={"value": "value_anom"}
-            ),
-            on=["column_name", "metric", "batch_name"],
-            how="left",
-        ).drop_duplicates()
-
-    row_runs = data.column_name.unique()
-    n_groups = row_runs.shape[0] // 10
-    n = row_runs.shape[0] // n_groups
-    groups = [
-        row_runs[i * n : (i + 1) * n] for i in range((len(row_runs) + n - 1) // n)
-    ]
-    dfs = []
-    for row_vars in groups:
-        new_df = data[data.column_name.isin(row_vars)].copy()
-        dfs.append(new_df)
-    for idx, df in enumerate(dfs):
-        title = "Row counts over time" if idx == 0 else None
-        row_runs = df.column_name.unique()
-        fig = make_subplots(
-            rows=row_runs.shape[0],
-            cols=1,
-            shared_xaxes=True,
-            shared_yaxes=False,
-        )
-        for row, (name, group) in enumerate(df.groupby("column_name"), start=1):
-            scat = go.Scatter(x=group.date, y=group.value.values, name=name)
-            fig.append_trace(scat, row=row, col=1)
-            outliers = go.Scatter(
-                x=group.date,
-                y=group.value_anom.values,
-                mode="markers",
-                marker=dict(color="red", size=10),
-                showlegend=False,
-            )
-            fig.append_trace(outliers, row=row, col=1)
-
-        fig["layout"].update(height=900, width=1000, title=title)
-        fig.show()
-
-
 def missing_by_column_bar_altair(data, schema=None, show_notebook=True):
     data = set_value_type(data)
     data = data.sort_values("value", ascending=False)
@@ -139,7 +83,11 @@ def row_count_bar_latest(data):
     bars = (
         alt.Chart(data)
         .mark_bar()
-        .encode(x=alt.X("column_name:N"), y=alt.Y("value_diff:Q"))
+        .encode(
+            x=alt.X("column_name:N"),
+            y=alt.Y("value_diff:Q"),
+            tooltips=["column_name", "value_diff"],
+        )
         .properties(width=800, title=f"Total count for {batch_name}")
     )
     text = bars.mark_text(align="center", baseline="middle", dy=-6).encode(
@@ -164,7 +112,12 @@ def row_count_summary(data):
     trends = (
         alt.Chart(data)
         .mark_line(point=True)
-        .encode(x="date:T", y=alt.Y("value:Q"), color="column_name", tooltip=["value"])
+        .encode(
+            x="date:T",
+            y=alt.Y("value:Q"),
+            color="column_name",
+            tooltip=["value", "column_name"],
+        )
         .properties(width=800, height=200)
     )
     trends = trends.facet(
