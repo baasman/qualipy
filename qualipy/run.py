@@ -118,9 +118,10 @@ class Qualipy(object):
                 self.current_data = chunk["chunk"]
                 if self.current_data.shape[0] == 0:
                     self.current_data = self.fallback_data
-                self.batch_name = str(chunk["batch_name"])
-                self.time_of_run = chunk["batch_name"]
-                self._run_with_optional_stratify(autocommit)
+                if self.current_data is not None:
+                    self.batch_name = str(chunk["batch_name"])
+                    self.time_of_run = chunk["batch_name"]
+                    self._run_with_optional_stratify(autocommit)
 
     def _run_with_optional_stratify(self, autocommit, profile_batch=False):
         if self.stratify:
@@ -222,7 +223,7 @@ class Qualipy(object):
 
     def _set_data(self, df, allowed_dataclasses):
         if df.__class__.__name__ in allowed_dataclasses:
-            self.current_data = df.get_data(backend_used=self.backend)
+            self.current_data = df.get_data()
             try:
                 self.fallback_data = df.set_fallback_data()
             except:
@@ -280,7 +281,7 @@ class Qualipy(object):
                 )
                 self.current_name_view = f"{self.current_name}-{specs['split_on'][1]}"
             else:
-                column_name = specs['name']
+                column_name = specs["name"]
                 self.data_view = self.generator.return_data_copy(self.current_data)
                 self.current_name_view = self.current_name
 

@@ -18,6 +18,7 @@ class SQLData(BaseData):
         conn_string: str = None,
         custom_select_sql: str = None,
         create_temp: bool = False,
+        backend='sql'
     ):
         """
         Args:
@@ -55,9 +56,10 @@ class SQLData(BaseData):
 
         # TODO: implement stratify logic. icluding when converted to pandas
         self.stratify = False
+        self.backend = backend
 
-    def get_data(self, backend_used="sql"):
-        if backend_used == "pandas":
+    def get_data(self):
+        if self.backend == "pandas":
             if not self.custom_select_sql:
                 query = f"select * from {self.table_name}"
             else:

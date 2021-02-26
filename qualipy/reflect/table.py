@@ -144,13 +144,13 @@ def sql_table(
     engine: sa.engine.base.Engine,
     schema: str = None,
     columns: Union[str, List[str]] = "all",
-    infer_schema: bool = True,
     ignore: List[str] = None,
     bool_as_cat: bool = True,
     int_as_cat: Union[bool, int] = 25,
     functions: List = None,
     extra_functions: Dict = None,
-    sample_dataset: pd.DataFrame = None,
+    split_on: str = None,
+    column_stage_collection_name: str = None,
 ):
     """This allows us to map an entire pandas table, without having to specify individual columns.
 
@@ -211,6 +211,8 @@ def sql_table(
             is_cat = True
         elif col_type in ["varchar", "string"]:
             is_cat = True
+        elif "varchar" in col_type:
+            is_cat = True
         else:
             is_cat = False
         if col_type in ["timestamp", "date", "datetime"]:
@@ -223,6 +225,8 @@ def sql_table(
                 column_functions.append(function)
             if function.input_format in [str, object] and is_cat:
                 column_functions.append(function)
+        if len(extra_functions.get(col_name, [])) > 0:
+            print(extra_functions)
 
         column_object = column(
             column_name=col_name,
@@ -235,6 +239,8 @@ def sql_table(
             is_date=is_date,
             functions=column_functions,
             extra_functions=extra_functions.get(col_name, None),
+            split_on=split_on,
+            column_stage_collection_name=column_stage_collection_name,
         )
         column_objects.append(column_object)
 

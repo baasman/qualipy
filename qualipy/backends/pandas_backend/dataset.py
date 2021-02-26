@@ -20,7 +20,7 @@ class PandasData(BaseData):
     def set_fallback_data(self):
         return self.data.head(0)
 
-    def get_data(self, backend_used="pandas"):
+    def get_data(self):
         return self.data
 
     def set_stratify_rule(self, column: str, values: List[str] = None) -> None:
