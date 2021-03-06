@@ -13,3 +13,4 @@ click
 schema
 banpei
 matplotlib
+dill

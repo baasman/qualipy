@@ -1,5 +1,5 @@
 from qualipy.run import Qualipy
-from qualipy.project import Project, generate_config
+from qualipy.project import Project, generate_config, load_project
 from qualipy.reflect.function import function
 from qualipy.reflect.table import pandas_table, sql_table
 from qualipy.reflect.column import Column, column

@@ -435,4 +435,3 @@ class Qualipy(object):
         self.generator.write(
             conn, measures, self.project, batch_name, schema=self.project.db_schema
         )
-        self.project.add_to_project_list(self.schema)

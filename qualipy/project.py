@@ -1,5 +1,7 @@
 import json
 import os
+import copy
+import codecs
 import datetime
 import pandas as pd
 from typing import List, Union, Dict
@@ -10,12 +12,17 @@ except ImportError:
     from collections import Callable
 
 from sqlalchemy import create_engine
+import dill
 
 from qualipy.util import HOME
 from qualipy._sql import DB_ENGINES
 from qualipy.reflect.column import Column
 from qualipy.reflect.table import Table
 from qualipy._schema import config_schema
+from qualipy.backends.data_types import PANDAS_TYPES
+
+
+DATA_TYPES = {"pandas": PANDAS_TYPES}
 
 
 def _validate_project_name(project_name):
@@ -292,6 +299,32 @@ class Project(object):
         with open(config_file_path, "w") as f:
             json.dump(config, f)
 
+    def serialize_project(self, use_dill=True):
+        project_file_path = os.path.join(self.config_dir, "projects.json")
+        try:
+            with open(project_file_path, "r") as f:
+                projects = json.loads(f.read())
+        except:
+            projects = {}
+
+        to_dict_cols = copy.deepcopy(self.columns)
+        serialized_dict = {}
+        for col_name, schema in to_dict_cols.items():
+            new_schema = schema
+            for idx, function in enumerate(schema["functions"]):
+                fun_name = function[0]
+                function_obj = function[1]
+                fun = codecs.encode(dill.dumps(function_obj), "base64").decode()
+                new_schema["functions"][idx] = (fun_name, fun)
+            new_schema["type"] = str(new_schema["type"])
+            serialized_dict[col_name] = new_schema
+        projects[self.project_name] = serialized_dict
+        with open(project_file_path, "w") as f:
+            json.dump(projects, f)
+
+    def _load_from_dict(self, column_dict: dict):
+        self.columns = column_dict
+
     def add_to_project_list(
         self, schema: Dict[str, Dict[str, Union[str, bool]]], reset_config: bool = False
     ) -> None:
@@ -314,3 +347,29 @@ class Project(object):
             projects[self.project_name]["schema"] = schema
         with open(project_file_path, "w") as f:
             json.dump(projects, f)
+
+
+def load_project(config_dir: str, project_name: str, backend: str = "pandas"):
+    config_dir = os.path.expanduser(config_dir)
+    project_file_path = os.path.join(config_dir, "projects.json")
+    with open(project_file_path, "r") as f:
+        projects = json.loads(f.read())
+    if project_name not in projects:
+        raise Exception(f"{project_name} has not yet been created or serialized")
+
+    project = projects[project_name]
+    data_types = DATA_TYPES[backend]
+
+    reconstructed_dict = {}
+    for col_name, schema in project.items():
+        new_schema = schema
+        for idx, function in enumerate(schema["functions"]):
+            fun_name = function[0]
+            function_obj = function[1]
+            fun = dill.loads(codecs.decode(function_obj.encode(), "base64"))
+            new_schema["functions"][idx] = (fun_name, fun)
+        new_schema["type"] = data_types[new_schema["type"]]()
+        reconstructed_dict[col_name] = new_schema
+    project = Project(project_name=project_name, config_dir=config_dir)
+    project._load_from_dict(reconstructed_dict)
+    return reconstructed_dict

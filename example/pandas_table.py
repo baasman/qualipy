@@ -24,6 +24,7 @@ def qualipy_pipeline(configuration_directory="~/eye-state"):
     # set up project and add all mappings
     project = qpy.Project(project_name="eye_state", config_dir=configuration_directory)
     project.add_table(table)
+    project.serialize_project()
 
     # instantiate qualipy object. Setting a batch name will make it easy to identify
     # when generating batch report
