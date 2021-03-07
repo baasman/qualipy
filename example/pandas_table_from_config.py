@@ -4,7 +4,7 @@ import qualipy as qpy
 import pandas as pd
 
 
-def qualipy_pipeline(configuration_directory="~/eye-state"):
+def _setup_project_separately(configuration_directory):
     # set up the config
     qpy.generate_config(configuration_directory)
 
@@ -24,6 +24,21 @@ def qualipy_pipeline(configuration_directory="~/eye-state"):
     # set up project and add all mappings
     project = qpy.Project(project_name="eye_state", config_dir=configuration_directory)
     project.add_table(table)
+
+    project.serialize_project()
+
+
+def qualipy_pipeline(configuration_directory="~/eye-state"):
+
+    # set up project
+    _setup_project_separately(configuration_directory)
+
+    # load project separetely
+    project = qpy.load_project(
+        config_dir=configuration_directory, project_name="eye_state"
+    )
+
+    eye_state = qpy.datasets.load_dataset("eye_state")
 
     # instantiate qualipy object. Setting a batch name will make it easy to identify
     # when generating batch report

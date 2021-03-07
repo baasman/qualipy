@@ -23,10 +23,15 @@ def qualipy_pipeline(configuration_directory="~/flat-data"):
         column_type=FloatType(),
         functions=[mean],
         overwrite_type=True,
+        column_stage_collection_name="num_col",
     )
     # we will only use this column when looking at the categorical data
     value_cat_column = qpy.column(
-        column_name="value", column_type=ObjectType(), functions=[], is_category=True
+        column_name="value",
+        column_type=ObjectType(),
+        functions=[],
+        is_category=True,
+        column_stage_collection_name="cat_col",
     )
 
     # set up project and add all mappings

@@ -349,7 +349,9 @@ class Project(object):
             json.dump(projects, f)
 
 
-def load_project(config_dir: str, project_name: str, backend: str = "pandas"):
+def load_project(
+    config_dir: str, project_name: str, backend: str = "pandas"
+) -> Project:
     config_dir = os.path.expanduser(config_dir)
     project_file_path = os.path.join(config_dir, "projects.json")
     with open(project_file_path, "r") as f:
@@ -372,4 +374,4 @@ def load_project(config_dir: str, project_name: str, backend: str = "pandas"):
         reconstructed_dict[col_name] = new_schema
     project = Project(project_name=project_name, config_dir=config_dir)
     project._load_from_dict(reconstructed_dict)
-    return reconstructed_dict
+    return project
