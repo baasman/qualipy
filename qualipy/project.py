@@ -20,6 +20,7 @@ from qualipy.reflect.column import Column
 from qualipy.reflect.table import Table
 from qualipy._schema import config_schema
 from qualipy.backends.data_types import PANDAS_TYPES
+from qualipy.config import DEFAULT_PROJECT_CONFIG
 
 
 DATA_TYPES = {"pandas": PANDAS_TYPES}
@@ -106,11 +107,11 @@ class Project(object):
             )
         self._write_default_config_if_not_exists()
         with open(os.path.join(self.config_dir, "config.json"), "rb") as f:
-            config = json.load(f)
-        self._validate_schema(config)
-        engine = config.get("QUALIPY_DB")
+            self.config = json.load(f)
+        self._validate_schema(self.config)
+        engine = self.config.get("QUALIPY_DB")
         self.engine = create_engine(engine)
-        self.db_schema = config.get("SCHEMA")
+        self.db_schema = self.config.get("SCHEMA")
         self.sql_helper = DB_ENGINES[inspect_db_connection(str(self.engine.url))](
             self.db_schema
         )
@@ -128,6 +129,14 @@ class Project(object):
             self._functions_used_in_project = {}
         else:
             pass  # read from config
+
+        self.project_file_path = os.path.join(self.config_dir, "projects.json")
+        try:
+            with open(self.project_file_path, "r") as f:
+                projects = json.loads(f.read())
+        except:
+            projects = {}
+        self.projects = projects
 
     def change_config_dir(self, config_dir):
         self._initialize(self.project_name, config_dir, True)
@@ -233,80 +242,24 @@ class Project(object):
         )
 
     def delete_from_project_config(self):
-        project_file_path = os.path.join(self.config_dir, "projects.json")
-        try:
-            with open(project_file_path, "r") as f:
-                projects = json.loads(f.read())
-        except:
-            projects = {}
-        projects.pop(self.project_name, None)
-        with open(project_file_path, "w") as f:
-            json.dump(projects, f)
+        self.projects.pop(self.project_name, None)
 
     def _write_default_config_if_not_exists(self):
         with open(os.path.join(self.config_dir, "config.json"), "rb") as f:
             config = json.load(f)
         if self.project_name not in config:
-            config[self.project_name] = {
-                "ANOMALY_ARGS": {
-                    "check_for_std": False,
-                    "importance_level": 1,
-                    "distance_from_bound": 1,
-                },
-                "ANOMALY_MODEL": "prophet",
-                "DATE_FORMAT": "%Y-%m-%d",
-                "NUM_SEVERITY_LEVEL": 1,
-                "CAT_SEVERITY_LEVEL": 1,
-                "VISUALIZATION": {
-                    "row_counts": {
-                        "include_bar_of_latest": {
-                            "use": True,
-                            "diff": False,
-                            "show_by_default": True,
-                        },
-                        "include_summary": {"use": True, "show_by_default": True},
-                    },
-                    "trend": {
-                        "include_bar_of_latest": {
-                            "use": True,
-                            "diff": False,
-                            "show_by_default": True,
-                        },
-                        "include_summary": {"use": True, "show_by_default": True},
-                        "sst": 3,
-                        "point": True,
-                        "n_steps": 10,
-                        "add_diff": {"shift": 1},
-                    },
-                    "missing": {
-                        "include_0": True,
-                        "include_bar_of_latest": {"use": True, "diff": False},
-                    },
-                },
-            }
+            config[self.project_name] = DEFAULT_PROJECT_CONFIG
         with open(os.path.join(self.config_dir, "config.json"), "w") as f:
             json.dump(config, f)
 
     def write_functions_to_config(self):
-        config_file_path = os.path.join(self.config_dir, "config.json")
-        with open(config_file_path, "r") as f:
-            config = json.loads(f.read())
-        if "DISPLAY_NAMES" not in config[self.project_name]:
-            config[self.project_name]["DISPLAY_NAMES"] = {}
-        config[self.project_name]["DISPLAY_NAMES"][
+        if "DISPLAY_NAMES" not in self.config[self.project_name]:
+            self.config[self.project_name]["DISPLAY_NAMES"] = {}
+        self.config[self.project_name]["DISPLAY_NAMES"][
             "DEFAULT"
         ] = self._functions_used_in_project
-        with open(config_file_path, "w") as f:
-            json.dump(config, f)
 
-    def serialize_project(self, use_dill=True):
-        project_file_path = os.path.join(self.config_dir, "projects.json")
-        try:
-            with open(project_file_path, "r") as f:
-                projects = json.loads(f.read())
-        except:
-            projects = {}
-
+    def serialize_project(self, use_dill: bool = True) -> None:
         to_dict_cols = copy.deepcopy(self.columns)
         serialized_dict = {}
         for col_name, schema in to_dict_cols.items():
@@ -318,22 +271,22 @@ class Project(object):
                 new_schema["functions"][idx] = (fun_name, fun)
             new_schema["type"] = str(new_schema["type"])
             serialized_dict[col_name] = new_schema
-        projects[self.project_name] = serialized_dict
-        with open(project_file_path, "w") as f:
-            json.dump(projects, f)
+        self.projects[self.project_name] = serialized_dict
+        with open(self.project_file_path, "w") as f:
+            json.dump(self.projects, f)
 
     def _load_from_dict(self, column_dict: dict):
         self.columns = column_dict
 
+    def update_config_and_project_files(self):
+        with open(os.path.join(self.config_dir, "config.json"), "w") as f:
+            json.dump(self.config, f)
+        with open(self.project_file_path, "w") as f:
+            json.dump(self.projects, f)
+
     def add_to_project_list(
         self, schema: Dict[str, Dict[str, Union[str, bool]]], reset_config: bool = False
     ) -> None:
-        project_file_path = os.path.join(self.config_dir, "projects.json")
-        try:
-            with open(project_file_path, "r") as f:
-                projects = json.loads(f.read())
-        except:
-            projects = {}
 
         if self.project_name not in projects or reset_config:
             projects[self.project_name] = {

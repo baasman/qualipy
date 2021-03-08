@@ -1,4 +1,5 @@
 from qualipy.backends.pandas_backend.pandas_types import FloatType, ObjectType
+from qualipy.reflect.function import function_from_module
 import qualipy as qpy
 
 import pandas as pd

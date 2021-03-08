@@ -247,11 +247,6 @@ class Qualipy(object):
         if columns is None:
             ret_columns = self.project.columns
         else:
-            # columns = {
-            #     col: items
-            #     for col, items in self.project.columns.items()
-            #     if col in columns
-            # }
             ret_columns = {}
             for col, items in self.project.columns.items():
                 stage_name = items.get("column_stage_collection_name")
@@ -263,6 +258,7 @@ class Qualipy(object):
         with self.project.engine.begin() as conn:
             self._write(conn=conn, measures=self.total_measures)
         self.project.write_functions_to_config()
+        self.project.update_config_and_project_files()
 
     def _generate_metrics(
         self, autocommit: bool = True, profile_batch: bool = False

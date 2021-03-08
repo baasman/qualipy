@@ -1,5 +1,6 @@
 from typing import Any, Dict, List, Callable, Optional
 from functools import wraps
+import importlib
 
 
 def function(
@@ -61,3 +62,13 @@ def function(
         return wrapper
 
     return inner_fun
+
+
+def function_from_module(full_module_path, function_name):
+    spec = importlib.import_module(full_module_path)
+    function_obj = getattr(spec, function_name)
+    return function_obj
+
+
+if __name__ == "__main__":
+    function_from_module("qualipy.backends.pandas_backend.functions", "mean")
