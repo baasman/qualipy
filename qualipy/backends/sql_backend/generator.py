@@ -64,6 +64,10 @@ class BackendSQL(BackendBase):
         return schema
 
     @staticmethod
+    def return_data_copy(data):
+        return data
+
+    @staticmethod
     def get_shape(data):
         if data.custom_where is None:
             count_query = sa.select([sa.func.count()]).select_from(data._table)
@@ -95,7 +99,7 @@ class BackendSQL(BackendBase):
         pass
 
     @staticmethod
-    def generate_column_general_info(specs, data, time_of_run):
+    def generate_column_general_info(specs, data, time_of_run, run_name):
         col_name = specs["name"]
         if specs["unique"]:
             unique = BackendSQL.generate_description(
@@ -107,6 +111,7 @@ class BackendSQL(BackendBase):
                 viz_type="data-characteristic",
                 kwargs={},
             )
+            unique["run_name"] = run_name
         else:
             unique = None
         if specs["is_category"]:
@@ -120,6 +125,9 @@ class BackendSQL(BackendBase):
                 kwargs={},
                 return_format="dict",
             )
+            value_props = None if str(value_props["value"]) == "nan" else value_props
+            if value_props is not None:
+                value_props["run_name"] = run_name
         else:
             value_props = None
         perc_missing = BackendSQL.generate_description(
@@ -131,6 +139,7 @@ class BackendSQL(BackendBase):
             viz_type="data-characteristic",
             kwargs={},
         )
+        perc_missing["run_name"] = run_name
         return unique, perc_missing, value_props
 
     @staticmethod

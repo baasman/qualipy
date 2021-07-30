@@ -5,3 +5,4 @@ from qualipy.reflect.table import pandas_table, sql_table
 from qualipy.reflect.column import Column, column
 from qualipy import datasets
 from qualipy import cli
+from qualipy import helper

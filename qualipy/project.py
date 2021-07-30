@@ -23,7 +23,7 @@ from qualipy.backends.data_types import PANDAS_TYPES
 from qualipy.config import DEFAULT_PROJECT_CONFIG
 
 
-DATA_TYPES = {"pandas": PANDAS_TYPES}
+DATA_TYPES = {"pandas": PANDAS_TYPES, "sql": {}}
 
 
 def _validate_project_name(project_name):
@@ -38,25 +38,32 @@ def set_default_config(config_dir, db_url=None):
     return conf
 
 
-def generate_config(config_dir, db_url=None):
+def _generate_config(config_dir, db_url):
+    os.makedirs(config_dir, exist_ok=True)
+    with open(os.path.join(config_dir, "config.json"), "w") as f:
+        json.dump(set_default_config(config_dir, db_url), f)
+    with open(os.path.join(config_dir, "projects.json"), "w") as f:
+        json.dump({}, f)
+    os.makedirs(os.path.join(config_dir, "models"), exist_ok=True)
+    os.makedirs(os.path.join(config_dir, "profile_data"), exist_ok=True)
+    os.makedirs(os.path.join(config_dir, "reports"), exist_ok=True)
+    os.makedirs(os.path.join(config_dir, "reports", "anomaly"), exist_ok=True)
+    os.makedirs(os.path.join(config_dir, "reports", "profiler"), exist_ok=True)
+    os.makedirs(os.path.join(config_dir, "reports", "comparison"), exist_ok=True)
+
+
+def generate_config(config_dir, create_in_empty_dir=False, db_url=None):
     config_dir = os.path.expanduser(config_dir)
     if not os.path.exists(config_dir):
-        os.makedirs(config_dir, exist_ok=True)
-        with open(os.path.join(config_dir, "config.json"), "w") as f:
-            json.dump(set_default_config(config_dir, db_url), f)
-        with open(os.path.join(config_dir, "projects.json"), "w") as f:
-            json.dump({}, f)
-        os.makedirs(os.path.join(config_dir, "models"), exist_ok=True)
-        os.makedirs(os.path.join(config_dir, "profile_data"), exist_ok=True)
-        os.makedirs(os.path.join(config_dir, "reports"), exist_ok=True)
-        os.makedirs(os.path.join(config_dir, "reports", "anomaly"), exist_ok=True)
-        os.makedirs(os.path.join(config_dir, "reports", "profiler"), exist_ok=True)
-        os.makedirs(os.path.join(config_dir, "reports", "comparison"), exist_ok=True)
+        _generate_config(config_dir=config_dir, db_url=db_url)
     else:
-        if not os.path.exists(os.path.join(config_dir, "config.json")):
-            raise Exception(
-                "Error: Make sure directory follows proper Qualipy structure"
-            )
+        if create_in_empty_dir:
+            _generate_config(config_dir=config_dir, db_url=db_url)
+        else:
+            if not os.path.exists(os.path.join(config_dir, "config.json")):
+                raise Exception(
+                    "Error: Make sure directory follows proper Qualipy structure"
+                )
 
 
 def inspect_db_connection(url):
@@ -92,6 +99,7 @@ class Project(object):
         re_init: bool = False,
     ):
         # need to come up with way that project does not need to redefined and re-imported
+        # "QUALIPY_DB": "sqlite:////data/baasman/.omop-prod2/qualipy.db",
         self.project_name = project_name
         self.value_table = "{}_values".format(self.project_name)
         self.value_custom_table = "{}_values_custom".format(self.project_name)
@@ -269,6 +277,11 @@ class Project(object):
                 function_obj = function[1]
                 fun = codecs.encode(dill.dumps(function_obj), "base64").decode()
                 new_schema["functions"][idx] = (fun_name, fun)
+            for idx, function in enumerate(schema["extra_functions"]):
+                fun_name = function[0]
+                function_obj = function[1]
+                fun = codecs.encode(dill.dumps(function_obj), "base64").decode()
+                new_schema["extra_functions"][idx] = (fun_name, fun)
             new_schema["type"] = str(new_schema["type"])
             serialized_dict[col_name] = new_schema
         self.projects[self.project_name] = serialized_dict
@@ -323,7 +336,13 @@ def load_project(
             function_obj = function[1]
             fun = dill.loads(codecs.decode(function_obj.encode(), "base64"))
             new_schema["functions"][idx] = (fun_name, fun)
-        new_schema["type"] = data_types[new_schema["type"]]()
+        for idx, function in enumerate(schema["extra_functions"]):
+            fun_name = function[0]
+            function_obj = function[1]
+            fun = dill.loads(codecs.decode(function_obj.encode(), "base64"))
+            new_schema["extra_functions"][idx] = (fun_name, fun)
+        if backend == "pandas":
+            new_schema["type"] = data_types[new_schema["type"]]()
         reconstructed_dict[col_name] = new_schema
     project = Project(project_name=project_name, config_dir=config_dir)
     project._load_from_dict(reconstructed_dict)

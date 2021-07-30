@@ -5,11 +5,13 @@ import os
 import datetime
 from typing import Any, Dict, Optional, Union, Dict, List, Callable
 import warnings
+import logging
 
 from qualipy.backends.pandas_backend.generator import BackendPandas
 from qualipy.backends.sql_backend.generator import BackendSQL
 from qualipy.exceptions import FailException, NullableError
 from qualipy.project import Project
+from qualipy.util import setup_logging
 
 try:
     from qualipy.backends.spark_backend.generator import BackendSpark
@@ -92,6 +94,9 @@ class Qualipy(object):
         self.stratify = False
         self.backend = backend
 
+        self._setup_logger()
+        self.logger = logging.getLogger(__name__)
+
     def run(self, autocommit: bool = False, profile_batch=False) -> None:
         """The method that runs the execution
 
@@ -114,7 +119,7 @@ class Qualipy(object):
             if profile_batch:
                 raise Exception("Can only profile batch without chunking data")
             for chunk in self.time_chunks:
-                print(f"Running on chunk: {chunk['batch_name']}")
+                self.logger.info(f"Running on chunk: {chunk['batch_name']}")
                 self.current_data = chunk["chunk"]
                 if self.current_data.shape[0] == 0:
                     self.current_data = self.fallback_data
@@ -141,6 +146,9 @@ class Qualipy(object):
                 self.current_data = self.original_data
         else:
             self._generate_metrics(autocommit=autocommit, profile_batch=profile_batch)
+
+    def _setup_logger(self):
+        setup_logging()
 
     def set_dataset(
         self, df, columns: Optional[List[str]] = None, run_name: str = None
@@ -269,6 +277,8 @@ class Qualipy(object):
 
             if col not in self.columns:
                 continue
+
+            self.logger.info(f"Analyzing column: {col}")
 
             if specs["split_on"] is not None:
                 column_name = specs["name"].split("||")[0]

@@ -4,7 +4,6 @@ scipy
 sqlalchemy
 python-dotenv
 scikit-learn
-pyarrow
 sqlalchemy_utils
 tqdm
 altair

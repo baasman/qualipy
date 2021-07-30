@@ -248,6 +248,8 @@ class Postgres(SQL):
             from {schema}{table_name}
         """
         data = pd.read_sql(query, engine, index_col="id")
+        # check this later
+        data.date = pd.to_datetime(data.date, utc=True)
         return data
 
     def get_anomaly_table(self, engine, project_name: str) -> pd.DataFrame:

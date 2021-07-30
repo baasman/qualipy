@@ -95,7 +95,12 @@ def get_project_data(project, timezone, latest_insert_only=False, floor_datetime
         data.date = pd.to_datetime(data.date).dt.tz_convert(timezone)
     except TypeError:
         data.date = pd.to_datetime(data.date)
-    data.insert_time = pd.to_datetime(data.insert_time)
+    try:
+        data.insert_time = pd.to_datetime(data.insert_time).dt.tz_convert(timezone)
+    except TypeError:
+        data.insert_time = pd.to_datetime(data.insert_time)
+    except ValueError:
+        data.insert_time = pd.to_datetime(data.insert_time, utc=True)
     data.value = data.value.fillna(np.NaN)
     data["original_column_name"] = data["column_name"]
     data["column_name"] = data["column_name"] + "_" + data["run_name"]
@@ -116,7 +121,14 @@ def get_anomaly_data(project, timezone=None):
         data.date = pd.to_datetime(data.date).dt.tz_convert(timezone)
     except TypeError:
         data.date = pd.to_datetime(data.date)
-    data.insert_time = pd.to_datetime(data.insert_time)
+    except ValueError:
+        data.date = pd.to_datetime(data.date, utc=True)
+    try:
+        data.insert_time = pd.to_datetime(data.insert_time).dt.tz_convert(timezone)
+    except TypeError:
+        data.date = pd.to_datetime(data.insert_time)
+    except ValueError:
+        data.insert_time = pd.to_datetime(data.insert_time, utc=True)
     data.batch_name = np.where(
         data.batch_name == "from_chunked", data.date.astype(str), data.batch_name
     )
@@ -133,3 +145,19 @@ def set_title_name(data):
     arguments = "" if data["arguments"] is None else f"_{data['arguments']}"
     title = f"{run_name}: {var_name} - {metric_name}{arguments}"
     return title
+
+
+def setup_logging():
+    """Initialize logging settings."""
+    # Setup logging
+    from logging import basicConfig
+    from rich.console import Console
+    from rich.logging import RichHandler
+
+    console = Console(width=160)
+    basicConfig(
+        level="INFO",
+        format="%(message)s",
+        datefmt="[%X]",
+        handlers=[RichHandler(console=console)],
+    )

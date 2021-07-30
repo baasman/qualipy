@@ -138,20 +138,29 @@ def prop_outside_of_range(data, column, low, high):
 
 @function(return_format=dict)
 def value_counts(data, column):
-    if data.custom_where is None:
-        counts = data.engine.execute(
-            sa.select([sa.column(column), sa.func.count(sa.column(column))])
-            .select_from(data._table)
-            .group_by(sa.column(column))
-        ).fetchall()
+    schema_name = "" if data.schema is None else data.schema + "."
+    check_unique_cases = f"""
+        select count(distinct {column}) from 
+            (select {column} from {schema_name}{data.table_name} limit 1000) as fin
+    """
+    count_distinct = data.engine.execute(check_unique_cases).fetchone()[0]
+    if count_distinct < 25:
+        if data.custom_where is None:
+            counts = data.engine.execute(
+                sa.select([sa.column(column), sa.func.count(sa.column(column))])
+                .select_from(data._table)
+                .group_by(sa.column(column))
+            ).fetchall()
+        else:
+            counts = data.engine.execute(
+                sa.select([sa.column(column), sa.func.count(sa.column(column))])
+                .select_from(data._table)
+                .where(sa.text(data.custom_where))
+                .group_by(sa.column(column))
+            ).fetchall()
+        counts = {i[0]: i[1] for i in counts}
     else:
-        counts = data.engine.execute(
-            sa.select([sa.column(column), sa.func.count(sa.column(column))])
-            .select_from(data._table)
-            .where(sa.text(data.custom_where))
-            .group_by(sa.column(column))
-        ).fetchall()
-    counts = {i[0]: i[1] for i in counts}
+        counts = np.NaN
     return counts
 
 

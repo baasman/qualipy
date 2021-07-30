@@ -225,8 +225,6 @@ def sql_table(
                 column_functions.append(function)
             if function.input_format in [str, object] and is_cat:
                 column_functions.append(function)
-        if len(extra_functions.get(col_name, [])) > 0:
-            print(extra_functions)
 
         column_object = column(
             column_name=col_name,

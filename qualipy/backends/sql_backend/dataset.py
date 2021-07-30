@@ -18,7 +18,7 @@ class SQLData(BaseData):
         conn_string: str = None,
         custom_select_sql: str = None,
         create_temp: bool = False,
-        backend='sql'
+        backend="sql",
     ):
         """
         Args:
@@ -48,6 +48,7 @@ class SQLData(BaseData):
             if self.dialect != "oracle":
                 schema = None
         self.table_name = table_name
+        self.schema = schema
 
         self._table = sa.Table(table_name, sa.MetaData(), schema=schema)
         insp = sa.engine.reflection.Inspector.from_engine(self.engine)

@@ -120,17 +120,18 @@ class GenerateAnomalies:
         ]
         df.value = df.value.astype(float)
         all_rows = []
-        for metric_name, data in tqdm(df.groupby("metric_name")):
+        if self.model_type != "ignore":
+            for metric_name, data in tqdm(df.groupby("metric_name")):
 
-            if not retrain:
-                try:
-                    all_rows = self._num_from_loaded_model(data, all_rows)
-                except ValueError:
-                    warnings.warn(f"Unable to load anomaly model for {metric_name}")
-                except FileNotFoundError:
+                if not retrain:
+                    try:
+                        all_rows = self._num_from_loaded_model(data, all_rows)
+                    except ValueError:
+                        warnings.warn(f"Unable to load anomaly model for {metric_name}")
+                    except FileNotFoundError:
+                        all_rows = self._num_train_and_save(data, all_rows, metric_name)
+                else:
                     all_rows = self._num_train_and_save(data, all_rows, metric_name)
-            else:
-                all_rows = self._num_train_and_save(data, all_rows, metric_name)
 
         try:
             data = pd.concat(all_rows).sort_values("date", ascending=False)
@@ -145,74 +146,78 @@ class GenerateAnomalies:
         df = self.df
         df = df[df["type"] == "categorical"]
         all_rows = []
-        for metric_id, data in tqdm(df.groupby("metric_id")):
-            data = set_value_type(data.copy())
-            try:
-                data_values = [
-                    (pd.Series(c) / pd.Series(c).sum()).to_dict() for c in data["value"]
-                ]
-                unique_vals = reduce(
-                    lambda x, y: x.union(y), [set(i.keys()) for i in data_values]
-                )
-                non_diff_lines = []
-                potential_lines = []
-                for cat in unique_vals:
-                    values = pd.Series([i.get(cat, 0) for i in data_values])
-                    running_means = values.rolling(window=5).mean()
-                    differences = values - running_means
-                    sum_abs = np.abs(differences).sum()
-                    potential_lines.append((cat, differences, sum_abs))
-                    non_diff_lines.append((cat, values))
-                potential_lines = sorted(
-                    potential_lines, key=lambda v: v[2], reverse=True
-                )
-                diffs_df = pd.DataFrame({i[0]: i[1] for i in potential_lines})
-                diffs_df["sum_of_changes"] = diffs_df.abs().sum(axis=1)
-                all_non_diff_lines = pd.DataFrame({i[0]: i[1] for i in non_diff_lines})
-
-                for col in all_non_diff_lines.columns:
-                    mean = all_non_diff_lines[col].mean()
-                    std = all_non_diff_lines[col].std()
-                    if std > 0.05:
-                        all_non_diff_lines[f"{col}_below"] = np.where(
-                            all_non_diff_lines[col] < (mean - (4 * std)), 1, 0
-                        )
-                        all_non_diff_lines[f"{col}_above"] = np.where(
-                            all_non_diff_lines[col] > (mean + (4 * std)), 1, 0
-                        )
-                    else:
-                        all_non_diff_lines[f"{col}_below"] = 0
-                        all_non_diff_lines[f"{col}_above"] = 0
-
-                std_sums = all_non_diff_lines[
-                    [
-                        col
-                        for col in all_non_diff_lines.columns
-                        if "_below" in str(col) or "_above" in str(col)
+        if self.model_type != "ignore":
+            for metric_id, data in tqdm(df.groupby("metric_id")):
+                data = set_value_type(data.copy())
+                try:
+                    data_values = [
+                        (pd.Series(c) / pd.Series(c).sum()).to_dict()
+                        for c in data["value"]
                     ]
-                ].sum(axis=1)
+                    unique_vals = reduce(
+                        lambda x, y: x.union(y), [set(i.keys()) for i in data_values]
+                    )
+                    non_diff_lines = []
+                    potential_lines = []
+                    for cat in unique_vals:
+                        values = pd.Series([i.get(cat, 0) for i in data_values])
+                        running_means = values.rolling(window=5).mean()
+                        differences = values - running_means
+                        sum_abs = np.abs(differences).sum()
+                        potential_lines.append((cat, differences, sum_abs))
+                        non_diff_lines.append((cat, values))
+                    potential_lines = sorted(
+                        potential_lines, key=lambda v: v[2], reverse=True
+                    )
+                    diffs_df = pd.DataFrame({i[0]: i[1] for i in potential_lines})
+                    diffs_df["sum_of_changes"] = diffs_df.abs().sum(axis=1)
+                    all_non_diff_lines = pd.DataFrame(
+                        {i[0]: i[1] for i in non_diff_lines}
+                    )
 
-                mod = IsolationForestModel(
-                    config_dir=self.config_dir,
-                    metric_name=metric_id,
-                    arguments={
-                        "contamination": 0.01,
-                        "n_estimators": 50,
-                        "multivariate": True,
-                        "check_for_std": True,
-                    },
-                )
-                outliers = mod.train_predict(all_non_diff_lines)
-                all_non_diff_lines["iso_outlier"] = outliers
-                data["severity"] = diffs_df.sum_of_changes.values
-                sample_size = data.value.apply(lambda v: sum(v.values()))
-                outlier_rows = data[
-                    (outliers == -1) & (std_sums.values > 0) & (sample_size > 10)
-                ]
-                if outlier_rows.shape[0] > 0:
-                    all_rows.append(outlier_rows)
-            except ValueError:
-                pass
+                    for col in all_non_diff_lines.columns:
+                        mean = all_non_diff_lines[col].mean()
+                        std = all_non_diff_lines[col].std()
+                        if std > 0.05:
+                            all_non_diff_lines[f"{col}_below"] = np.where(
+                                all_non_diff_lines[col] < (mean - (4 * std)), 1, 0
+                            )
+                            all_non_diff_lines[f"{col}_above"] = np.where(
+                                all_non_diff_lines[col] > (mean + (4 * std)), 1, 0
+                            )
+                        else:
+                            all_non_diff_lines[f"{col}_below"] = 0
+                            all_non_diff_lines[f"{col}_above"] = 0
+
+                    std_sums = all_non_diff_lines[
+                        [
+                            col
+                            for col in all_non_diff_lines.columns
+                            if "_below" in str(col) or "_above" in str(col)
+                        ]
+                    ].sum(axis=1)
+
+                    mod = IsolationForestModel(
+                        config_dir=self.config_dir,
+                        metric_name=metric_id,
+                        arguments={
+                            "contamination": 0.01,
+                            "n_estimators": 50,
+                            "multivariate": True,
+                            "check_for_std": True,
+                        },
+                    )
+                    outliers = mod.train_predict(all_non_diff_lines)
+                    all_non_diff_lines["iso_outlier"] = outliers
+                    data["severity"] = diffs_df.sum_of_changes.values
+                    sample_size = data.value.apply(lambda v: sum(v.values()))
+                    outlier_rows = data[
+                        (outliers == -1) & (std_sums.values > 0) & (sample_size > 10)
+                    ]
+                    if outlier_rows.shape[0] > 0:
+                        all_rows.append(outlier_rows)
+                except ValueError:
+                    pass
 
         try:
             data = pd.concat(all_rows).sort_values("date", ascending=False)

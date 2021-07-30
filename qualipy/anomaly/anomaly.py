@@ -48,7 +48,9 @@ def _run_anomaly(project_name, config_dir, retrain):
         loaded_config = json.load(file)
     qualipy_db = loaded_config["QUALIPY_DB"]
     anom_data = anomaly_data_project(
-        project_name=project_name, config_dir=config_dir, retrain=retrain,
+        project_name=project_name,
+        config_dir=config_dir,
+        retrain=retrain,
     )
     engine = create_engine(qualipy_db)
     db_schema = loaded_config.get("SCHEMA")
