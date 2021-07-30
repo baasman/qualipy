@@ -1,16 +1,17 @@
-from typing import Any, Dict, List, Callable, Optional
+from typing import Any, Dict, List, Callable, Optional, Union
 from functools import wraps
 import importlib
 
 
 def function(
     allowed_arguments: Optional[List[str]] = None,
-    return_format: type = float,
+    return_format: type = Union[float, str],
     arguments: Dict[str, Any] = None,
     fail: bool = False,
     display_name: str = None,
     description: str = None,
     input_format: type = float,
+    custom_value_return_format: type = None,
 ) -> Callable:
     """Define a function that can be applied to a qualipy dataset
 
@@ -48,12 +49,18 @@ def function(
         method.arguments = {} if arguments is None else arguments
         method.has_decorator = True
         method.return_format = return_format
+        method.custom_value_return_format = custom_value_return_format
         method.input_format = input_format
         method.fail = fail
         method.valid_min_range = None
         method.valid_max_range = None
         method.display_name = method.__name__ if display_name is None else display_name
         method.description = "" if description is None else description
+
+        if return_format == "custom" and custom_value_return_format is None:
+            raise ValueError(
+                "If using custom format, must set the custom_value_return_format"
+            )
 
         @wraps(method)
         def wrapper(*args, **kwargs):

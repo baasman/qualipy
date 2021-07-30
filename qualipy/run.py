@@ -6,6 +6,7 @@ import datetime
 from typing import Any, Dict, Optional, Union, Dict, List, Callable
 import warnings
 import logging
+import copy
 
 from qualipy.backends.pandas_backend.generator import BackendPandas
 from qualipy.backends.sql_backend.generator import BackendSQL
@@ -272,7 +273,14 @@ class Qualipy(object):
         self, autocommit: bool = True, profile_batch: bool = False
     ) -> None:
         measures = []
-        types = {float: "float", int: "int", bool: "bool", dict: "dict", str: "str"}
+        types = {
+            float: "float",
+            int: "int",
+            bool: "bool",
+            dict: "dict",
+            str: "str",
+            "custom": "dict",
+        }
         for col, specs in self.project.columns.items():
 
             if col not in self.columns:
@@ -346,7 +354,14 @@ class Qualipy(object):
                         "parameter 'fail=True'".format(function_name, col)
                     )
 
-                measures.append(result)
+                if return_format == "custom":
+                    for sub_value in result["value"]:
+                        new_result = copy.copy(result)
+                        new_result["value"] = sub_value["value"]
+                        new_result["run_name"] = sub_value["run_name"]
+                        measures.append(new_result)
+                else:
+                    measures.append(result)
 
         measures = self._get_general_info(measures)
         # measures = [{**m, **{"run_name": self.current_name_view}} for m in measures]
@@ -423,6 +438,8 @@ class Qualipy(object):
 
     def _set_viz_type(self, function: Callable, function_name: str) -> str:
         return_format = function.return_format
+        if return_format == "custom":
+            return_format = function.custom_value_return_format
         types = {
             float: "numerical",
             int: "numerical",

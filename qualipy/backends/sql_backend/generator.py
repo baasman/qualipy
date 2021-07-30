@@ -40,7 +40,8 @@ class BackendSQL(BackendBase):
                     " '{}'".format(e, str(return_format))
                 )
         elif return_format == "custom":
-            pass
+            if not isinstance(value, list):
+                raise InvalidReturnValue("Improperly formatted custom return type")
         else:
             raise InvalidReturnValue(
                 "Unsupported type: '{}'".format(str(return_format))
