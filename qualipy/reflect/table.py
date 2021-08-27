@@ -147,6 +147,7 @@ def sql_table(
     ignore: List[str] = None,
     bool_as_cat: bool = True,
     int_as_cat: Union[bool, int] = 25,
+    types: dict = None,
     functions: List = None,
     extra_functions: Dict = None,
     split_on: str = None,
@@ -183,17 +184,40 @@ def sql_table(
 
     """
     dialect = engine.dialect.name.lower()
-    insp = sa.engine.reflection.Inspector.from_engine(engine)
+    insp = sa.engine.reflection.Inspector(bind=engine)
+
+    if dialect == "oracle":
+        def_schema_name = engine.dialect.default_schema_name
+        engine.dialect.default_schema_name = None
+
     all_columns = {
         col["name"]: col
         for col in insp.get_columns(table_name, schema=schema)
         if "name" in col
     }
+
+    if dialect == "oracle":
+        engine.dialect.default_schema_name = def_schema_name
+
+    # somehow unable to reflect clarity table
+    # quick hack - get names and types through sql query
+    if len(all_columns) == 0 and dialect == "oracle":
+        schema_name = "" if schema is None else schema + "."
+        all_columns = pd.read_sql(
+            f"select * from {schema_name}{table_name} fetch first 1 rows only", engine
+        )
+        all_columns = {
+            col: {"type": "Unknown", "null": "Unknown", "unique": "Unknown"}
+            for col in all_columns.columns
+        }
+
     column_objects = []
     if extra_functions is None:
         extra_functions = {}
     if ignore is None:
         ignore = []
+    if types is None:
+        types = {}
     if functions is None:
         functions = []
     if columns == "all":
@@ -206,7 +230,10 @@ def sql_table(
         }
 
     for col_name, reflection in all_columns.items():
-        col_type = str(reflection["type"]).lower()
+        if col_name in types:
+            col_type = types[col_name]
+        else:
+            col_type = str(reflection["type"]).lower()
         if "int" in col_type and int_as_cat:
             is_cat = True
         elif col_type in ["varchar", "string"]:
@@ -226,12 +253,13 @@ def sql_table(
             if function.input_format in [str, object] and is_cat:
                 column_functions.append(function)
 
+        # need to inspect columns more for uniqueness and nullable
         column_object = column(
             column_name=col_name,
             column_type=col_type,
             force_type=False,
             overwrite_type=False,
-            null=True,
+            null=reflection.get("nullable", True),
             force_null=False,
             is_category=is_cat,
             is_date=is_date,

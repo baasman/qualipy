@@ -64,6 +64,7 @@ class Qualipy(object):
         backend: str = "pandas",
         time_of_run: Optional[datetime.datetime] = None,
         batch_name: str = None,
+        overwrite_arguments: dict = None,
     ):
         """
         Args:
@@ -94,9 +95,11 @@ class Qualipy(object):
         self.from_step = None
         self.stratify = False
         self.backend = backend
+        self.overwrite_arguments = overwrite_arguments
 
         self._setup_logger()
         self.logger = logging.getLogger(__name__)
+        self.logger.info(f"Working on batch {self.batch_name}")
 
     def run(self, autocommit: bool = False, profile_batch=False) -> None:
         """The method that runs the execution
@@ -340,6 +343,7 @@ class Qualipy(object):
                     viz_type=viz_type,
                     return_format=return_format_repr,
                     kwargs=arguments,
+                    overwrite_kwargs=self.overwrite_arguments,
                 )
                 result["run_name"] = self.current_name_view
 
@@ -359,6 +363,8 @@ class Qualipy(object):
                         new_result = copy.copy(result)
                         new_result["value"] = sub_value["value"]
                         new_result["run_name"] = sub_value["run_name"]
+                        if "metric_name" in sub_value:
+                            new_result["metric"] = sub_value["metric_name"]
                         measures.append(new_result)
                 else:
                     measures.append(result)

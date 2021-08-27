@@ -57,13 +57,13 @@ def generate_config(config_dir, create_in_empty_dir=False, db_url=None):
     if not os.path.exists(config_dir):
         _generate_config(config_dir=config_dir, db_url=db_url)
     else:
-        if create_in_empty_dir:
+        config_already_exists = os.path.exists(os.path.join(config_dir, "config.json"))
+        if create_in_empty_dir and not config_already_exists:
             _generate_config(config_dir=config_dir, db_url=db_url)
-        else:
-            if not os.path.exists(os.path.join(config_dir, "config.json")):
-                raise Exception(
-                    "Error: Make sure directory follows proper Qualipy structure"
-                )
+        if not config_already_exists:
+            raise Exception(
+                "Error: Make sure directory follows proper Qualipy structure"
+            )
 
 
 def inspect_db_connection(url):
@@ -201,7 +201,8 @@ class Project(object):
                     }
 
     def _validate_schema(self, config):
-        config_schema.validate(config)
+        # config_schema.validate(config)
+        pass
 
     def add_table(self, table: Table) -> None:
         for column in table.columns:

@@ -28,19 +28,26 @@ def set_metric_id(data):
         + "_"
         + data.metric.astype(str)
         + "_"
-        + np.where(data.arguments.isnull(), "", data.arguments)
+        # + np.where(
+        #     data.arguments.isnull(),
+        #     "",
+        #     data.arguments.astype(str).str.replace(" ", "").str.replace("'", ""),
+        # )
     )
     return data
 
 
 def set_value_type(data: pd.DataFrame) -> pd.DataFrame:
     type = data.return_format.values[0]
+    data_type = data.type.values[0]
     if type == "bool":
         data.value = data.value.map(
             {"True": True, "False": False, "true": True, "false": False}
         )
-    elif type == "dict":
+    elif type == "dict" and data_type != "numerical":
         data.value = data.value.apply(lambda v: json.loads(v))
+    elif type == "dict" and data_type == "numerical":
+        data.value = data.value.astype(float)
     else:
         data.value = data.value.astype(type)
     return data

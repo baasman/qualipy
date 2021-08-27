@@ -79,6 +79,7 @@ def setup_auto_qpy_sql_table(
         ignore=ignore,
         int_as_cat=int_as_cat,
         bool_as_cat=True,
+        types=types,
     )
     project.add_table(full_table)
     return project
@@ -184,16 +185,23 @@ def auto_qpy_single_batch_sql(
     schema: str = None,
     stratify: str = None,
     run_anomaly: bool = True,
+    batch_name: str = None,
     run_name: str = None,
     commit: bool = True,
     column_collection_name: List[str] = None,
     produce_report: bool = True,
+    overwrite_arguments: dict = None,
 ):
     if isinstance(project, str):
         project = qpy.Project(
             project_name=project, config_dir=configuration_dir, re_init=True
         )
-    qualipy = qpy.Qualipy(project=project, backend="sql")
+    qualipy = qpy.Qualipy(
+        project=project,
+        backend="sql",
+        batch_name=batch_name,
+        overwrite_arguments=overwrite_arguments,
+    )
 
     if run_name is None:
         run_name = "auto-qpy"

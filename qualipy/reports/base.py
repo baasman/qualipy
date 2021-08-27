@@ -76,6 +76,7 @@ class BaseJinjaView:
         only_show_anomaly=False,
         key_columns=None,
         include_0_missing=True,
+        only_include_runs=None,
     ):
         if anomaly_data.shape[0] > 0:
             anomaly_data["keep"] = True
@@ -141,6 +142,10 @@ class BaseJinjaView:
             ).drop_duplicates()
         if key_columns is not None:
             project_data = project_data[project_data.column_name.isin(key_columns)]
+        if only_include_runs is not None:
+            # should we always include auto-qpy
+            only_include_runs.append("auto-qpy")
+            project_data = project_data[project_data.run_name.isin(only_include_runs)]
         return project_data, anomaly_data
 
     def _run_anomaly_detection(self, project_name, config_dir, retrain_anomaly):

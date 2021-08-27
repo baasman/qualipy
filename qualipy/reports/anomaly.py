@@ -79,11 +79,11 @@ class AnomalyReport(BaseJinjaView):
             latest_insert_only=True,
             floor_datetime=True,
         )
-        if run_name is not None:
-            # TODO: this should be much better
-            self.project_data = self.project_data[
-                self.project_data.run_name.str.contains(run_name)
-            ]
+        # if run_name is not None:
+        #     # TODO: this should be much better
+        #     self.project_data = self.project_data[
+        #         self.project_data.run_name.str.contains(run_name)
+        #     ]
         self.anomaly_data = get_anomaly_data(self.project, timezone=time_zone)
         # limitation - type not part of anomaly table - same
         if self.anomaly_data.shape[0] > 0:
@@ -123,6 +123,7 @@ class AnomalyReport(BaseJinjaView):
             only_show_anomaly=self.only_show_anomaly,
             key_columns=self.key_columns,
             include_0_missing=self.missing.get("include_0", True),
+            only_include_runs=self.run_names_to_display,
         )
 
     def _create_template_vars(self) -> dict:
@@ -204,6 +205,9 @@ class AnomalyReport(BaseJinjaView):
             ).reset_index()
             display_names = pd.concat([display_names, display_names_custom])
         self.display_names = display_names.rename(columns={"index": "metric"})
+        self.run_names_to_display = self.project_specific_config.get(
+            "INCLUDE_RUN_NAMES"
+        )
 
     def _show_anomaly_table(self):
         columns = [

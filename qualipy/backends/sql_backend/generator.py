@@ -14,10 +14,14 @@ import datetime
 from typing import Optional, Union, List, Dict, Any, Callable
 import uuid
 import pickle
+import logging
 
 from numpy import NaN
 import pandas as pd
 import sqlalchemy as sa
+
+
+logger = logging.getLogger(__name__)
 
 
 Column = Dict[str, Union[str, bool, Dict[str, Callable]]]
@@ -53,11 +57,20 @@ class BackendSQL(BackendBase):
         data, columns: Dict[str, Column], current_name: str
     ) -> Dict[str, Dict[str, Union[bool, str]]]:
         # TODO: figure out what to do if column name is a list
+        # schema = {
+        #     f"{info['name']}_{current_name}": {
+        #         "nullable": info["null"],
+        #         "unique": info["unique"],
+        #         "dtype": BackendSQL.get_dtype(data, info["name"]),
+        #         "column_name": info["name"],
+        #     }
+        #     for col, info in columns.items()
+        # }
         schema = {
             f"{info['name']}_{current_name}": {
                 "nullable": info["null"],
                 "unique": info["unique"],
-                "dtype": BackendSQL.get_dtype(data, info["name"]),
+                "dtype": info["type"],
                 "column_name": info["name"],
             }
             for col, info in columns.items()
@@ -84,12 +97,12 @@ class BackendSQL(BackendBase):
 
     @staticmethod
     def get_dtype(data, column):
+        # is there any point retrieving type?
         try:
             col = [i for i in data.table_reflection if i["name"] == column][0]
         except IndexError:
-            raise Exception(
-                f"Column: {column} not found in table {data._table.fullname}"
-            )
+            logger.warn(f"Column: {column} not found in table {data._table.fullname}")
+            return "Unknown"
         except AttributeError:
             raise Exception(f"A pandas dataframe was pass to a SQL backend")
 

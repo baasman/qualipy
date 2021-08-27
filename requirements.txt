@@ -13,3 +13,4 @@ schema
 banpei
 matplotlib
 dill
+rich

@@ -4,6 +4,7 @@ import pickle
 import uuid
 import json
 from typing import Tuple, Dict, Union, Callable, List, Optional, Any
+import copy
 
 import pandas as pd
 from numpy import NaN
@@ -62,13 +63,19 @@ class BackendBase(abc.ABC):
         viz_type: str = "numerical",
         return_format: str = "float",
         kwargs: Dict[str, Any] = None,
+        overwrite_kwargs: Dict[str, Any] = None,
     ):
         kwargs = {} if kwargs is None else kwargs
+        original_kwargs = copy.copy(kwargs)
+        if overwrite_kwargs is not None:
+            for arg in function.allowed_arguments:
+                if arg in overwrite_kwargs:
+                    kwargs[arg] = overwrite_kwargs[arg]
         value = function(data, column, **kwargs)
         return {
             "value": value,
             "metric": function_name,
-            "arguments": _create_arg_string(kwargs),
+            "arguments": _create_arg_string(original_kwargs),
             "date": date,
             "column_name": column,
             "return_format": return_format,

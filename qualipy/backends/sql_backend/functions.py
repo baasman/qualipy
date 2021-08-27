@@ -139,10 +139,17 @@ def prop_outside_of_range(data, column, low, high):
 @function(return_format=dict)
 def value_counts(data, column):
     schema_name = "" if data.schema is None else data.schema + "."
-    check_unique_cases = f"""
-        select count(distinct {column}) from 
-            (select {column} from {schema_name}{data.table_name} limit 1000) as fin
-    """
+    if data.dialect == "oracle":
+        check_unique_cases = f"""
+            select count(distinct {column}) from 
+                (select {column} from {schema_name}{data.table_name} fetch first 1000 rows only)
+        """
+
+    else:
+        check_unique_cases = f"""
+            select count(distinct {column}) from 
+                (select {column} from {schema_name}{data.table_name} limit 1000) as fin
+        """
     count_distinct = data.engine.execute(check_unique_cases).fetchone()[0]
     if count_distinct < 25:
         if data.custom_where is None:
