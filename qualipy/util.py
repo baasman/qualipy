@@ -95,7 +95,9 @@ def get_latest_insert_only(data, floor_datetime=False):
     return data
 
 
-def get_project_data(project, timezone, latest_insert_only=False, floor_datetime=False):
+def get_project_data(
+    project, timezone=None, latest_insert_only=False, floor_datetime=False
+):
     timezone = "UTC" if timezone is None else timezone
     data = project.get_project_table()
     try:

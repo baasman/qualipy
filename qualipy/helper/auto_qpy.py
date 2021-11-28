@@ -8,9 +8,9 @@ import qualipy as qpy
 
 
 def setup_auto_qpy(
-    data: pd.DataFrame,
     configuration_dir: str,
     project_name: str,
+    sample_data: pd.DataFrame = None,
     functions: list = None,
     types: dict = None,
     overwrite_type: bool = False,
@@ -18,13 +18,14 @@ def setup_auto_qpy(
     int_as_cat: Union[bool, int] = 25,
     split_on: str = None,
     column_stage_collection_name: str = None,
+    as_cat: List[str] = None,
 ):
     qpy.generate_config(configuration_dir, create_in_empty_dir=True)
     project = qpy.Project(project_name=project_name, config_dir=configuration_dir)
     if split_on:
         full_table = qpy.reflect.table.Table(table_name=project_name, columns=[])
         # NOTE: this is not working because the project overwrites the key
-        for name, group in data.groupby(split_on):
+        for name, group in sample_data.groupby(split_on):
             new_table = qpy.pandas_table(
                 infer_schema=True,
                 sample_dataset=group,
@@ -35,17 +36,19 @@ def setup_auto_qpy(
                 int_as_cat=int_as_cat,
                 split_on=[split_on, name],
                 column_stage_collection_name=column_stage_collection_name,
+                as_cat=as_cat,
             )
             project.add_table(new_table)
     else:
         full_table = qpy.pandas_table(
             infer_schema=True,
-            sample_dataset=data,
+            sample_dataset=sample_data,
             functions=functions,
             types=types,
             overwrite_type=overwrite_type,
             ignore=ignore,
             int_as_cat=int_as_cat,
+            as_cat=as_cat,
         )
         project.add_table(full_table)
     return project
@@ -61,11 +64,8 @@ def setup_auto_qpy_sql_table(
     functions: list = None,
     extra_functions: Dict[str, list] = None,
     types: dict = None,
-    overwrite_type: bool = False,
     ignore: list = None,
     int_as_cat: Union[bool, int] = 25,
-    split_on: str = None,
-    column_stage_collection_name: str = None,
 ):
     qpy.generate_config(configuration_dir, create_in_empty_dir=True)
     project = qpy.Project(project_name=project_name, config_dir=configuration_dir)

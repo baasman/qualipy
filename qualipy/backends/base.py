@@ -9,6 +9,8 @@ import copy
 import pandas as pd
 from numpy import NaN
 
+from qualipy.exceptions import InvalidReturnValue
+
 
 def _create_arg_string(keyword_arguments: Dict[str, Any]) -> str:
     if keyword_arguments:
@@ -46,15 +48,14 @@ class BaseData(object):
 
 class BackendBase(abc.ABC):
     def __init__(self, config):
-        pass
+        self.config = config
 
-    @staticmethod
     @abc.abstractmethod
-    def set_schema(data, columns):
+    def set_schema(self, data, columns):
         return
 
-    @staticmethod
     def generate_description(
+        self,
         function: Callable,
         data,
         column: str,
@@ -82,33 +83,43 @@ class BackendBase(abc.ABC):
             "type": viz_type,
         }
 
-    @staticmethod
+    def set_return_value_type(self, value: type, return_format: type):
+        if str(value) == "nan":
+            return value
+        if return_format in [int, float, str, dict, bool]:
+            try:
+                value = return_format(value)
+            except TypeError as e:
+                raise InvalidReturnValue(
+                    "Invalid return value: {}, was expecting"
+                    " '{}'".format(e, str(return_format))
+                )
+        elif return_format == "custom":
+            if not isinstance(value, list):
+                raise InvalidReturnValue("Improperly formatted custom return type")
+        else:
+            raise InvalidReturnValue(
+                "Unsupported type: '{}'".format(str(return_format))
+            )
+        return value
+
     @abc.abstractmethod
-    def set_return_value_type(value, return_format):
+    def get_dtype(self, data, column):
         return
 
-    @staticmethod
     @abc.abstractmethod
-    def get_dtype(data, column):
+    def check_type(self, data, column, desired_type, force=False):
         return
 
-    @staticmethod
     @abc.abstractmethod
-    def check_type(data, column, desired_type, force=False):
+    def generate_column_general_info(self, specs, data, time_of_run):
         return
 
-    @staticmethod
     @abc.abstractmethod
-    def generate_column_general_info(specs, data, time_of_run):
+    def generate_data(self, *args, **kwargs):
         return
 
-    @staticmethod
-    @abc.abstractmethod
-    def generate_data(*args, **kwargs):
-        return
-
-    @staticmethod
-    def write(conn, measures, project, batch_name, schema=None):
+    def write(self, conn, measures, project, batch_name, schema=None):
         data = pd.DataFrame(measures)
         data["insert_time"] = datetime.datetime.now().replace(tzinfo=None)
         data["batch_name"] = batch_name

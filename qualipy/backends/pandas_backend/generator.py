@@ -26,30 +26,8 @@ Column = Dict[str, Union[str, bool, Dict[str, Callable]]]
 
 
 class BackendPandas(BackendBase):
-    def __init__(self, config):
-        pass
-
-    @staticmethod
-    def set_return_value_type(value: type, return_format: type):
-        if return_format in [int, float, str, dict, bool]:
-            try:
-                value = return_format(value)
-            except TypeError as e:
-                raise InvalidReturnValue(
-                    "Invalid return value: {}, was expecting"
-                    " '{}'".format(e, str(return_format))
-                )
-        elif return_format == "custom":
-            pass
-        else:
-            raise InvalidReturnValue(
-                "Unsupported type: '{}'".format(str(return_format))
-            )
-        return value
-
-    @staticmethod
     def set_schema(
-        data: pd.DataFrame, columns: Dict[str, Column], current_name: str
+        self, data: pd.DataFrame, columns: Dict[str, Column], current_name: str
     ) -> Dict[str, Dict[str, Union[bool, str]]]:
         # TODO: figure out what to do if column name is a list
         schema = {
@@ -63,17 +41,14 @@ class BackendPandas(BackendBase):
         }
         return schema
 
-    @staticmethod
-    def get_shape(data):
+    def get_shape(self, data):
         rows, cols = data.shape
         return rows, cols
 
-    @staticmethod
-    def get_dtype(data, column):
+    def get_dtype(self, data, column):
         return data[column].dtype
 
-    @staticmethod
-    def check_type(data, column, desired_type, force=False):
+    def check_type(self, data, column, desired_type, force=False):
         is_equal = desired_type.check_approximate_type(data[column].dtype)
         if is_equal:
             return
@@ -83,11 +58,10 @@ class BackendPandas(BackendBase):
                 "got {}".format(column, desired_type, data[column].dtype)
             )
 
-    @staticmethod
-    def generate_column_general_info(specs, data, time_of_run, run_name):
+    def generate_column_general_info(self, specs, data, time_of_run, run_name):
         col_name = specs["name"]
         if specs["unique"]:
-            unique = BackendPandas.generate_description(
+            unique = self.generate_description(
                 function=is_unique,
                 data=data,
                 column=col_name,
@@ -100,7 +74,7 @@ class BackendPandas(BackendBase):
         else:
             unique = None
         if specs["is_category"]:
-            value_props = BackendPandas.generate_description(
+            value_props = self.generate_description(
                 function=value_counts,
                 data=data,
                 column=col_name,
@@ -115,7 +89,7 @@ class BackendPandas(BackendBase):
                 value_props["run_name"] = run_name
         else:
             value_props = None
-        perc_missing = BackendPandas.generate_description(
+        perc_missing = self.generate_description(
             function=percentage_missing,
             data=data,
             column=col_name,
@@ -127,8 +101,7 @@ class BackendPandas(BackendBase):
         perc_missing["run_name"] = run_name
         return unique, perc_missing, value_props
 
-    @staticmethod
-    def get_chunks(data, time_freq, time_column):
+    def get_chunks(self, data, time_freq, time_column):
         if data.shape[0] == 0:
             raise Exception("Unable to chunk empty dataframe")
         groups = [
@@ -137,30 +110,27 @@ class BackendPandas(BackendBase):
         ]
         return groups
 
-    @staticmethod
-    def overwrite_type(data, col, type):
+    def overwrite_type(self, data, col, type):
         if isinstance(type, FloatType) or isinstance(type, IntType):
             data[col] = pd.to_numeric(data[col], errors="coerce")
         else:
             data[col] = data[col].astype(type.str_name)
         return data
 
-    @staticmethod
-    def generate_data(data, config):
+    def generate_data(self, data, config):
         return
 
-    @staticmethod
-    def profile_batch(data, batch_name, run_name, columns, config_dir, project_name):
+    def profile_batch(
+        self, data, batch_name, run_name, columns, config_dir, project_name
+    ):
         profiler = PandasBatchProfiler(
             data, batch_name, run_name, columns, config_dir, project_name
         )
         profiler.profile()
 
-    @staticmethod
-    def return_split_subset(data, split_var, split_value):
+    def return_split_subset(self, data, split_var, split_value):
         data = data[data[split_var] == split_value].copy()
         return data
 
-    @staticmethod
-    def return_data_copy(data):
+    def return_data_copy(self, data):
         return data.copy()

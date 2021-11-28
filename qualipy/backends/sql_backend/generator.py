@@ -28,44 +28,10 @@ Column = Dict[str, Union[str, bool, Dict[str, Callable]]]
 
 
 class BackendSQL(BackendBase):
-    def __init__(self, config):
-        pass
 
-    @staticmethod
-    def set_return_value_type(value: type, return_format: type):
-        if str(value) == "nan":
-            return value
-        if return_format in [int, float, str, dict, bool]:
-            try:
-                value = return_format(value)
-            except TypeError as e:
-                raise InvalidReturnValue(
-                    "Invalid return value: {}, was expecting"
-                    " '{}'".format(e, str(return_format))
-                )
-        elif return_format == "custom":
-            if not isinstance(value, list):
-                raise InvalidReturnValue("Improperly formatted custom return type")
-        else:
-            raise InvalidReturnValue(
-                "Unsupported type: '{}'".format(str(return_format))
-            )
-        return value
-
-    @staticmethod
     def set_schema(
-        data, columns: Dict[str, Column], current_name: str
+        self, data, columns: Dict[str, Column], current_name: str
     ) -> Dict[str, Dict[str, Union[bool, str]]]:
-        # TODO: figure out what to do if column name is a list
-        # schema = {
-        #     f"{info['name']}_{current_name}": {
-        #         "nullable": info["null"],
-        #         "unique": info["unique"],
-        #         "dtype": BackendSQL.get_dtype(data, info["name"]),
-        #         "column_name": info["name"],
-        #     }
-        #     for col, info in columns.items()
-        # }
         schema = {
             f"{info['name']}_{current_name}": {
                 "nullable": info["null"],
@@ -77,12 +43,10 @@ class BackendSQL(BackendBase):
         }
         return schema
 
-    @staticmethod
-    def return_data_copy(data):
+    def return_data_copy(self, data):
         return data
 
-    @staticmethod
-    def get_shape(data):
+    def get_shape(self, data):
         if data.custom_where is None:
             count_query = sa.select([sa.func.count()]).select_from(data._table)
         else:
@@ -95,8 +59,7 @@ class BackendSQL(BackendBase):
         columns = len(data.table_reflection)
         return rows, columns
 
-    @staticmethod
-    def get_dtype(data, column):
+    def get_dtype(self, data, column):
         # is there any point retrieving type?
         try:
             col = [i for i in data.table_reflection if i["name"] == column][0]
@@ -108,15 +71,14 @@ class BackendSQL(BackendBase):
 
         return str(col["type"])
 
-    @staticmethod
-    def check_type(data, column, desired_type, force=False):
+    def check_type(self, data, column, desired_type, force=False):
+        # no point here
         pass
 
-    @staticmethod
-    def generate_column_general_info(specs, data, time_of_run, run_name):
+    def generate_column_general_info(self, specs, data, time_of_run, run_name):
         col_name = specs["name"]
         if specs["unique"]:
-            unique = BackendSQL.generate_description(
+            unique = self.generate_description(
                 function=is_unique,
                 data=data,
                 column=col_name,
@@ -129,7 +91,7 @@ class BackendSQL(BackendBase):
         else:
             unique = None
         if specs["is_category"]:
-            value_props = BackendSQL.generate_description(
+            value_props = self.generate_description(
                 function=value_counts,
                 data=data,
                 column=col_name,
@@ -144,7 +106,7 @@ class BackendSQL(BackendBase):
                 value_props["run_name"] = run_name
         else:
             value_props = None
-        perc_missing = BackendSQL.generate_description(
+        perc_missing = self.generate_description(
             function=percentage_missing,
             data=data,
             column=col_name,
@@ -156,15 +118,12 @@ class BackendSQL(BackendBase):
         perc_missing["run_name"] = run_name
         return unique, perc_missing, value_props
 
-    @staticmethod
-    def get_chunks(data, time_freq, time_column):
+    def get_chunks(self, data, time_freq, time_column):
         pass
 
-    @staticmethod
-    def overwrite_type(data, col, type):
+    def overwrite_type(self, data, col, type):
         return data
 
-    @staticmethod
-    def generate_data(*args, **kwargs):
+    def generate_data(self, *args, **kwargs):
         data = SQLData(*args, **kwargs)
         return data.get_data()

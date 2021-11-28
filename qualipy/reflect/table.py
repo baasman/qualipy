@@ -43,6 +43,7 @@ def pandas_table(
     functions: List = None,
     split_on: str = None,
     column_stage_collection_name: str = None,
+    as_cat: List[str] = None,
     extra_functions: Dict = None,
     sample_dataset: pd.DataFrame = None,
 ):
@@ -110,7 +111,7 @@ def pandas_table(
             else:
                 # need to add more here, should be way smarter
                 col_type = PANDAS_INFER_TYPES[sample_dataset[col_name].dtype.name]()
-        is_cat = isinstance(col_type, pObjectType)
+        is_cat = isinstance(col_type, pObjectType) or col_name in as_cat
         is_date = isinstance(col_type, pDateTimeType)
         column_functions = []
         for function in functions:

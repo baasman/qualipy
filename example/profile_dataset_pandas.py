@@ -1,50 +1,31 @@
-import subprocess
-
 from qualipy.backends.pandas_backend.pandas_types import FloatType, ObjectType
 import qualipy as qpy
 
 import pandas as pd
 
+from util import get_project_data
+
 
 def qualipy_pipeline(configuration_directory="~/eye-state"):
-    # set up the config
-    qpy.generate_config(configuration_directory)
 
     # Define a simple function
     @qpy.function(return_format=float)
     def mean(data, column):
         return data[column].mean()
 
-    # create mappings
-    my_mappings = []
+    eye_state = qpy.datasets.load_dataset("eye_state")
 
-    # Create a mapping for each variable. There are 14 float type variables, for which
-    # we want to collect the mean, and one categorical variable.
-    for col in [f"V{i}" for i in range(1, 15)]:
-        my_mappings.append(
-            qpy.column(column_name=col, column_type=FloatType(), functions=[mean])
-        )
-    # To denote a variable as categorical, make sure to set is_category=True. By default
-    # Qualipy will assume numeric type when collecting batch information
-    my_mappings.append(
-        qpy.column(
-            column_name="Class",
-            column_type=ObjectType(),
-            is_category=True,
-            force_type=False,
-        )
+    project = qpy.helper.setup_auto_qpy(
+        sample_data=eye_state,
+        configuration_dir=configuration_directory,
+        project_name="eye_state",
+        functions=[mean],
+        types={"Class": ObjectType()},
     )
-
-    # set up project and add all mappings
-    project = qpy.Project(project_name="eye_state", config_dir=configuration_directory)
-    for mapping in my_mappings:
-        project.add_column(mapping)
 
     # instantiate qualipy object. Setting a batch name will make it easy to identify
     # when generating batch report
     qualipy = qpy.Qualipy(project=project, batch_name="eye-state-run-0")
-
-    eye_state = qpy.datasets.load_dataset("eye_state")
 
     eye_state = qpy.backends.pandas_backend.dataset.PandasData(eye_state)
     qualipy.set_dataset(eye_state, run_name="full-run")

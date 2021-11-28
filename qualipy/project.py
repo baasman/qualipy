@@ -67,6 +67,7 @@ def generate_config(config_dir, create_in_empty_dir=False, db_url=None):
 
 
 def inspect_db_connection(url):
+    # TODO: should grab dialect instead of this
     for backend in DB_ENGINES.keys():
         if backend in url:
             return backend
@@ -117,21 +118,23 @@ class Project(object):
         with open(os.path.join(self.config_dir, "config.json"), "rb") as f:
             self.config = json.load(f)
         self._validate_schema(self.config)
-        engine = self.config.get("QUALIPY_DB")
+        engine = self.config["QUALIPY_DB"]
         self.engine = create_engine(engine)
         self.db_schema = self.config.get("SCHEMA")
         self.sql_helper = DB_ENGINES[inspect_db_connection(str(self.engine.url))](
-            self.db_schema
+            self.engine, self.db_schema
         )
         if re_init:
-            exists = self.sql_helper.does_table_exist(self.engine, self.project_name)
+            exists = self.sql_helper.does_table_exist(self.project_name)
             if exists is None:
                 raise Exception(f"Project {project_name} does not exist.")
 
         if not re_init:
-            self.sql_helper.create_schema_if_not_exists(self.engine)
-            self.sql_helper.create_table(self.engine, self.project_name)
-            self.sql_helper.create_anomaly_table(self.engine, self.anomaly_table)
+            self.sql_helper.create_schema_if_not_exists()
+            self.sql_helper.create_table(self.project_name)
+            self.sql_helper.create_anomaly_table(self.anomaly_table)
+
+        self.sql_helper.reflect_tables(self.project_name, self.anomaly_table)
 
         if not re_init:
             self._functions_used_in_project = {}
@@ -237,14 +240,13 @@ class Project(object):
         self.columns = {**self.columns, **columns}
 
     def get_project_table(self) -> pd.DataFrame:
-        return self.sql_helper.get_project_table(self.engine, self.project_name)
+        return self.sql_helper.get_project_table()
 
     def get_anomaly_table(self) -> pd.DataFrame:
-        return self.sql_helper.get_anomaly_table(self.engine, self.project_name)
+        return self.sql_helper.get_anomaly_table(self.project_name)
 
     def delete_data(self, recreate=True):
         self.sql_helper.delete_data(
-            engine=self.engine,
             name=self.project_name,
             anomaly_name=self.anomaly_table,
             recreate=recreate,
