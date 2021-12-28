@@ -54,6 +54,7 @@ docs/_templates/
 
 .idea/
 .vscode
+.ipynb_checkpoints
 venv/
 examples/
 env/
@@ -67,3 +68,5 @@ tests/.ipynb_checkpoints/qualipy-example-checkpoint.ipynb
 Pipfile.lock
 .qualipy/
 .history/
+omop_snapshot/
+omop_shapshot/table_size_snapshot.py
