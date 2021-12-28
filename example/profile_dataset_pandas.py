@@ -9,9 +9,12 @@ from util import get_project_data
 def qualipy_pipeline(configuration_directory="~/eye-state"):
 
     # Define a simple function
-    @qpy.function(return_format=float)
+    @qpy.function(return_format="custom", custom_value_return_format=float)
     def mean(data, column):
-        return data[column].mean()
+        return [
+            {"value": data[column].mean(), "run_name": "t1"},
+            {"value": data[column].mean(), "run_name": "t2"},
+        ]
 
     eye_state = qpy.datasets.load_dataset("eye_state")
 
