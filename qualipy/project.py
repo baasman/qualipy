@@ -30,18 +30,18 @@ def _validate_project_name(project_name):
     assert "-" not in project_name
 
 
-def set_default_config(config_dir, db_url=None):
-    conf = {}
-    if db_url is None:
+def set_default_config(config_dir, overwrite_kwargs=None):
+    if "QUALIPY_DB" not in overwrite_kwargs:
         db_url = f'sqlite:///{os.path.join(config_dir, "qualipy.db")}'
-    conf["QUALIPY_DB"] = db_url
-    return conf
+        overwrite_kwargs["QUALIPY_DB"] = db_url
+    return overwrite_kwargs
 
 
-def _generate_config(config_dir, db_url):
+def _generate_config(config_dir, overwrite_kwargs: dict = None):
+    overwrite_kwargs = {} if overwrite_kwargs is None else overwrite_kwargs
     os.makedirs(config_dir, exist_ok=True)
     with open(os.path.join(config_dir, "config.json"), "w") as f:
-        json.dump(set_default_config(config_dir, db_url), f)
+        json.dump(set_default_config(config_dir, overwrite_kwargs), f)
     with open(os.path.join(config_dir, "projects.json"), "w") as f:
         json.dump({}, f)
     os.makedirs(os.path.join(config_dir, "models"), exist_ok=True)
@@ -52,14 +52,22 @@ def _generate_config(config_dir, db_url):
     os.makedirs(os.path.join(config_dir, "reports", "comparison"), exist_ok=True)
 
 
-def generate_config(config_dir, create_in_empty_dir=False, db_url=None):
+def generate_config(
+    config_dir, create_in_empty_dir=False, db_url=None, overwrite_kwargs: dict = None
+):
     config_dir = os.path.expanduser(config_dir)
     if not os.path.exists(config_dir):
-        _generate_config(config_dir=config_dir, db_url=db_url)
+        _generate_config(config_dir=config_dir, overwrite_kwargs=overwrite_kwargs)
     else:
         config_already_exists = os.path.exists(os.path.join(config_dir, "config.json"))
         if create_in_empty_dir and not config_already_exists:
-            _generate_config(config_dir=config_dir, db_url=db_url)
+            _generate_config(config_dir=config_dir, overwrite_kwargs=overwrite_kwargs)
+        if overwrite_kwargs is not None:
+            with open(os.path.join(config_dir, "config.json"), "r") as f:
+                conf = json.load(f)
+            conf = {**conf, **overwrite_kwargs}
+            with open(os.path.join(config_dir, "config.json"), "w") as f:
+                json.dump(conf, f)
         if not config_already_exists:
             raise Exception(
                 "Error: Make sure directory follows proper Qualipy structure"
@@ -243,7 +251,7 @@ class Project(object):
         return self.sql_helper.get_project_table()
 
     def get_anomaly_table(self) -> pd.DataFrame:
-        return self.sql_helper.get_anomaly_table(self.project_name)
+        return self.sql_helper.get_anomaly_table()
 
     def delete_data(self, recreate=True):
         self.sql_helper.delete_data(

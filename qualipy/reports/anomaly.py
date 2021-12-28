@@ -302,7 +302,10 @@ class AnomalyReport(BaseJinjaView):
     def _create_missing_plot(self):
         plots = []
         missing_data = self.project_data[self.project_data["metric"] == "perc_missing"]
-        if self.missing.get("include_bar_of_latest", False):
+        if (
+            self.missing.get("include_bar_of_latest", False)
+            and missing_data.shape[0] > 0
+        ):
             conf = self.missing["include_bar_of_latest"]
             missing_data = self.project_data[
                 (self.project_data["metric"] == "perc_missing")

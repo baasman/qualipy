@@ -70,7 +70,7 @@ class BackendPandas(BackendBase):
                 viz_type="data-characteristic",
                 kwargs={},
             )
-            unique["run_name"] = run_name
+            unique.update_keys(run_name=run_name)
         else:
             unique = None
         if specs["is_category"]:
@@ -82,11 +82,11 @@ class BackendPandas(BackendBase):
                 date=time_of_run,
                 viz_type="categorical",
                 kwargs={},
-                return_format="dict",
+                return_format=dict,
             )
-            value_props = None if str(value_props["value"]) == "nan" else value_props
+            value_props = None if str(value_props.value) == "nan" else value_props
             if value_props is not None:
-                value_props["run_name"] = run_name
+                value_props.update_keys(run_name=run_name)
         else:
             value_props = None
         perc_missing = self.generate_description(
@@ -98,7 +98,7 @@ class BackendPandas(BackendBase):
             viz_type="data-characteristic",
             kwargs={},
         )
-        perc_missing["run_name"] = run_name
+        perc_missing.update_keys(run_name=run_name)
         return unique, perc_missing, value_props
 
     def get_chunks(self, data, time_freq, time_column):

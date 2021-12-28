@@ -87,6 +87,8 @@ def pandas_table(
         types = {}
     if functions is None:
         functions = []
+    if as_cat is None:
+        as_cat = []
     if columns == "all":
         try:
             columns = [

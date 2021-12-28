@@ -13,6 +13,7 @@ from qualipy.backends.sql_backend.generator import BackendSQL
 from qualipy.exceptions import FailException, NullableError
 from qualipy.project import Project
 from qualipy.util import setup_logging
+from qualipy.backends.base import MetricResult
 
 try:
     from qualipy.backends.spark_backend.generator import BackendSpark
@@ -32,6 +33,7 @@ GENERATORS = {"pandas": BackendPandas, "spark": BackendSpark, "sql": BackendSQL}
 Measure = List[Dict[str, Any]]
 
 
+# TODO: dont really need this method now
 def _create_value(
     value: Any,
     metric: str,
@@ -41,15 +43,16 @@ def _create_value(
     return_format: str,
     run_name,
 ):
-    return {
-        "value": value,
-        "date": date,
-        "column_name": name,
-        "metric": metric,
-        "type": type,
-        "return_format": return_format,
-        "run_name": run_name,
-    }
+    metric_res = MetricResult(
+        value=value,
+        metric=metric,
+        date=date,
+        column_name=name,
+        return_format=return_format,
+        type=type,
+        run_name=run_name,
+    )
+    return metric_res
 
 
 class Qualipy(object):
@@ -272,18 +275,15 @@ class Qualipy(object):
         self.project.write_functions_to_config()
         self.project.update_config_and_project_files()
 
+    def _set_default_view(self):
+        self.data_view = self.generator.return_data_copy(self.current_data)
+        self.current_name_view = self.current_name
+
     def _generate_metrics(
         self, autocommit: bool = True, profile_batch: bool = False
     ) -> None:
         measures = []
-        types = {
-            float: "float",
-            int: "int",
-            bool: "bool",
-            dict: "dict",
-            str: "str",
-            "custom": "dict",
-        }
+        self._set_default_view()
         for col, specs in self.project.columns.items():
 
             if col not in self.columns:
@@ -330,7 +330,7 @@ class Qualipy(object):
                 should_fail = function.fail
                 arguments = function.arguments
                 return_format = function.return_format
-                return_format_repr = types[return_format]
+                # return_format_repr = types[return_format]
                 viz_type = self._set_viz_type(function, function_name)
 
                 # generate result row
@@ -341,16 +341,14 @@ class Qualipy(object):
                     function_name=function_name,
                     date=self.time_of_run,
                     viz_type=viz_type,
-                    return_format=return_format_repr,
+                    return_format=return_format,
+                    run_name=self.current_name_view,
                     kwargs=arguments,
                     overwrite_kwargs=self.overwrite_arguments,
                 )
-                result["run_name"] = self.current_name_view
 
                 # set value type
-                result["value"] = self.generator.set_return_value_type(
-                    value=result["value"], return_format=return_format
-                )
+                result.set_return_value_type()
 
                 if should_fail and not result["value"]:
                     raise FailException(
@@ -359,12 +357,13 @@ class Qualipy(object):
                     )
 
                 if return_format == "custom":
-                    for sub_value in result["value"]:
-                        new_result = copy.copy(result)
-                        new_result["value"] = sub_value["value"]
-                        new_result["run_name"] = sub_value["run_name"]
+                    for sub_value in result.value:
+                        new_result = copy.deepcopy(result)
+                        new_result.update_keys(
+                            value=sub_value["value"], run_name=sub_value["run_name"]
+                        )
                         if "metric_name" in sub_value:
-                            new_result["metric"] = sub_value["metric_name"]
+                            new_result.update_keys(metric=sub_value["metric_name"])
                         measures.append(new_result)
                 else:
                     measures.append(result)
@@ -398,7 +397,7 @@ class Qualipy(object):
             measures.append(value_props)
         measures.append(perc_missing)
 
-        if perc_missing["value"] > 0 and specs["force_null"] and not specs["null"]:
+        if perc_missing.value > 0 and specs["force_null"] and not specs["null"]:
             raise NullableError(
                 "Column {} has {} percent missing even"
                 " though it is not nullable".format(col_name, perc_missing["value"])
@@ -410,7 +409,7 @@ class Qualipy(object):
                 col_name,
                 self.time_of_run,
                 "data-characteristic",
-                "str",
+                str,
                 self.current_name_view,
             )
         )
@@ -425,7 +424,7 @@ class Qualipy(object):
                 "rows",
                 self.time_of_run,
                 "data-characteristic",
-                "int",
+                int,
                 self.current_name,
             )
         )
@@ -436,7 +435,7 @@ class Qualipy(object):
                 "columns",
                 self.time_of_run,
                 "data-characteristic",
-                "int",
+                int,
                 self.current_name,
             )
         )

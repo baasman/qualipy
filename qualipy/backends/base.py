@@ -1,6 +1,7 @@
 import abc
 import datetime
 import pickle
+from typing_extensions import runtime
 import uuid
 import json
 from typing import Tuple, Dict, Union, Callable, List, Optional, Any
@@ -10,12 +11,6 @@ import pandas as pd
 from numpy import NaN
 
 from qualipy.exceptions import InvalidReturnValue
-
-
-def _create_arg_string(keyword_arguments: Dict[str, Any]) -> str:
-    if keyword_arguments:
-        return str(keyword_arguments)
-    return NaN
 
 
 def convert_value_to_varchar(value):
@@ -46,6 +41,84 @@ class BaseData(object):
         pass
 
 
+class MetricResult:
+
+    types_repr = {
+        float: "float",
+        int: "int",
+        bool: "bool",
+        dict: "dict",
+        str: "str",
+        "custom": "list",
+    }
+
+    def __init__(
+        self,
+        value,
+        metric: str,
+        date: datetime.date,
+        column_name: str,
+        return_format: str,
+        type,
+        run_name: str = None,
+        arguments: str = None,
+    ) -> None:
+        self.value = value
+        self.metric = metric
+        self.date = date
+        self.column_name = column_name
+        self.return_format = return_format
+        self.type = type
+        self.run_name = run_name
+        self.arguments = arguments
+
+    @staticmethod
+    def create_arg_string(keyword_arguments: Dict[str, Any]) -> str:
+        if keyword_arguments:
+            return str(keyword_arguments)
+        return NaN
+
+    def set_return_value_type(self):
+        if str(self.value) == "nan":
+            pass
+        elif self.return_format in [int, float, str, dict, bool]:
+            try:
+                self.value = self.return_format(self.value)
+            except TypeError as e:
+                raise InvalidReturnValue(
+                    "Invalid return self.value: {}, was expecting"
+                    " '{}'".format(e, str(self.return_format))
+                )
+        elif self.return_format == "custom":
+            if not isinstance(self.value, list):
+                raise InvalidReturnValue("Improperly formatted custom return type")
+            else:
+                return
+        else:
+            raise InvalidReturnValue(
+                "Unsupported type: '{}'".format(str(self.return_format))
+            )
+
+    def update_keys(self, **kwargs):
+        for key, value in kwargs.items():
+            setattr(self, key, value)
+
+    def __repr__(self) -> str:
+        return str(self.to_dict())
+
+    def to_dict(self) -> dict:
+        return {
+            "value": self.value,
+            "metric": self.metric,
+            "date": self.date,
+            "column_name": self.column_name,
+            "return_format": self.types_repr[self.return_format],
+            "type": self.type,
+            "run_name": self.run_name,
+            "arguments": self.arguments,
+        }
+
+
 class BackendBase(abc.ABC):
     def __init__(self, config):
         self.config = config
@@ -62,10 +135,11 @@ class BackendBase(abc.ABC):
         date: datetime.datetime,
         function_name: str,
         viz_type: str = "numerical",
-        return_format: str = "float",
+        return_format: str = float,
+        run_name: str = None,
         kwargs: Dict[str, Any] = None,
         overwrite_kwargs: Dict[str, Any] = None,
-    ):
+    ) -> MetricResult:
         kwargs = {} if kwargs is None else kwargs
         original_kwargs = copy.copy(kwargs)
         if overwrite_kwargs is not None:
@@ -73,35 +147,18 @@ class BackendBase(abc.ABC):
                 if arg in overwrite_kwargs:
                     kwargs[arg] = overwrite_kwargs[arg]
         value = function(data, column, **kwargs)
-        return {
-            "value": value,
-            "metric": function_name,
-            "arguments": _create_arg_string(original_kwargs),
-            "date": date,
-            "column_name": column,
-            "return_format": return_format,
-            "type": viz_type,
-        }
-
-    def set_return_value_type(self, value: type, return_format: type):
-        if str(value) == "nan":
-            return value
-        if return_format in [int, float, str, dict, bool]:
-            try:
-                value = return_format(value)
-            except TypeError as e:
-                raise InvalidReturnValue(
-                    "Invalid return value: {}, was expecting"
-                    " '{}'".format(e, str(return_format))
-                )
-        elif return_format == "custom":
-            if not isinstance(value, list):
-                raise InvalidReturnValue("Improperly formatted custom return type")
-        else:
-            raise InvalidReturnValue(
-                "Unsupported type: '{}'".format(str(return_format))
-            )
-        return value
+        argument_str = MetricResult.create_arg_string(original_kwargs)
+        metric_res = MetricResult(
+            value=value,
+            metric=function_name,
+            arguments=argument_str,
+            date=date,
+            column_name=column,
+            return_format=return_format,
+            type=viz_type,
+            run_name=run_name,
+        )
+        return metric_res
 
     @abc.abstractmethod
     def get_dtype(self, data, column):
@@ -120,7 +177,7 @@ class BackendBase(abc.ABC):
         return
 
     def write(self, conn, measures, project, batch_name, schema=None):
-        data = pd.DataFrame(measures)
+        data = pd.DataFrame([i.to_dict() for i in measures])
         data["insert_time"] = datetime.datetime.now().replace(tzinfo=None)
         data["batch_name"] = batch_name
 

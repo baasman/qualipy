@@ -57,8 +57,9 @@ def setup_auto_qpy(
 def setup_auto_qpy_sql_table(
     table_name: str,
     engine: sa.engine.base.Engine,
-    configuration_dir: str,
-    project_name: str,
+    project: qpy.Project = None,
+    configuration_dir: str = None,
+    project_name: str = None,
     schema: str = None,
     columns: List[str] = None,
     functions: list = None,
@@ -68,7 +69,12 @@ def setup_auto_qpy_sql_table(
     int_as_cat: Union[bool, int] = 25,
 ):
     qpy.generate_config(configuration_dir, create_in_empty_dir=True)
-    project = qpy.Project(project_name=project_name, config_dir=configuration_dir)
+    if project is None:
+        if project_name is None or configuration_dir is None:
+            raise ValueError(
+                "Must supply project_name and configuration_dir if not giving project"
+            )
+        project = qpy.Project(project_name=project_name, config_dir=configuration_dir)
     full_table = qpy.sql_table(
         table_name=table_name,
         engine=engine,
@@ -181,7 +187,8 @@ def auto_qpy_single_batch_sql(
     table_name: str,
     engine: sa.engine.base.Engine,
     project: Union[qpy.Project, str],
-    configuration_dir: str,
+    batch: qpy.run.Qualipy = None,
+    configuration_dir: str = None,
     schema: str = None,
     stratify: str = None,
     run_anomaly: bool = True,
@@ -193,15 +200,18 @@ def auto_qpy_single_batch_sql(
     overwrite_arguments: dict = None,
 ):
     if isinstance(project, str):
+        if configuration_dir is None:
+            raise Exception("Must specify configuration_dir if project is a str")
         project = qpy.Project(
             project_name=project, config_dir=configuration_dir, re_init=True
         )
-    qualipy = qpy.Qualipy(
-        project=project,
-        backend="sql",
-        batch_name=batch_name,
-        overwrite_arguments=overwrite_arguments,
-    )
+    if batch is None:
+        batch = qpy.Qualipy(
+            project=project,
+            backend="sql",
+            batch_name=batch_name,
+            overwrite_arguments=overwrite_arguments,
+        )
 
     if run_name is None:
         run_name = "auto-qpy"
@@ -209,9 +219,9 @@ def auto_qpy_single_batch_sql(
     qpy_data = qpy.backends.sql_backend.dataset.SQLData(
         engine=engine, table_name=table_name, schema=schema
     )
-    qualipy.set_dataset(qpy_data, run_name=run_name, columns=column_collection_name)
+    batch.set_dataset(qpy_data, run_name=run_name, columns=column_collection_name)
 
-    qualipy.run(autocommit=commit)
+    batch.run(autocommit=commit)
 
     if produce_report:
         qpy.cli.produce_anomaly_report_cli(
@@ -220,4 +230,4 @@ def auto_qpy_single_batch_sql(
             run_anomaly=run_anomaly,
             run_name=run_name,
         )
-    return qualipy
+    return batch

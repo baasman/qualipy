@@ -76,7 +76,7 @@ def produce_anomaly_report_cli(
     t1=None,
     t2=None,
     out_file=None,
-    run_name=None
+    run_name=None,
 ):
     config_dir = os.path.expanduser(config_dir)
     view = AnomalyReport(
@@ -87,7 +87,7 @@ def produce_anomaly_report_cli(
         only_show_anomaly=only_show_anomaly,
         t1=t1,
         t2=t2,
-        run_name=run_name
+        run_name=run_name,
     )
     rendered_page = view.render(
         template=f"anomaly.j2", title="Anomaly Report", project_name=project_name
@@ -288,4 +288,5 @@ if __name__ == "__main__":
 
     sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
 
-    produce_anomaly_report(sys.argv[1:])  # pylint: disable=no-value-for-parameter
+    clear_data_cli(config_dir="/data/baasman/.omop-snapshot")
+    # clear_data(sys.argv[1:])  # pylint: disable=no-value-for-parameter
