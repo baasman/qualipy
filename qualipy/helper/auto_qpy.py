@@ -198,7 +198,7 @@ def auto_qpy_single_batch_sql(
     column_collection_name: List[str] = None,
     produce_report: bool = True,
     overwrite_arguments: dict = None,
-):
+) -> qpy.Qualipy:
     if isinstance(project, str):
         if configuration_dir is None:
             raise Exception("Must specify configuration_dir if project is a str")

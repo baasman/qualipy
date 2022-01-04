@@ -222,3 +222,17 @@ def is_unique(data, column):
     distinct = counts[0][0]
     total = counts[0][1]
     return distinct == total
+
+
+@function(return_format=bool)
+def number_of_unique(data, column):
+    counts = data.engine.execute(
+        sa.select(
+            [
+                sa.func.count(sa.distinct(sa.column(column))),
+            ]
+        ).select_from(data._table)
+    ).fetchall()
+
+    distinct = counts[0][0]
+    return distinct

@@ -53,7 +53,7 @@ def _generate_config(config_dir, overwrite_kwargs: dict = None):
 
 
 def generate_config(
-    config_dir, create_in_empty_dir=False, db_url=None, overwrite_kwargs: dict = None
+    config_dir, create_in_empty_dir=False, overwrite_kwargs: dict = None
 ):
     config_dir = os.path.expanduser(config_dir)
     if not os.path.exists(config_dir):

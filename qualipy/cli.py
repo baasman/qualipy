@@ -4,12 +4,17 @@ import datetime
 from functools import reduce
 
 import click
+import sqlalchemy as sa
+
+from qualipy.helper.auto_qpy import auto_qpy_single_batch_sql
 from qualipy.anomaly.anomaly import _run_anomaly
 from qualipy.backends.pandas_backend.generator import BackendPandas
-from qualipy.project import generate_config as generate_config_, Project
+from qualipy.project import generate_config as generate_config_, Project, load_project
 from qualipy.reports.anomaly import AnomalyReport
 from qualipy.reports.comparison import ComparisonReport
 from qualipy.reports.batch import BatchReport
+from qualipy.helper._cli import _setup_pandas_table_project, _setup_sql_table_project
+import qualipy as qpy
 
 
 # DEPLOYMENT_OPTIONS = {"flask": FlaskDeploy, "gunicorn": GUnicornDeploy}
@@ -30,7 +35,8 @@ def qualipy():
 
 @qualipy.command()
 @click.argument("config_dir_path")
-def generate_config(config_dir_path):
+@click.option("--keyword_arg", "--kwarg", multiple=True)
+def generate_config(config_dir_path, keyword_arg):
     """
     Arguments:
         config_dir_path: The path to the stored directory
@@ -42,7 +48,9 @@ def generate_config(config_dir_path):
         * models - This folder will store binary versions of your anomaly models used for all projects
             specified in the config
     """
-    generate_config_(config_dir=config_dir_path)
+    overwrite_kwargs = [i.split(":::") for i in keyword_arg]
+    overwrite_kwargs = {k[0]: k[1] for k in overwrite_kwargs}
+    generate_config_(config_dir=config_dir_path, overwrite_kwargs=overwrite_kwargs)
 
 
 @qualipy.command()
@@ -266,10 +274,12 @@ def clear_data_cli(config_dir, project_name, recreate=True, confirm=True):
             "Do you wish to continue? Warning - this will permanently delete data"
         ):
             project.delete_data(recreate=recreate)
-            project.delete_from_project_config()
+            if not recreate:
+                project.delete_from_project_config()
     else:
         project.delete_data(recreate=recreate)
-        project.delete_from_project_config()
+        if not recreate:
+            project.delete_from_project_config()
 
 
 @qualipy.command()
@@ -281,6 +291,66 @@ def clear_data(config_dir, project_name, recreate, confirm):
     clear_data_cli(config_dir, project_name, recreate, confirm)
 
 
+@qualipy.command()
+@click.argument("config_dir")
+@click.argument("project_name")
+def setup_project(config_dir, project_name):
+    with open(os.path.join(config_dir, "config.json"), "r") as f:
+        conf = json.load(f)
+
+    if "PROJECT_SPEC" not in conf:
+        raise Exception(
+            f"Must specify PROJECT_SPEC in config to use this functionality"
+        )
+
+    if project_name not in conf["PROJECT_SPEC"]:
+        raise Exception(f"Must specify {project_name} in PROJECT_SPEC")
+
+    spec = conf["PROJECT_SPEC"][project_name]
+    project = _setup_sql_table_project(
+        conf=conf, config_dir=config_dir, project_name=project_name, spec=spec
+    )
+    project.serialize_project()
+
+
+@qualipy.command()
+@click.argument("config_dir")
+@click.argument("project_name")
+@click.option("--table_name", multiple=True, required=True)
+@click.option("--tracking_db", required=True)
+@click.option("--run_anomaly", default=False)
+@click.option("--produce_report", default=False)
+@click.option("--run_name", default=None)
+def run_sql_batch(
+    config_dir,
+    project_name,
+    table_name,
+    tracking_db,
+    run_anomaly,
+    produce_report,
+    run_name,
+):
+    project = load_project(
+        config_dir=config_dir, project_name=project_name, backend="sql"
+    )
+    url = sa.engine.URL.create(**project.config["TRACKING_DBS"][tracking_db])
+    tracking_engine = sa.create_engine(url)
+    run_name = table_name if run_name is None else run_name
+    batch = None
+    for table in table_name:
+        batch = auto_qpy_single_batch_sql(
+            batch=batch,
+            table_name=table,
+            project=project,
+            run_anomaly=run_anomaly,
+            run_name=run_name,
+            produce_report=produce_report,
+            engine=tracking_engine,
+            commit=False,
+        )
+    batch.commit()
+
+
 if __name__ == "__main__":
     # I do the following to debug cli commands, ignore
 
@@ -288,5 +358,4 @@ if __name__ == "__main__":
 
     sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
 
-    clear_data_cli(config_dir="/data/baasman/.omop-snapshot")
-    # clear_data(sys.argv[1:])  # pylint: disable=no-value-for-parameter
+    setup_project(sys.argv[1:])  # pylint: disable=no-value-for-parameter

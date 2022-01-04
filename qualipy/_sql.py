@@ -19,7 +19,7 @@ class SQL:
         self.schema = schema
         self.meta = sa.MetaData(bind=self.engine, schema=schema)
 
-    def create_table(self, table_name: str) -> None:
+    def create_table(self, table_name: str, extend_existing: bool = False) -> None:
         exists = self.does_table_exist(table_name)
         if not exists:
             table = sa.Table(
@@ -36,10 +36,13 @@ class SQL:
                 sa.Column("run_name", sa.String, nullable=False),
                 sa.Column("value", sa.String, nullable=True),
                 sa.Column("insert_time", sa.DateTime, nullable=False),
+                extend_existing=extend_existing,
             )
             self.meta.create_all()
 
-    def create_anomaly_table(self, table_name: str) -> None:
+    def create_anomaly_table(
+        self, table_name: str, extend_existing: bool = False
+    ) -> None:
         exists = self.does_table_exist(table_name)
         if not exists:
             table = sa.Table(
@@ -58,6 +61,7 @@ class SQL:
                 sa.Column("value", sa.String, nullable=True),
                 sa.Column("severity", sa.String, nullable=True),
                 sa.Column("insert_time", sa.DateTime, nullable=False),
+                extend_existing=extend_existing,
             )
             self.meta.create_all()
 

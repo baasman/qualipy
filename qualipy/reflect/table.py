@@ -1,4 +1,5 @@
 from typing import Dict, List, Callable, Optional, Union
+import logging
 
 import sqlalchemy as sa
 import pandas as pd
@@ -11,6 +12,8 @@ from qualipy.backends.pandas_backend.pandas_types import (
     DateTimeType as pDateTimeType,
 )
 from qualipy.reflect.column import Column, column
+
+logger = logging.getLogger(__name__)
 
 
 PANDAS_INFER_TYPES = {
@@ -237,6 +240,10 @@ def sql_table(
             col_type = types[col_name]
         else:
             col_type = str(reflection["type"]).lower()
+        if isinstance(int_as_cat, int) and not isinstance(int_as_cat, bool):
+            logger.warning("Using int_as_cat as int can be slow on a large table")
+            raise NotImplementedError
+
         if "int" in col_type and int_as_cat:
             is_cat = True
         elif col_type in ["varchar", "string"]:

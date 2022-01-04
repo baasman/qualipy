@@ -68,6 +68,10 @@ def copy_function_spec(function: Union[Dict[str, Any], Callable]):
         copied_function.key_function = function.get("key", False)
         copied_function.valid_min_range = function.get("valid_min")
         copied_function.valid_max_range = function.get("valid_max")
+    elif isinstance(function, str):
+        copied_function = copy_func(import_function_by_name_full_path(function))
+        copied_function.arguments = {}
+        copied_function.key_function = False
     else:
         copied_function = copy_func(function)
         copied_function.arguments = {}
@@ -78,6 +82,14 @@ def copy_function_spec(function: Union[Dict[str, Any], Callable]):
 def import_function_by_name(name: str, backend: str) -> Callable:
     module = importlib.import_module(f"qualipy.backends.{backend}_backend.functions")
     return getattr(module, name)
+
+
+def import_function_by_name_full_path(name: str) -> Callable:
+    name = name.split(".")
+    module_name = ".".join(name[:-1])
+    function_name = name[-1]
+    module = importlib.import_module(module_name)
+    return getattr(module, function_name)
 
 
 def get_latest_insert_only(data, floor_datetime=False):

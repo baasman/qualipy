@@ -11,7 +11,7 @@ from qualipy.backends.sql_backend.functions import (
 
 import warnings
 import datetime
-from typing import Optional, Union, List, Dict, Any, Callable
+from typing import NoReturn, Optional, Union, List, Dict, Any, Callable
 import uuid
 import pickle
 import logging
@@ -28,7 +28,6 @@ Column = Dict[str, Union[str, bool, Dict[str, Callable]]]
 
 
 class BackendSQL(BackendBase):
-
     def set_schema(
         self, data, columns: Dict[str, Column], current_name: str
     ) -> Dict[str, Dict[str, Union[bool, str]]]:
@@ -87,7 +86,7 @@ class BackendSQL(BackendBase):
                 viz_type="data-characteristic",
                 kwargs={},
             )
-            unique["run_name"] = run_name
+            unique.update_keys(run_name=run_name)
         else:
             unique = None
         if specs["is_category"]:
@@ -99,11 +98,11 @@ class BackendSQL(BackendBase):
                 date=time_of_run,
                 viz_type="categorical",
                 kwargs={},
-                return_format="dict",
+                return_format=dict,
             )
-            value_props = None if str(value_props["value"]) == "nan" else value_props
+            value_props = None if str(value_props.value) == "nan" else value_props
             if value_props is not None:
-                value_props["run_name"] = run_name
+                value_props.update_keys(run_name=run_name)
         else:
             value_props = None
         perc_missing = self.generate_description(
@@ -115,11 +114,11 @@ class BackendSQL(BackendBase):
             viz_type="data-characteristic",
             kwargs={},
         )
-        perc_missing["run_name"] = run_name
+        perc_missing.update_keys(run_name=run_name)
         return unique, perc_missing, value_props
 
     def get_chunks(self, data, time_freq, time_column):
-        pass
+        raise NotImplementedError
 
     def overwrite_type(self, data, col, type):
         return data
