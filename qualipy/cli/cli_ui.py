@@ -1,4 +1,4 @@
-from qualipy import cli
+from qualipy.cli import cli
 
 from click_web import create_click_web_app
 

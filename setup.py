@@ -13,12 +13,6 @@ except FileNotFoundError:
 with open("requirements.txt") as f:
     required = f.read().splitlines()
 
-try:
-    os.mkdir(os.path.join(HOME, ".qualipy"))
-    os.mkdir(os.path.join(HOME, ".qualipy", "data"))
-except FileExistsError:
-    pass
-
 setup(
     name="qualipy",
     version="0.1.0",
@@ -39,7 +33,7 @@ setup(
     install_requires=required,
     entry_points="""
             [console_scripts]
-            qualipy=qualipy.cli:qualipy
+            qualipy=qualipy.cli.cli:qualipy
         """,
     include_package_data=True,
     python_requires=">=3.6",
