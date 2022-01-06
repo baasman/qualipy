@@ -7,11 +7,13 @@ import sqlalchemy as sa
 import qualipy as qpy
 
 
-def setup_auto_qpy(
+def setup_auto_qpy_pandas_table(
     configuration_dir: str,
     project_name: str,
+    columns: str = None,
     sample_data: pd.DataFrame = None,
     functions: list = None,
+    extra_functions: Dict[str, list] = None,
     types: dict = None,
     overwrite_type: bool = False,
     ignore: list = None,
@@ -27,9 +29,11 @@ def setup_auto_qpy(
         # NOTE: this is not working because the project overwrites the key
         for name, group in sample_data.groupby(split_on):
             new_table = qpy.pandas_table(
+                columns=columns,
                 infer_schema=True,
                 sample_dataset=group,
                 functions=functions,
+                extra_functions=extra_functions,
                 types=types,
                 overwrite_type=overwrite_type,
                 ignore=ignore,
@@ -41,9 +45,11 @@ def setup_auto_qpy(
             project.add_table(new_table)
     else:
         full_table = qpy.pandas_table(
+            columns=columns,
             infer_schema=True,
             sample_dataset=sample_data,
             functions=functions,
+            extra_functions=extra_functions,
             types=types,
             overwrite_type=overwrite_type,
             ignore=ignore,
@@ -146,9 +152,11 @@ def auto_qpy_chunked(
     )
 
 
-def auto_qpy_single_batch(
+def auto_qpy_single_batch_pandas(
     data: pd.DataFrame,
     project: Union[qpy.Project, str],
+    batch: qpy.run.Qualipy = None,
+    batch_name: str = None,
     configuration_dir: str = None,
     stratify: str = None,
     run_anomaly: bool = True,
@@ -156,12 +164,19 @@ def auto_qpy_single_batch(
     commit: bool = True,
     column_collection_name: List[str] = None,
     produce_report: bool = True,
+    overwrite_arguments: dict = None,
 ):
     if isinstance(project, str):
         project = qpy.Project(
             project_name=project, config_dir=configuration_dir, re_init=True
         )
-    qualipy = qpy.Qualipy(project=project)
+    if batch is None:
+        batch = qpy.Qualipy(
+            project=project,
+            backend="pandas",
+            batch_name=batch_name,
+            overwrite_arguments=overwrite_arguments,
+        )
 
     if run_name is None:
         run_name = "auto-qpy"
@@ -169,9 +184,9 @@ def auto_qpy_single_batch(
     qpy_data = qpy.backends.pandas_backend.dataset.PandasData(data)
     if stratify is not None:
         qpy_data.set_stratify_rule(stratify)
-    qualipy.set_dataset(qpy_data, run_name=run_name, columns=column_collection_name)
+    batch.set_dataset(qpy_data, run_name=run_name, columns=column_collection_name)
 
-    qualipy.run(autocommit=commit)
+    batch.run(autocommit=commit)
 
     if produce_report:
         qpy.cli.produce_anomaly_report_cli(
@@ -180,7 +195,7 @@ def auto_qpy_single_batch(
             run_anomaly=run_anomaly,
             run_name=run_name,
         )
-    return qualipy
+    return batch
 
 
 def auto_qpy_single_batch_sql(

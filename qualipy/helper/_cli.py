@@ -1,4 +1,7 @@
-from qualipy.helper.auto_qpy import setup_auto_qpy_sql_table
+from qualipy.helper.auto_qpy import (
+    setup_auto_qpy_sql_table,
+    setup_auto_qpy_pandas_table,
+)
 import qualipy as qpy
 
 import sqlalchemy as sa
@@ -32,5 +35,30 @@ def _setup_sql_table_project(conf, config_dir, project_name, spec) -> qpy.Projec
     return table
 
 
-def _setup_pandas_table_project(spec):
-    table_name = spec["table_name"]
+def _setup_pandas_table_project(
+    sample_data, conf, config_dir, project_name, spec
+) -> qpy.Project:
+    columns = spec.get("columns", "all")
+    functions = spec.get("functions")
+    extra_functions = spec.get("extra_functions")
+    types = spec.get("types")
+    ignore = spec.get("ignore")
+    int_as_cat = spec.get("int_as_cat")
+    overwrite_type = spec.get("overwrite_type")
+    as_cat = spec.get("as_cat")
+    split_on = spec.get("split_on")
+    table = setup_auto_qpy_pandas_table(
+        sample_data=sample_data,
+        project_name=project_name,
+        configuration_dir=config_dir,
+        columns=columns,
+        functions=functions,
+        extra_functions=extra_functions,
+        types=types,
+        ignore=ignore,
+        int_as_cat=int_as_cat,
+        overwrite_type=overwrite_type,
+        as_cat=as_cat,
+        split_on=split_on,
+    )
+    return table
