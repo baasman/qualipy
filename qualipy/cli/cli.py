@@ -26,3 +26,14 @@ qualipy.add_command(generate_config)
 qualipy.add_command(add_tracking_db)
 qualipy.add_command(setup_pandas_project)
 qualipy.add_command(setup_sql_project)
+
+
+if __name__ == "__main__":
+    # I do the following to debug cli commands, ignore
+
+    import sys
+    import os
+
+    sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
+
+    run_pandas_batch(sys.argv[1:])  # pylint: disable=no-value-for-parameter

@@ -1,8 +1,7 @@
 import os
 import json
-import datetime
-from functools import reduce
 from collections import defaultdict
+import logging
 
 import click
 import sqlalchemy as sa
@@ -12,19 +11,20 @@ from qualipy.helper.auto_qpy import (
     auto_qpy_single_batch_pandas,
     auto_qpy_single_batch_sql,
 )
-from qualipy.anomaly.anomaly import _run_anomaly
-from qualipy.backends.pandas_backend.generator import BackendPandas
-from qualipy.project import generate_config as generate_config_, Project, load_project
-from qualipy.reports.anomaly import AnomalyReport
-from qualipy.reports.comparison import ComparisonReport
-from qualipy.reports.batch import BatchReport
+from qualipy.project import generate_config as generate_config_, load_project
 from qualipy.helper._cli import _setup_pandas_table_project, _setup_sql_table_project
-import qualipy as qpy
+from qualipy.cli.report.util import produce_anomaly_report_cli, produce_batch_report_cli
+from qualipy.cli.qualipy.util import clear_data_cli
+
+
+logger = logging.getLogger()
 
 
 @click.command()
 @click.argument("config_dir")
-@click.option("--keyword_arg", "--kwarg", multiple=True)
+@click.option(
+    "--keyword_arg", "--kwarg", multiple=True, nargs=2, default=None, type=(str, str)
+)
 def generate_config(config_dir, keyword_arg):
     """
     Arguments:
@@ -37,8 +37,12 @@ def generate_config(config_dir, keyword_arg):
         * models - This folder will store binary versions of your anomaly models used for all projects
             specified in the config
     """
-    overwrite_kwargs = [i.split(":::") for i in keyword_arg]
-    overwrite_kwargs = {k[0]: k[1] for k in overwrite_kwargs}
+    if keyword_arg is not None:
+        overwrite_kwargs = {}
+        for inp in keyword_arg:
+            overwrite_kwargs[inp[0]] = inp[1]
+    else:
+        overwrite_kwargs = None
     generate_config_(config_dir=config_dir, overwrite_kwargs=overwrite_kwargs)
 
 
@@ -49,8 +53,10 @@ def generate_config(config_dir, keyword_arg):
 @click.option("--username", required=True)
 @click.option("--password", required=True)
 @click.option("--host", required=True)
-@click.option("--port", required=True)
-@click.option("--query", required=False, nargs=2, type=(str, str), default=None)
+@click.option("--port", required=True, type=int)
+@click.option(
+    "--query", required=False, multiple=True, nargs=2, type=(str, str), default=None
+)
 def add_tracking_db(
     config_dir, name, drivername, username, password, host, port, query
 ):
@@ -80,17 +86,23 @@ def add_tracking_db(
 @click.command()
 @click.argument("config_dir")
 @click.argument("project_name")
-@click.option("--tracking-db", type=str, required=True)
-@click.option("--table-name", type=str, required=True)
-@click.option("--schema", type=str)
+@click.option("--tracking-db", type=str, required=False, default=None)
+@click.option("--table-name", type=str, required=False, default=None)
+@click.option("--schema", type=str, default=None)
 @click.option("--int_as_cat", type=bool, default=False, show_default=True)
-@click.option("--columns", type=str, help="To specify multiple, use comma as delimiter")
+@click.option(
+    "--columns",
+    type=str,
+    help="To specify multiple, use comma as delimiter",
+    required=False,
+)
 @click.option(
     "--function",
     nargs=2,
     type=(str, str),
     multiple=True,
     help="This expects two values. The first is the ",
+    required=False,
 )
 def setup_sql_project(
     config_dir,
@@ -111,13 +123,16 @@ def setup_sql_project(
     for inp in function:
         extra_functions[inp[0]].append(inp[1])
 
+    if columns != "all" and columns is not None:
+        columns = columns.split(",")
+
     project_spec = {
         "table_type": "sql",
         "db": tracking_db,
         "table_name": table_name,
         "int_as_cat": int_as_cat,
         "schema": schema,
-        "columns": columns.split(","),
+        "columns": columns,
         "extra_functions": extra_functions,
     }
     conf["PROJECT_SPEC"][project_name] = project_spec
@@ -237,9 +252,10 @@ def run_sql_batch(
     )
     url = sa.engine.URL.create(**project.config["TRACKING_DBS"][tracking_db])
     tracking_engine = sa.create_engine(url)
-    run_name = table_name if run_name is None else run_name
     batch = None
     for table in table_name:
+        run_name = table if run_name is None else run_name
+        logger.info(f"Table: {table}")
         batch = auto_qpy_single_batch_sql(
             batch=batch,
             table_name=table,
@@ -251,6 +267,13 @@ def run_sql_batch(
             commit=False,
         )
     batch.commit()
+    if produce_report:
+        produce_anomaly_report_cli(
+            config_dir=project.config_dir,
+            project_name=project.project_name,
+            run_anomaly=run_anomaly,
+            run_name=run_name,
+        )
 
 
 @click.command()
@@ -296,30 +319,12 @@ def run_pandas_batch(
         )
     batch.commit()
     if produce_report:
-        qpy.cli.produce_anomaly_report_cli(
+        produce_anomaly_report_cli(
             config_dir=project.config_dir,
             project_name=project.project_name,
             run_anomaly=run_anomaly,
             run_name=run_name,
         )
-
-
-def clear_data_cli(config_dir, project_name, recreate=True, confirm=True):
-    project = Project(config_dir=config_dir, project_name=project_name, re_init=True)
-    print(
-        f"Preparing to delete table {project_name} as specified in config dir {config_dir}"
-    )
-    if confirm:
-        if click.confirm(
-            "Do you wish to continue? Warning - this will permanently delete data"
-        ):
-            project.delete_data(recreate=recreate)
-            if not recreate:
-                project.delete_from_project_config()
-    else:
-        project.delete_data(recreate=recreate)
-        if not recreate:
-            project.delete_from_project_config()
 
 
 @click.command()

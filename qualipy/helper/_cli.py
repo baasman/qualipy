@@ -11,15 +11,18 @@ def _setup_sql_table_project(conf, config_dir, project_name, spec) -> qpy.Projec
     table_name = spec["table_name"]
     schema = spec.get("schema")
     tracking_db = spec["db"]
-    url = sa.engine.URL.create(**conf["TRACKING_DBS"][tracking_db])
-    engine = sa.create_engine(url)
+    if tracking_db is not None:
+        url = sa.engine.URL.create(**conf["TRACKING_DBS"][tracking_db])
+        engine = sa.create_engine(url)
+    else:
+        engine = None
     columns = spec.get("columns", "all")
     functions = spec.get("functions")
     extra_functions = spec.get("extra_functions")
     types = spec.get("types")
     ignore = spec.get("ignore")
     int_as_cat = spec.get("int_as_cat")
-    table = setup_auto_qpy_sql_table(
+    project = setup_auto_qpy_sql_table(
         table_name=table_name,
         project_name=project_name,
         schema=schema,
@@ -32,7 +35,7 @@ def _setup_sql_table_project(conf, config_dir, project_name, spec) -> qpy.Projec
         ignore=ignore,
         int_as_cat=int_as_cat,
     )
-    return table
+    return project
 
 
 def _setup_pandas_table_project(

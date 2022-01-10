@@ -1,10 +1,14 @@
 import datetime
+import logging
 from typing import Union, List, Dict
 
 import pandas as pd
 import sqlalchemy as sa
 
 import qualipy as qpy
+
+
+logger = logging.getLogger(__name__)
 
 
 def setup_auto_qpy_pandas_table(
@@ -61,8 +65,8 @@ def setup_auto_qpy_pandas_table(
 
 
 def setup_auto_qpy_sql_table(
-    table_name: str,
-    engine: sa.engine.base.Engine,
+    table_name: str = None,
+    engine: sa.engine.base.Engine = None,
     project: qpy.Project = None,
     configuration_dir: str = None,
     project_name: str = None,
@@ -81,19 +85,22 @@ def setup_auto_qpy_sql_table(
                 "Must supply project_name and configuration_dir if not giving project"
             )
         project = qpy.Project(project_name=project_name, config_dir=configuration_dir)
-    full_table = qpy.sql_table(
-        table_name=table_name,
-        engine=engine,
-        schema=schema,
-        columns=columns,
-        functions=functions,
-        extra_functions=extra_functions,
-        ignore=ignore,
-        int_as_cat=int_as_cat,
-        bool_as_cat=True,
-        types=types,
-    )
-    project.add_table(full_table)
+    if table_name is not None:
+        full_table = qpy.sql_table(
+            table_name=table_name,
+            engine=engine,
+            schema=schema,
+            columns=columns,
+            functions=functions,
+            extra_functions=extra_functions,
+            ignore=ignore,
+            int_as_cat=int_as_cat,
+            bool_as_cat=True,
+            types=types,
+        )
+        project.add_table(full_table)
+    else:
+        logger.warning("Creating sql project without specifying a table")
     return project
 
 
