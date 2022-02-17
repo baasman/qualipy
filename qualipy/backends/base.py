@@ -9,6 +9,7 @@ import copy
 
 import pandas as pd
 from numpy import NaN
+import sqlalchemy as sa
 
 from qualipy.exceptions import InvalidReturnValue
 

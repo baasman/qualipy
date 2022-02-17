@@ -14,7 +14,7 @@ except ImportError:
 from sqlalchemy import create_engine
 import dill
 
-from qualipy.util import HOME
+from qualipy.util import HOME, copy_function_spec
 from qualipy._sql import DB_ENGINES
 from qualipy.reflect.column import Column
 from qualipy.reflect.table import Table
@@ -260,6 +260,9 @@ class Project(object):
             recreate=recreate,
         )
 
+    def delete_existing_batch(self, trans, batch_name):
+        self.sql_helper.delete_existing_batch(trans, batch_name)
+
     def delete_from_project_config(self):
         self.projects.pop(self.project_name, None)
 
@@ -287,12 +290,12 @@ class Project(object):
                 fun_name = function[0]
                 function_obj = function[1]
                 fun = codecs.encode(dill.dumps(function_obj), "base64").decode()
-                new_schema["functions"][idx] = (fun_name, fun)
+                new_schema["functions"][idx] = (function_obj.__module__, fun)
             for idx, function in enumerate(schema["extra_functions"]):
                 fun_name = function[0]
                 function_obj = function[1]
                 fun = codecs.encode(dill.dumps(function_obj), "base64").decode()
-                new_schema["extra_functions"][idx] = (fun_name, fun)
+                new_schema["extra_functions"][idx] = (function_obj.__module__, fun)
             new_schema["type"] = str(new_schema["type"])
             serialized_dict[col_name] = new_schema
         self.projects[self.project_name] = serialized_dict
@@ -327,9 +330,15 @@ class Project(object):
 
 
 def load_project(
-    config_dir: str, project_name: str, backend: str = "pandas"
+    config_dir: str,
+    project_name: str,
+    backend: str = "pandas",
+    reload_functions: bool = None,
 ) -> Project:
     config_dir = os.path.expanduser(config_dir)
+    with open(os.path.join(config_dir, "config.json"), "r") as f:
+        config = json.loads(f.read())
+    project_spec = config["PROJECT_SPEC"][project_name]
     project_file_path = os.path.join(config_dir, "projects.json")
     with open(project_file_path, "r") as f:
         projects = json.loads(f.read())
@@ -342,16 +351,35 @@ def load_project(
     reconstructed_dict = {}
     for col_name, schema in project.items():
         new_schema = schema
-        for idx, function in enumerate(schema["functions"]):
-            fun_name = function[0]
-            function_obj = function[1]
-            fun = dill.loads(codecs.decode(function_obj.encode(), "base64"))
-            new_schema["functions"][idx] = (fun_name, fun)
-        for idx, function in enumerate(schema["extra_functions"]):
-            fun_name = function[0]
-            function_obj = function[1]
-            fun = dill.loads(codecs.decode(function_obj.encode(), "base64"))
-            new_schema["extra_functions"][idx] = (fun_name, fun)
+        if not reload_functions:
+            for idx, function in enumerate(schema["functions"]):
+                fun_name = function[0]
+                function_obj = function[1]
+                fun = dill.loads(codecs.decode(function_obj.encode(), "base64"))
+                new_schema["functions"][idx] = (fun_name, fun)
+            for idx, function in enumerate(schema["extra_functions"]):
+                fun_name = function[0]
+                function_obj = function[1]
+                fun = dill.loads(codecs.decode(function_obj.encode(), "base64"))
+                new_schema["extra_functions"][idx] = (fun_name, fun)
+        else:
+            for idx, function in enumerate(schema["functions"]):
+                fun_name = function[0]
+                function_obj = function[1]
+                function_obj = copy_function_spec(fun_name)
+                new_schema["functions"][idx] = (
+                    function_obj.__name__,
+                    function_obj,
+                )
+            for idx, function in enumerate(schema["extra_functions"]):
+                fun_name = function[0]
+                function_obj = function[1]
+                function_obj = copy_function_spec(fun_name)
+                new_schema["extra_functions"][idx] = (
+                    function_obj.__name__,
+                    function_obj,
+                )
+
         if backend == "pandas":
             new_schema["type"] = data_types[new_schema["type"]]()
         reconstructed_dict[col_name] = new_schema

@@ -205,6 +205,36 @@ def auto_qpy_single_batch_pandas(
     return batch
 
 
+def _set_sql_data(engine, table_name, schema, custom_select_sql=None, backend="sql"):
+    qpy_data = qpy.backends.sql_backend.dataset.SQLData(
+        engine=engine,
+        table_name=table_name,
+        schema=schema,
+        custom_select_sql=custom_select_sql,
+        backend=backend,
+    )
+    return qpy_data
+
+
+def _set_spark_sql_data(
+    engine,
+    table_name,
+    schema,
+    spark_settings,
+    custom_select_sql=None,
+    backend="spark-sql",
+):
+    qpy_data = qpy.backends.sql_backend.dataset.SparkSQLData(
+        spark_config=spark_settings,
+        engine=engine,
+        table_name=table_name,
+        schema=schema,
+        custom_select_sql=custom_select_sql,
+        backend=backend,
+    )
+    return qpy_data
+
+
 def auto_qpy_single_batch_sql(
     table_name: str,
     engine: sa.engine.base.Engine,
@@ -220,6 +250,9 @@ def auto_qpy_single_batch_sql(
     column_collection_name: List[str] = None,
     produce_report: bool = True,
     overwrite_arguments: dict = None,
+    use_spark: bool = False,
+    custom_select_sql: str = None,
+    backend: str = "sql",
 ) -> qpy.Qualipy:
     if isinstance(project, str):
         if configuration_dir is None:
@@ -230,7 +263,7 @@ def auto_qpy_single_batch_sql(
     if batch is None:
         batch = qpy.Qualipy(
             project=project,
-            backend="sql",
+            backend=backend,
             batch_name=batch_name,
             overwrite_arguments=overwrite_arguments,
         )
@@ -238,9 +271,24 @@ def auto_qpy_single_batch_sql(
     if run_name is None:
         run_name = "auto-qpy"
 
-    qpy_data = qpy.backends.sql_backend.dataset.SQLData(
-        engine=engine, table_name=table_name, schema=schema
-    )
+    if use_spark:
+        qpy_data = _set_spark_sql_data(
+            engine=engine,
+            table_name=table_name,
+            schema=schema,
+            spark_settings=project.config["SPARK_CONN"],
+            custom_select_sql=custom_select_sql,
+            backend=backend,
+        )
+    else:
+        qpy_data = _set_sql_data(
+            engine=engine,
+            table_name=table_name,
+            schema=schema,
+            custom_select_sql=custom_select_sql,
+            backend=backend,
+        )
+
     batch.set_dataset(qpy_data, run_name=run_name, columns=column_collection_name)
 
     batch.run(autocommit=commit)

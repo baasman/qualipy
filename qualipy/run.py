@@ -180,7 +180,10 @@ class Qualipy(object):
         """
         # NOTE: if sqldata but pandas backend, should pull data and work on that!
         # also give option of query or taking last x rows
-        self._set_data(df, allowed_dataclasses=["SQLData", "PandasData", "SparkData"])
+        self._set_data(
+            df,
+            allowed_dataclasses=["SQLData", "PandasData", "SparkData", "SparkSQLData"],
+        )
         self.current_name = run_name if run_name is not None else self.run_n
         self._set_stratification(df)
         self.columns = self._set_columns(columns)
@@ -269,8 +272,10 @@ class Qualipy(object):
                     ret_columns[col] = items
         return ret_columns
 
-    def commit(self):
+    def commit(self, delete_existing_batch=False):
         with self.project.engine.begin() as conn:
+            if delete_existing_batch:
+                self._delete_existing_batch(conn)
             self._write(conn=conn, measures=self.total_measures)
         self.project.write_functions_to_config()
         self.project.update_config_and_project_files()
@@ -456,6 +461,7 @@ class Qualipy(object):
         return viz_type
 
     def _write(self, conn, measures: Measure) -> None:
+        # TODO: move this to sql class - not generator!!!!
         if self.chunk:
             batch_name = "from_chunked"
         else:
@@ -463,3 +469,10 @@ class Qualipy(object):
         self.generator.write(
             conn, measures, self.project, batch_name, schema=self.project.db_schema
         )
+
+    def _delete_existing_batch(self, conn):
+        if self.chunk:
+            batch_name = "from_chunked"
+        else:
+            batch_name = self.batch_name
+        self.project.delete_existing_batch(conn, batch_name=batch_name)

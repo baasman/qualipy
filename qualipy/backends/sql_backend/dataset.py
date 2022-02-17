@@ -1,10 +1,20 @@
+from black import main
 from qualipy.backends.base import BaseData
 from qualipy.backends.pandas_backend.dataset import PandasData
 
 import sqlalchemy as sa
 import pandas as pd
 
+try:
+    import pyspark
+except ImportError:
+    pass
+
 import uuid
+import logging
+
+
+logger = logging.getLogger(__name__)
 
 
 class SQLData(BaseData):
@@ -61,10 +71,13 @@ class SQLData(BaseData):
 
     def get_data(self):
         if self.backend == "pandas":
-            if not self.custom_select_sql:
-                query = f"select * from {self.table_name}"
+            if self.custom_select_sql is None:
+                query = sa.select("*").select_from(self._table)
             else:
                 query = self.custom_select_sql
+                # # temp
+                # query = query.replace("\\", "")
+            logger.info(query)
             data = pd.read_sql(query, self.engine)
             return data
         return self
@@ -105,6 +118,90 @@ class SQLData(BaseData):
 
     def _drop_temp_table(self):
         self._table.drop()
+
+    def set_custom_where(self, custom_where: str):
+        """Set this when you want a function to run on a subset of the table
+
+        Args:
+            custom_where: The where portion of a sql statement. This can then be used in
+                a function. See example in the documentation for more information
+
+        """
+        self.custom_where = custom_where
+
+    def _table_exists_fallback(self, table_name):
+        try:
+            self.engine.execute(
+                sa.select([sa.text("*")]).select_from(sa.text(table_name))
+            )
+        except:
+            return False
+        return True
+
+
+class SparkSQLData(BaseData):
+    """This is used when tracking a relational table"""
+
+    def __init__(
+        self,
+        spark_config: dict = None,
+        engine: sa.engine.base.Engine = None,
+        table_name: str = None,
+        schema: str = None,
+        conn_string: str = None,
+        custom_select_sql: str = None,
+        backend="spark-sql",
+    ):
+        # spark_config = []
+        conf = pyspark.SparkConf()
+        conf.setAll(pairs=[("spark.ui.port", 8081)])
+
+        self.spark = (
+            pyspark.sql.SparkSession.builder.appName("qualipy")
+            .master("local[32]")
+            .config(conf=conf)
+            .getOrCreate()
+        )
+        if engine is not None:
+            self.engine = engine
+        else:
+            self.engine = sa.create_engine(conn_string)
+
+        self.table_name = table_name
+        self.schema = schema
+
+        self._table = sa.Table(table_name, sa.MetaData(), schema=schema)
+        insp = sa.engine.reflection.Inspector.from_engine(self.engine)
+        self.table_reflection = insp.get_columns(table_name, schema=schema)
+        self.custom_where = None
+
+        # TODO: implement stratify logic. icluding when converted to pandas
+        self.stratify = False
+        self.backend = backend
+
+        query_string = (
+            custom_select_sql
+            if custom_select_sql is not None
+            else f"select * from {self.table_name}"
+        )
+
+        # temp
+        query_string = query_string.replace("\\", "")
+
+        table_df = (
+            self.spark.read.format("jdbc")
+            .option("url", spark_config["jdbc_url"])
+            .option("user", spark_config["username"])
+            .option("password", spark_config["password"])
+            .option("driver", "oracle.jdbc.driver.OracleDriver")
+            .option("dbtable", f"({query_string}) t")
+        )
+        self.table_df = table_df.load()
+
+    def get_data(self):
+        if self.backend == "pandas":
+            return self.table_df.toPandas()
+        return self
 
     def set_custom_where(self, custom_where: str):
         """Set this when you want a function to run on a subset of the table

@@ -64,16 +64,22 @@ def copy_func(f: Callable, name: Optional[str] = None) -> Callable:
 def copy_function_spec(function: Union[Dict[str, Any], Callable]):
     if isinstance(function, dict):
         copied_function = copy_func(function["function"])
+        copied_function.__name__ = function['function'].__name__
+        copied_function.__module__ = function['function'].__module__
         copied_function.arguments = function.get("parameters", {})
         copied_function.key_function = function.get("key", False)
         copied_function.valid_min_range = function.get("valid_min")
         copied_function.valid_max_range = function.get("valid_max")
     elif isinstance(function, str):
         copied_function = copy_func(import_function_by_name_full_path(function))
+        copied_function.__name__ = function.split(".")[-1]
+        copied_function.__module__ = function
         copied_function.arguments = {}
         copied_function.key_function = False
     else:
         copied_function = copy_func(function)
+        copied_function.__name__ = function.__name__
+        copied_function.__module__ = function.__module__
         copied_function.arguments = {}
         copied_function.key_function = False
     return copied_function

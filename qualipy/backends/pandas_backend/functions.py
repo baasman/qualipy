@@ -4,8 +4,31 @@ from scipy import stats
 
 import warnings
 
-from qualipy.util import get_column
 from qualipy.reflect.function import function
+
+
+@function(
+    return_format="custom",
+    custom_value_return_format=float,
+    allowed_arguments=["category"],
+)
+def aggregate_per_category(data, column, category):
+    aggs = data.groupby(category)[column].describe().reset_index()
+    custom_meas = []
+    for idx, row in aggs.iterrows():
+        for metric in aggs.columns[1:]:
+            if row[metric] is None:
+                value = np.NaN
+            else:
+                value = float(row[metric])
+            custom_meas.append(
+                {
+                    "value": value,
+                    "run_name": str(row[category]),
+                    "metric_name": metric,
+                }
+            )
+    return custom_meas
 
 
 # numeric

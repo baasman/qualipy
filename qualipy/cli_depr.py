@@ -196,4 +196,4 @@ if __name__ == "__main__":
 
     sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
 
-    generate_config(sys.argv[1:])  # pylint: disable=no-value-for-parameter
+    run_sql_batch(sys.argv[1:])  # pylint: disable=no-value-for-parameter

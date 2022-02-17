@@ -1,6 +1,17 @@
+import logging
 from typing import Any, Dict, List, Callable, Optional, Union
 from functools import wraps
 import importlib
+from dataclasses import dataclass
+
+
+logger = logging.getLogger(__name__)
+
+
+@dataclass
+class FunctionTracker:
+    name: str
+    module: str
 
 
 def function(
@@ -64,6 +75,7 @@ def function(
 
         @wraps(method)
         def wrapper(*args, **kwargs):
+            logger.info(f"Running method: {method.__name__}")
             return method(*args, **kwargs)
 
         return wrapper

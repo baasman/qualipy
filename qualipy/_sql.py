@@ -1,5 +1,5 @@
 import pandas as pd
-from sqlalchemy import engine
+from sqlalchemy import delete, engine
 import sqlalchemy as sa
 
 from typing import Callable, List, Union
@@ -126,6 +126,12 @@ class SQL:
                 'and name="{}"'.format(table_name)
             ).fetchone()
         return exists
+
+    def delete_existing_batch(self, trans, batch_name):
+        delete_query = sa.delete(self.table).where(
+            self.table.c.batch_name == str(batch_name)
+        )
+        trans.execute(delete_query)
 
 
 class SQLite(SQL):

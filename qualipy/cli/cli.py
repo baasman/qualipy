@@ -8,6 +8,7 @@ from qualipy.cli.qualipy.commands import (
     add_tracking_db,
     setup_pandas_project,
     setup_sql_project,
+    add_spark_conn,
 )
 
 
@@ -24,6 +25,7 @@ qualipy.add_command(run_sql_batch)
 qualipy.add_command(run_pandas_batch)
 qualipy.add_command(generate_config)
 qualipy.add_command(add_tracking_db)
+qualipy.add_command(add_spark_conn)
 qualipy.add_command(setup_pandas_project)
 qualipy.add_command(setup_sql_project)
 

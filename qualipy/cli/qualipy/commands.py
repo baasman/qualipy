@@ -1,9 +1,12 @@
+from imp import reload
 import os
 import json
 from collections import defaultdict
 import logging
+from turtle import back
 
 import click
+from requests import delete
 import sqlalchemy as sa
 import pandas as pd
 
@@ -85,34 +88,31 @@ def add_tracking_db(
 
 @click.command()
 @click.argument("config_dir")
-@click.argument("project_name")
-@click.option("--tracking-db", type=str, required=False, default=None)
-@click.option("--table-name", type=str, required=False, default=None)
-@click.option("--schema", type=str, default=None)
-@click.option("--int_as_cat", type=bool, default=False, show_default=True)
-@click.option(
-    "--columns",
-    type=str,
-    help="To specify multiple, use comma as delimiter",
-    required=False,
-)
-@click.option(
-    "--function",
-    nargs=2,
-    type=(str, str),
-    multiple=True,
-    help="This expects two values. The first is the ",
-    required=False,
-)
-def setup_sql_project(
+@click.option("--jdbc-url", required=True)
+@click.option("--username", required=True)
+@click.option("--password", required=True)
+def add_spark_conn(config_dir, jdbc_url, username, password):
+    with open(os.path.join(config_dir, "config.json"), "r") as f:
+        conf = json.load(f)
+    spec = dict(
+        jdbc_url=jdbc_url,
+        username=username,
+        password=password,
+    )
+    conf["SPARK_CONN"] = spec
+    with open(os.path.join(config_dir, "config.json"), "w") as f:
+        json.dump(conf, f)
+
+
+def _setup_sql_project(
     config_dir,
     project_name,
-    tracking_db,
-    table_name,
-    schema,
-    int_as_cat,
-    columns,
-    function,
+    tracking_db=None,
+    table_name=None,
+    schema=None,
+    int_as_cat=None,
+    columns=None,
+    function=None,
 ):
     with open(os.path.join(config_dir, "config.json"), "r") as f:
         conf = json.load(f)
@@ -142,6 +142,50 @@ def setup_sql_project(
         conf=conf, config_dir=config_dir, project_name=project_name, spec=project_spec
     )
     project.serialize_project()
+    return project
+
+
+@click.command()
+@click.argument("config_dir")
+@click.argument("project_name")
+@click.option("--tracking-db", type=str, required=False, default=None)
+@click.option("--table-name", type=str, required=False, default=None)
+@click.option("--schema", type=str, default=None)
+@click.option("--int_as_cat", type=bool, default=False, show_default=True)
+@click.option(
+    "--columns",
+    type=str,
+    help="To specify multiple, use comma as delimiter",
+    required=False,
+)
+@click.option(
+    "--function",
+    nargs=2,
+    type=(str, str),
+    multiple=True,
+    help="This expects two values. The first is the ",
+    required=False,
+)
+def setup_sql_project(
+    config_dir,
+    project_name,
+    tracking_db,
+    table_name,
+    schema,
+    int_as_cat,
+    columns,
+    function,
+):
+    _setup_sql_project(
+        config_dir=config_dir,
+        project_name=project_name,
+        tracking_db=tracking_db,
+        table_name=table_name,
+        schema=schema,
+        int_as_cat=int_as_cat,
+        columns=columns,
+        function=function,
+    )
 
 
 @click.command()
@@ -214,6 +258,66 @@ def setup_pandas_project(
         spec=project_spec,
     )
     project.serialize_project()
+    return project
+
+
+def _run_sql_batch(
+    config_dir,
+    project_name,
+    table_name,
+    tracking_db,
+    run_anomaly=False,
+    produce_report=False,
+    run_name=None,
+    use_spark=False,
+    overwrite_kwarg=None,
+    custom_select_sql=None,
+    backend="sql",
+    reload_functions=False,
+    batch_name: str = None,
+    delete_existing_batch: bool = False,
+):
+    if isinstance(project_name, str):
+        project = load_project(
+            config_dir=config_dir,
+            project_name=project_name,
+            backend="sql",
+            reload_functions=reload_functions,
+        )
+    else:
+        project = project_name
+    url = sa.engine.URL.create(**project.config["TRACKING_DBS"][tracking_db])
+    tracking_engine = sa.create_engine(url)
+    batch = None
+    if overwrite_kwarg is not None:
+        overwrite_kwarg = {i[0]: i[1] for i in overwrite_kwarg}
+    initial_run_name = run_name
+    for table in table_name:
+        run_name = table if initial_run_name is None else initial_run_name
+        logger.info(f"Table: {table}, Run name: {run_name}")
+        batch = auto_qpy_single_batch_sql(
+            batch=batch,
+            table_name=table,
+            project=project,
+            run_anomaly=run_anomaly,
+            run_name=run_name,
+            produce_report=False,
+            engine=tracking_engine,
+            overwrite_arguments=overwrite_kwarg,
+            commit=False,
+            use_spark=use_spark,
+            custom_select_sql=custom_select_sql,
+            backend=backend,
+            batch_name=batch_name,
+        )
+    batch.commit(delete_existing_batch=delete_existing_batch)
+    if produce_report:
+        produce_anomaly_report_cli(
+            config_dir=project.config_dir,
+            project_name=project.project_name,
+            run_anomaly=run_anomaly,
+            run_name=run_name,
+        )
 
 
 @click.command()
@@ -233,6 +337,37 @@ def setup_pandas_project(
 @click.option("--run-anomaly", default=False, help="Should the anomaly models run?")
 @click.option("--produce-report", default=False, help="Should the report be produced")
 @click.option("--run-name", default=None, help="Name to associate with the batch run")
+@click.option("--use-spark/--sql-only", default=False, help="Use spark when possible")
+@click.option(
+    "--overwrite-kwarg",
+    required=False,
+    multiple=True,
+    nargs=2,
+    type=(str, str),
+    default=None,
+)
+@click.option("--custom-select-sql", default=None, help="When creating a custom table")
+@click.option(
+    "--backend", default="sql", help="Will qpy functions expect pandas/spark/sql data"
+)
+@click.option(
+    "--reload-functions",
+    default=False,
+    required=False,
+    help="Do you want to reload the functions. Sometimes relevant",
+)
+@click.option(
+    "--batch-name",
+    default=None,
+    required=False,
+    help="Do you want to reload the functions. Sometimes relevant",
+)
+@click.option(
+    "--delete-existing-batch",
+    default=False,
+    required=False,
+    help="If batch of this name already exists, should it be deleted?",
+)
 def run_sql_batch(
     config_dir,
     project_name,
@@ -241,39 +376,35 @@ def run_sql_batch(
     run_anomaly,
     produce_report,
     run_name,
+    use_spark,
+    overwrite_kwarg,
+    custom_select_sql,
+    backend,
+    reload_functions,
+    batch_name,
+    delete_existing_batch,
 ):
     """
     Arguments:
         config_dir: The path to the configuration directory
         project_name: Existing project for which you want to run a batch
     """
-    project = load_project(
-        config_dir=config_dir, project_name=project_name, backend="sql"
+    _run_sql_batch(
+        config_dir=config_dir,
+        project_name=project_name,
+        table_name=table_name,
+        tracking_db=tracking_db,
+        run_anomaly=run_anomaly,
+        produce_report=produce_report,
+        run_name=run_name,
+        use_spark=use_spark,
+        overwrite_kwarg=overwrite_kwarg,
+        custom_select_sql=custom_select_sql,
+        backend=backend,
+        reload_functions=reload_functions,
+        batch_name=batch_name,
+        delete_existing_batch=delete_existing_batch,
     )
-    url = sa.engine.URL.create(**project.config["TRACKING_DBS"][tracking_db])
-    tracking_engine = sa.create_engine(url)
-    batch = None
-    for table in table_name:
-        run_name = table if run_name is None else run_name
-        logger.info(f"Table: {table}")
-        batch = auto_qpy_single_batch_sql(
-            batch=batch,
-            table_name=table,
-            project=project,
-            run_anomaly=run_anomaly,
-            run_name=run_name,
-            produce_report=False,
-            engine=tracking_engine,
-            commit=False,
-        )
-    batch.commit()
-    if produce_report:
-        produce_anomaly_report_cli(
-            config_dir=project.config_dir,
-            project_name=project.project_name,
-            run_anomaly=run_anomaly,
-            run_name=run_name,
-        )
 
 
 @click.command()
