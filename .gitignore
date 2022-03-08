@@ -52,6 +52,7 @@ docs/_static/
 docs/_templates/
 
 
+omop_snapshot/
 .idea/
 .vscode
 .ipynb_checkpoints
@@ -68,5 +69,3 @@ tests/.ipynb_checkpoints/qualipy-example-checkpoint.ipynb
 Pipfile.lock
 .qualipy/
 .history/
-omop_snapshot/
-omop_shapshot/table_size_snapshot.py

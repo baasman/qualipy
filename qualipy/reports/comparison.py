@@ -7,7 +7,7 @@ from qualipy.reports.base import BaseJinjaView, convert_to_markup
 from qualipy.project import Project
 from qualipy.util import get_project_data
 
-from qualipy.visualization.comparison import (
+from qualipy.reports.visualization.comparison import (
     plot_diffs_altair,
     bar_chart_comparison_altair,
     value_count_comparison_altair,

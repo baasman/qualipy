@@ -36,6 +36,7 @@ class SQL:
                 sa.Column("run_name", sa.String, nullable=False),
                 sa.Column("value", sa.String, nullable=True),
                 sa.Column("insert_time", sa.DateTime, nullable=False),
+                sa.Column("meta", sa.String, nullable=True),
                 extend_existing=extend_existing,
             )
             self.meta.create_all()

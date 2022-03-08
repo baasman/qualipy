@@ -14,10 +14,11 @@ from qualipy.helper.auto_qpy import (
     auto_qpy_single_batch_pandas,
     auto_qpy_single_batch_sql,
 )
-from qualipy.project import generate_config as generate_config_, load_project
+from qualipy.project import load_project
 from qualipy.helper._cli import _setup_pandas_table_project, _setup_sql_table_project
 from qualipy.cli.report.util import produce_anomaly_report_cli, produce_batch_report_cli
 from qualipy.cli.qualipy.util import clear_data_cli
+from qualipy.config import QualipyConfig, generate_config as generate_config_
 
 
 logger = logging.getLogger()
@@ -64,10 +65,10 @@ def add_tracking_db(
     config_dir, name, drivername, username, password, host, port, query
 ):
 
-    with open(os.path.join(config_dir, "config.json"), "r") as f:
-        conf = json.load(f)
-    if "TRACKING_DBS" not in conf:
-        conf["TRACKING_DBS"] = {}
+    config = QualipyConfig(config_dir=config_dir)
+
+    if "TRACKING_DBS" not in config:
+        config["TRACKING_DBS"] = {}
 
     spec = dict(
         drivername=drivername,
@@ -81,9 +82,8 @@ def add_tracking_db(
         for inp in query:
             query_args[inp[0]] = inp[1]
         spec["query"] = query_args
-    conf["TRACKING_DBS"][name] = spec
-    with open(os.path.join(config_dir, "config.json"), "w") as f:
-        json.dump(conf, f)
+    config["TRACKING_DBS"][name] = spec
+    config.dump()
 
 
 @click.command()
@@ -92,16 +92,14 @@ def add_tracking_db(
 @click.option("--username", required=True)
 @click.option("--password", required=True)
 def add_spark_conn(config_dir, jdbc_url, username, password):
-    with open(os.path.join(config_dir, "config.json"), "r") as f:
-        conf = json.load(f)
+    config = QualipyConfig(config_dir=config_dir)
     spec = dict(
         jdbc_url=jdbc_url,
         username=username,
         password=password,
     )
-    conf["SPARK_CONN"] = spec
-    with open(os.path.join(config_dir, "config.json"), "w") as f:
-        json.dump(conf, f)
+    config["SPARK_CONN"] = spec
+    config.dump()
 
 
 def _setup_sql_project(
@@ -114,10 +112,9 @@ def _setup_sql_project(
     columns=None,
     function=None,
 ):
-    with open(os.path.join(config_dir, "config.json"), "r") as f:
-        conf = json.load(f)
-    if "PROJECT_SPEC" not in conf:
-        conf["PROJECT_SPEC"] = {}
+    config = QualipyConfig(config_dir=config_dir)
+    if "PROJECT_SPEC" not in config:
+        config["PROJECT_SPEC"] = {}
 
     extra_functions = defaultdict(list)
     for inp in function:
@@ -135,11 +132,10 @@ def _setup_sql_project(
         "columns": columns,
         "extra_functions": extra_functions,
     }
-    conf["PROJECT_SPEC"][project_name] = project_spec
-    with open(os.path.join(config_dir, "config.json"), "w") as f:
-        json.dump(conf, f)
+    config["PROJECT_SPEC"][project_name] = project_spec
+    config.dump()
     project = _setup_sql_table_project(
-        conf=conf, config_dir=config_dir, project_name=project_name, spec=project_spec
+        conf=config, config_dir=config_dir, project_name=project_name, spec=project_spec
     )
     project.serialize_project()
     return project
@@ -226,10 +222,9 @@ def setup_pandas_project(
     columns,
     function,
 ):
-    with open(os.path.join(config_dir, "config.json"), "r") as f:
-        conf = json.load(f)
-    if "PROJECT_SPEC" not in conf:
-        conf["PROJECT_SPEC"] = {}
+    config = QualipyConfig(config_dir=config_dir)
+    if "PROJECT_SPEC" not in config:
+        config["PROJECT_SPEC"] = {}
 
     extra_functions = defaultdict(list)
     for inp in function:
@@ -247,12 +242,11 @@ def setup_pandas_project(
         "ignore": ignore,
         "extra_functions": extra_functions,
     }
-    conf["PROJECT_SPEC"][project_name] = project_spec
-    with open(os.path.join(config_dir, "config.json"), "w") as f:
-        json.dump(conf, f)
+    config["PROJECT_SPEC"][project_name] = project_spec
+    config.dump()
     project = _setup_pandas_table_project(
         sample_data=sample_data,
-        conf=conf,
+        conf=config,
         config_dir=config_dir,
         project_name=project_name,
         spec=project_spec,

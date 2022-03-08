@@ -20,7 +20,7 @@ from qualipy.reflect.column import Column
 from qualipy.reflect.table import Table
 from qualipy._schema import config_schema
 from qualipy.backends.data_types import PANDAS_TYPES
-from qualipy.config import DEFAULT_PROJECT_CONFIG
+from qualipy.config import QualipyConfig
 
 
 DATA_TYPES = {"pandas": PANDAS_TYPES, "sql": {}}
@@ -28,50 +28,6 @@ DATA_TYPES = {"pandas": PANDAS_TYPES, "sql": {}}
 
 def _validate_project_name(project_name):
     assert "-" not in project_name
-
-
-def set_default_config(config_dir, overwrite_kwargs=None):
-    if "QUALIPY_DB" not in overwrite_kwargs:
-        db_url = f'sqlite:///{os.path.join(config_dir, "qualipy.db")}'
-        overwrite_kwargs["QUALIPY_DB"] = db_url
-    return overwrite_kwargs
-
-
-def _generate_config(config_dir, overwrite_kwargs: dict = None):
-    overwrite_kwargs = {} if overwrite_kwargs is None else overwrite_kwargs
-    os.makedirs(config_dir, exist_ok=True)
-    with open(os.path.join(config_dir, "config.json"), "w") as f:
-        json.dump(set_default_config(config_dir, overwrite_kwargs), f)
-    with open(os.path.join(config_dir, "projects.json"), "w") as f:
-        json.dump({}, f)
-    os.makedirs(os.path.join(config_dir, "models"), exist_ok=True)
-    os.makedirs(os.path.join(config_dir, "profile_data"), exist_ok=True)
-    os.makedirs(os.path.join(config_dir, "reports"), exist_ok=True)
-    os.makedirs(os.path.join(config_dir, "reports", "anomaly"), exist_ok=True)
-    os.makedirs(os.path.join(config_dir, "reports", "profiler"), exist_ok=True)
-    os.makedirs(os.path.join(config_dir, "reports", "comparison"), exist_ok=True)
-
-
-def generate_config(
-    config_dir, create_in_empty_dir=False, overwrite_kwargs: dict = None
-):
-    config_dir = os.path.expanduser(config_dir)
-    if not os.path.exists(config_dir):
-        _generate_config(config_dir=config_dir, overwrite_kwargs=overwrite_kwargs)
-    else:
-        config_already_exists = os.path.exists(os.path.join(config_dir, "config.json"))
-        if create_in_empty_dir and not config_already_exists:
-            _generate_config(config_dir=config_dir, overwrite_kwargs=overwrite_kwargs)
-        if overwrite_kwargs is not None:
-            with open(os.path.join(config_dir, "config.json"), "r") as f:
-                conf = json.load(f)
-            conf = {**conf, **overwrite_kwargs}
-            with open(os.path.join(config_dir, "config.json"), "w") as f:
-                json.dump(conf, f)
-        if not config_already_exists:
-            raise Exception(
-                "Error: Make sure directory follows proper Qualipy structure"
-            )
 
 
 def inspect_db_connection(url):
@@ -122,16 +78,20 @@ class Project(object):
                 f"""Directory {config_dir} does not exist. 
                 \nRun 'qualipy generate-config' before instantiating a project."""
             )
-        self._write_default_config_if_not_exists()
-        with open(os.path.join(self.config_dir, "config.json"), "rb") as f:
-            self.config = json.load(f)
-        self._validate_schema(self.config)
+
+        self.config = QualipyConfig(
+            config_dir=self.config_dir, project_name=project_name
+        )
+        self.config.set_default_project_config(project_name)
+        self.projects = self.config.get_projects()
+
         engine = self.config["QUALIPY_DB"]
         self.engine = create_engine(engine)
         self.db_schema = self.config.get("SCHEMA")
         self.sql_helper = DB_ENGINES[inspect_db_connection(str(self.engine.url))](
             self.engine, self.db_schema
         )
+
         if re_init:
             exists = self.sql_helper.does_table_exist(self.project_name)
             if exists is None:
@@ -147,15 +107,7 @@ class Project(object):
         if not re_init:
             self._functions_used_in_project = {}
         else:
-            pass  # read from config
-
-        self.project_file_path = os.path.join(self.config_dir, "projects.json")
-        try:
-            with open(self.project_file_path, "r") as f:
-                projects = json.loads(f.read())
-        except:
-            projects = {}
-        self.projects = projects
+            pass  # TODO:
 
     def change_config_dir(self, config_dir):
         self._initialize(self.project_name, config_dir, True)
@@ -211,10 +163,6 @@ class Project(object):
                         "description": function[1].description,
                     }
 
-    def _validate_schema(self, config):
-        # config_schema.validate(config)
-        pass
-
     def add_table(self, table: Table) -> None:
         for column in table.columns:
             self.add_column(column)
@@ -266,14 +214,6 @@ class Project(object):
     def delete_from_project_config(self):
         self.projects.pop(self.project_name, None)
 
-    def _write_default_config_if_not_exists(self):
-        with open(os.path.join(self.config_dir, "config.json"), "rb") as f:
-            config = json.load(f)
-        if self.project_name not in config:
-            config[self.project_name] = DEFAULT_PROJECT_CONFIG
-        with open(os.path.join(self.config_dir, "config.json"), "w") as f:
-            json.dump(config, f)
-
     def write_functions_to_config(self):
         if "DISPLAY_NAMES" not in self.config[self.project_name]:
             self.config[self.project_name]["DISPLAY_NAMES"] = {}
@@ -299,34 +239,16 @@ class Project(object):
             new_schema["type"] = str(new_schema["type"])
             serialized_dict[col_name] = new_schema
         self.projects[self.project_name] = serialized_dict
-        with open(self.project_file_path, "w") as f:
+        with open(os.path.join(self.config_dir, "projects.json"), "w") as f:
             json.dump(self.projects, f)
 
     def _load_from_dict(self, column_dict: dict):
         self.columns = column_dict
 
     def update_config_and_project_files(self):
-        with open(os.path.join(self.config_dir, "config.json"), "w") as f:
-            json.dump(self.config, f)
-        with open(self.project_file_path, "w") as f:
+        self.config.dump()
+        with open(os.path.join(self.config_dir, "projects.json"), "w") as f:
             json.dump(self.projects, f)
-
-    def add_to_project_list(
-        self, schema: Dict[str, Dict[str, Union[str, bool]]], reset_config: bool = False
-    ) -> None:
-
-        if self.project_name not in projects or reset_config:
-            projects[self.project_name] = {
-                "executions": [datetime.datetime.now().strftime("%m/%d/%Y %H:%M")],
-                "schema": schema,
-            }
-        else:
-            projects[self.project_name]["executions"].append(
-                str(datetime.datetime.now())
-            )
-            projects[self.project_name]["schema"] = schema
-        with open(project_file_path, "w") as f:
-            json.dump(projects, f)
 
 
 def load_project(
@@ -336,12 +258,8 @@ def load_project(
     reload_functions: bool = None,
 ) -> Project:
     config_dir = os.path.expanduser(config_dir)
-    with open(os.path.join(config_dir, "config.json"), "r") as f:
-        config = json.loads(f.read())
-    project_spec = config["PROJECT_SPEC"][project_name]
-    project_file_path = os.path.join(config_dir, "projects.json")
-    with open(project_file_path, "r") as f:
-        projects = json.loads(f.read())
+    config = QualipyConfig(config_dir=config_dir, project_name=project_name)
+    projects = config.get_projects()
     if project_name not in projects:
         raise Exception(f"{project_name} has not yet been created or serialized")
 

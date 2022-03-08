@@ -8,7 +8,7 @@ import pandas as pd
 from qualipy.reports.base import BaseJinjaView, convert_to_markup
 from qualipy.project import Project
 from qualipy.util import get_project_data
-from qualipy.visualization.batch import (
+from qualipy.reports.visualization.batch import (
     plot_correlation,
     numeric_batch_profile,
     histogram_from_custom_bins,

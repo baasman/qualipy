@@ -14,7 +14,7 @@ from qualipy.helper.auto_qpy import (
 )
 from qualipy.anomaly.anomaly import _run_anomaly
 from qualipy.backends.pandas_backend.generator import BackendPandas
-from qualipy.project import generate_config as generate_config_, Project, load_project
+from qualipy.project import Project, load_project
 from qualipy.reports.anomaly import AnomalyReport
 from qualipy.reports.comparison import ComparisonReport
 from qualipy.reports.batch import BatchReport
@@ -196,4 +196,4 @@ if __name__ == "__main__":
 
     sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
 
-    run_sql_batch(sys.argv[1:])  # pylint: disable=no-value-for-parameter
+    setup_sql_project(sys.argv[1:])  # pylint: disable=no-value-for-parameter

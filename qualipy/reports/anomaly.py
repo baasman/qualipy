@@ -21,16 +21,16 @@ from qualipy.util import (
 from qualipy.anomaly.trend_rules import trend_rules
 
 # from qualipy.anomaly_detection import _run_anomaly
-from qualipy.visualization.trends import (
+from qualipy.reports.visualization.trends import (
     trend_line_altair,
     trend_bar_lateset,
     trend_summary,
 )
-from qualipy.visualization.categorical import (
+from qualipy.reports.visualization.categorical import (
     value_count_chart_altair,
     barchart_top_categories_altair,
 )
-from qualipy.visualization.general import (
+from qualipy.reports.visualization.general import (
     missing_by_column_bar_altair,
     row_count_summary,
 )

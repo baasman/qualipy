@@ -63,6 +63,7 @@ class MetricResult:
         type,
         run_name: str = None,
         arguments: str = None,
+        meta: dict = None,
     ) -> None:
         self.value = value
         self.metric = metric
@@ -72,6 +73,7 @@ class MetricResult:
         self.type = type
         self.run_name = run_name
         self.arguments = arguments
+        self.meta = meta
 
     @staticmethod
     def create_arg_string(keyword_arguments: Dict[str, Any]) -> str:
@@ -108,6 +110,10 @@ class MetricResult:
         return str(self.to_dict())
 
     def to_dict(self) -> dict:
+        if self.meta is not None:
+            meta = json.dumps(self.meta)
+        else:
+            meta = self.meta
         return {
             "value": self.value,
             "metric": self.metric,
@@ -117,6 +123,7 @@ class MetricResult:
             "type": self.type,
             "run_name": self.run_name,
             "arguments": self.arguments,
+            "meta": meta,
         }
 
 

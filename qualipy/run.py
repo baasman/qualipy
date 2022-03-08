@@ -367,8 +367,13 @@ class Qualipy(object):
                         new_result.update_keys(
                             value=sub_value["value"], run_name=sub_value["run_name"]
                         )
+                        new_result.update_keys(
+                            return_format=function.custom_value_return_format
+                        )
                         if "metric_name" in sub_value:
                             new_result.update_keys(metric=sub_value["metric_name"])
+                        if "meta" in sub_value:
+                            new_result.update_keys(meta=sub_value["meta"])
                         measures.append(new_result)
                 else:
                     measures.append(result)

@@ -103,6 +103,6 @@ if __name__ == "__main__":
     config_dir = "~/flat_data"
     qualipy_pipeline(config_dir)
     # generate anomaly report
-    qpy.cli.produce_anomaly_report_cli(
-        config_dir, "flat_data_with_complex_function", run_anomaly=True
-    )
+    # qpy.cli.produce_anomaly_report_cli(
+    #     config_dir, "flat_data_with_complex_function", run_anomaly=True
+    # )
