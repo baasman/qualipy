@@ -1,4 +1,3 @@
-from black import main
 from qualipy.backends.base import BaseData
 from qualipy.backends.pandas_backend.dataset import PandasData
 

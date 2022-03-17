@@ -284,7 +284,8 @@ def _run_sql_batch(
     tracking_engine = sa.create_engine(url)
     batch = None
     if overwrite_kwarg is not None:
-        overwrite_kwarg = {i[0]: i[1] for i in overwrite_kwarg}
+        if isinstance(overwrite_kwarg, tuple):
+            overwrite_kwarg = {i[0]: i[1] for i in overwrite_kwarg}
     initial_run_name = run_name
     for table in table_name:
         run_name = table if initial_run_name is None else initial_run_name

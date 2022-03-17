@@ -23,6 +23,7 @@ def anomaly_data_project(project_name, config_dir, retrain):
     return anomalies
 
 
+# need to move this to sql helper class
 def write_anomaly(conn, data, project_name, clear=False, schema=None):
     schema_str = schema + "." if schema is not None else ""
     anomaly_table_name = f"{project_name}_anomaly"

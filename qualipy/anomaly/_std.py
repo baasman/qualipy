@@ -7,7 +7,11 @@ from qualipy.anomaly.base import AnomalyModelImplementation
 
 class STDCheck(AnomalyModelImplementation):
     def __init__(
-        self, config_dir, metric_name, project_name=None, arguments=None,
+        self,
+        config_dir,
+        metric_name,
+        project_name=None,
+        arguments=None,
     ):
         super(STDCheck, self).__init__(config_dir, metric_name, project_name, arguments)
         self.multivariate = self.arguments.pop("multivariate", False)
@@ -22,8 +26,19 @@ class STDCheck(AnomalyModelImplementation):
         else:
             # note: this doesnt work when theres missing data
             # should probably compute manually
-            zscores = zscore(test_data.value)
-            std_outliers = (zscores < -self.std) | (zscores > self.std)
-            preds = [-1 if std == True else 1 for std in std_outliers]
-
-        return np.array(preds), zscores
+            preds = []
+            final_zscores = []
+            for idx in range(test_data.shape[0]):
+                values = test_data.value[:idx]
+                try:
+                    zscores = zscore(values)
+                    std_outliers = (zscores < -self.std) | (zscores > self.std)
+                    final_zscores.append(zscores[-1])
+                    if std_outliers[-1]:
+                        preds.append(-1)
+                    else:
+                        preds.append(1)
+                except IndexError:
+                    preds.append(1)
+                    final_zscores.append(np.NaN)
+        return np.array(preds), np.array(final_zscores)
