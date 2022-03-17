@@ -31,7 +31,7 @@ class STDCheck(AnomalyModelImplementation):
             for idx in range(test_data.shape[0]):
                 values = test_data.value[: idx + 1]
                 try:
-                    zscores = zscore(values)
+                    zscores = np.array(zscore(values))
                     std_outliers = (zscores < -self.std) | (zscores > self.std)
                     final_zscores.append(zscores[-1])
                     if std_outliers[-1]:
