@@ -58,7 +58,7 @@ class SQL:
                 sa.Column("return_format", sa.String, nullable=False, default="float"),
                 sa.Column("trend_function_name", sa.String, nullable=True),
                 sa.Column("batch_name", sa.String, nullable=False),
-                sa.Column("run_name", sa.String, nullable=False),
+                sa.Column("run_name", sa.String, nullable=True),
                 sa.Column("value", sa.String, nullable=True),
                 sa.Column("severity", sa.String, nullable=True),
                 sa.Column("insert_time", sa.DateTime, nullable=False),
