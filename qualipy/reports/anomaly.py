@@ -264,9 +264,9 @@ class AnomalyReport(BaseJinjaView):
         if not anom_data.empty:
             anom_data.metric = anom_data.apply(
                 lambda r: '<a href="#" data-toggle="tooltip" title="'
-                + r["description"]
+                + str(r["description"])
                 + '">'
-                + r["display_name"]
+                + str(r["display_name"])
                 + "</a>",
                 axis=1,
             )

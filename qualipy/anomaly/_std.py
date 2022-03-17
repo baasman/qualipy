@@ -29,7 +29,7 @@ class STDCheck(AnomalyModelImplementation):
             preds = []
             final_zscores = []
             for idx in range(test_data.shape[0]):
-                values = test_data.value[:idx]
+                values = test_data.value[: idx + 1]
                 try:
                     zscores = zscore(values)
                     std_outliers = (zscores < -self.std) | (zscores > self.std)
