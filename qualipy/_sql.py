@@ -134,6 +134,18 @@ class SQL:
         )
         trans.execute(delete_query)
 
+    def does_batch_exist(self, batch_name):
+        with self.engine.connect() as conn:
+            query = (
+                sa.select(self.table)
+                .where(self.table.c.batch_name == str(batch_name))
+                .limit(1)
+            )
+            exists = conn.execute(query).fetchone()
+        if exists:
+            return True
+        return False
+
 
 class SQLite(SQL):
     def __init__(self, engine, schema):

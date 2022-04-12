@@ -6,6 +6,7 @@ import pandas as pd
 import sqlalchemy as sa
 
 import qualipy as qpy
+from qualipy.util import does_batch_exist
 
 
 logger = logging.getLogger(__name__)
@@ -253,6 +254,7 @@ def auto_qpy_single_batch_sql(
     use_spark: bool = False,
     custom_select_sql: str = None,
     backend: str = "sql",
+    ignore_if_batch_exists: bool = False,
 ) -> qpy.Qualipy:
     if isinstance(project, str):
         if configuration_dir is None:
@@ -267,6 +269,11 @@ def auto_qpy_single_batch_sql(
             batch_name=batch_name,
             overwrite_arguments=overwrite_arguments,
         )
+    if ignore_if_batch_exists:
+        exists = does_batch_exist(batch)
+        if exists:
+            logger.info(f"Batch {batch_name} exists. Skipping...")
+            return batch
 
     if run_name is None:
         run_name = "auto-qpy"

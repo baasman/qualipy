@@ -252,13 +252,16 @@ class Project(object):
 
 
 def load_project(
-    config_dir: str,
+    config_dir: Union[str, QualipyConfig],
     project_name: str,
-    backend: str = "pandas",
+    backend: str = "sql",
     reload_functions: bool = None,
 ) -> Project:
-    config_dir = os.path.expanduser(config_dir)
-    config = QualipyConfig(config_dir=config_dir, project_name=project_name)
+    if isinstance(config_dir, str):
+        config_dir = os.path.expanduser(config_dir)
+        config = QualipyConfig(config_dir=config_dir, project_name=project_name)
+    elif isinstance(config_dir, QualipyConfig):
+        config = config_dir
     projects = config.get_projects()
     if project_name not in projects:
         raise Exception(f"{project_name} has not yet been created or serialized")
@@ -301,6 +304,6 @@ def load_project(
         if backend == "pandas":
             new_schema["type"] = data_types[new_schema["type"]]()
         reconstructed_dict[col_name] = new_schema
-    project = Project(project_name=project_name, config_dir=config_dir)
+    project = Project(project_name=project_name, config_dir=config.config_dir)
     project._load_from_dict(reconstructed_dict)
     return project

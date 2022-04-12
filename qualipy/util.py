@@ -64,8 +64,8 @@ def copy_func(f: Callable, name: Optional[str] = None) -> Callable:
 def copy_function_spec(function: Union[Dict[str, Any], Callable]):
     if isinstance(function, dict):
         copied_function = copy_func(function["function"])
-        copied_function.__name__ = function['function'].__name__
-        copied_function.__module__ = function['function'].__module__
+        copied_function.__name__ = function["function"].__name__
+        copied_function.__module__ = function["function"].__module__
         copied_function.arguments = function.get("parameters", {})
         copied_function.key_function = function.get("key", False)
         copied_function.valid_min_range = function.get("valid_min")
@@ -188,3 +188,7 @@ def setup_logging():
         datefmt="[%X]",
         handlers=[RichHandler(console=console)],
     )
+
+
+def does_batch_exist(run):
+    return run.project.sql_helper.does_batch_exist(run.batch_name)

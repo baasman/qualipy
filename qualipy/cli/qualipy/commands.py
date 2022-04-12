@@ -117,8 +117,9 @@ def _setup_sql_project(
         config["PROJECT_SPEC"] = {}
 
     extra_functions = defaultdict(list)
-    for inp in function:
-        extra_functions[inp[0]].append(inp[1])
+    if function is not None:
+        for inp in function:
+            extra_functions[inp[0]].append(inp[1])
 
     if columns != "all" and columns is not None:
         columns = columns.split(",")
@@ -270,6 +271,7 @@ def _run_sql_batch(
     reload_functions=False,
     batch_name: str = None,
     delete_existing_batch: bool = False,
+    ignore_if_existing_batch: bool = False,
 ):
     if isinstance(project_name, str):
         project = load_project(
@@ -304,8 +306,10 @@ def _run_sql_batch(
             custom_select_sql=custom_select_sql,
             backend=backend,
             batch_name=batch_name,
+            ignore_if_batch_exists=ignore_if_existing_batch,
         )
-    batch.commit(delete_existing_batch=delete_existing_batch)
+    if len(batch.total_measures) > 0:
+        batch.commit(delete_existing_batch=delete_existing_batch)
     if produce_report:
         produce_anomaly_report_cli(
             config_dir=project.config_dir,
