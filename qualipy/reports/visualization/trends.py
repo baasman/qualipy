@@ -215,10 +215,12 @@ def trend_summary(data, variables, axis="metric_id"):
 def trend_line_altair_(
     trend_data: pd.DataFrame,
     anom_data: pd.DataFrame,
+    title: str = None,
     point: bool = True,
     sst: int = 30,
     add_diff=None,
     n_steps=20,
+    line_per_group=False,
 ):
     args = trend_data.arguments.iloc[0]
     args = f"_{args}" if args is not None else ""
@@ -234,33 +236,17 @@ def trend_line_altair_(
     else:
         trend_data["anom_val"] = np.NaN
 
-    trend_data["2std_plus_line"] = trend_data.value.mean() + (
-        2 * trend_data.value.std()
-    )
-    trend_data["2std_minus_line"] = trend_data.value.mean() - (
-        2 * trend_data.value.std()
-    )
-
-    trend_data["rolling_mean"] = trend_data.value.rolling(n_steps).mean()
-    trend_data["rolling_deviation"] = 2 * trend_data.value.rolling(n_steps).std()
-
-    trend_data["lower"] = trend_data.rolling_mean - trend_data.rolling_deviation
-    trend_data["upper"] = trend_data.rolling_mean + trend_data.rolling_deviation
-
-    trend_data["mean_line"] = trend_data.value.mean()
-    trend_data["median_line"] = trend_data.value.median()
     td = trend_data[
         [
             "date",
             "value",
-            "mean_line",
-            "median_line",
         ]
     ].melt("date")
 
-    min_y = min(trend_data.value.min() - 0.001, trend_data["lower"].min() - 0.001)
-    max_y = max(trend_data.value.max() + 0.001, trend_data["upper"].max() + 0.001)
-    title = set_title_name(trend_data)
+    min_y = trend_data.value.min() - 0.001
+    max_y = trend_data.value.max() + 0.001
+    if title is None:
+        title = set_title_name(trend_data)
     base = alt.Chart(td[["date", "value", "variable"]]).properties(
         title=title, width=800
     )
@@ -284,6 +270,73 @@ def trend_line_altair_(
         )
     )
     chart = value_line + anom_points
+    charts = [chart]
+    if add_diff is not None:
+        # should this be put in the database?
+        # could be useful in a number of different ways, like to detect where biggest changes are occurring
+        trend_data["value_diff"] = trend_data.value.diff()
+        # trend_data["value_perc_change"] = trend_data.value.pct_change()
+        d = pd.DataFrame(
+            {"date": trend_data["date"], "value_diff": trend_data["value_diff"]}
+        )
+        value_diff = (
+            alt.Chart(d)
+            .mark_line(point=point)
+            .encode(x="date:T", y="value_diff:Q", tooltip=["value_diff", "date"])
+            .properties(height=100, width=800)
+        )
+        charts.append(value_diff)
+    final_chart = alt.vconcat(*charts).resolve_axis(y="shared")
+    return final_chart
+
+
+def trend_line_altair_with_group_(
+    trend_data: pd.DataFrame,
+    anom_data: pd.DataFrame,
+    title: str = None,
+    point: bool = True,
+    sst: int = 30,
+    add_diff=None,
+    n_steps=20,
+    line_per_group=False,
+):
+    args = trend_data.arguments.iloc[0]
+    args = f"_{args}" if args is not None else ""
+    if anom_data.shape[0] > 0:
+        trend_data = trend_data.merge(
+            anom_data[["column_name", "batch_name", "value"]].rename(
+                columns={"value": "anom_val"}
+            ),
+            how="left",
+            on=["column_name", "batch_name"],
+        )
+        trend_data["anom_val"] = trend_data["anom_val"].astype(float)
+    else:
+        trend_data["anom_val"] = np.NaN
+
+    td = (
+        trend_data[["date", "value", "meta_options"]]
+        .melt(["date", "meta_options"])
+        .drop_duplicates()
+    )
+
+    min_y = trend_data.value.min() - 0.001
+    max_y = trend_data.value.max() + 0.001
+    if title is None:
+        title = set_title_name(trend_data)
+    base = alt.Chart(td[["date", "value", "meta_options", "variable"]]).properties(
+        title=title, width=800
+    )
+    value_line = base.mark_line(point=point).encode(
+        x=alt.X("date:T"),
+        y=alt.Y("value:Q", scale=alt.Scale(domain=[min_y, max_y])),
+        tooltip=["value", "date"],
+        color="meta_options:N",
+        opacity=alt.condition(
+            alt.datum.variable == "value", alt.value(1), alt.value(0.3)
+        ),
+    )
+    chart = value_line
     charts = [chart]
     if add_diff is not None:
         # should this be put in the database?

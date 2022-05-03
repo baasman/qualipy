@@ -1,19 +1,13 @@
-FROM python:3.8-slim-buster
+FROM python:3.10
 
-RUN apt-get update && apt-get install -y vim gcc python3-dev
-
-RUN mkdir /workspace && \
-    mkdir /src
+RUN curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py \
+    && python3 get-pip.py --force-reinstall \
+    && apt-get update -y \
+    && apt-get install -y python3-dev vim gcc 
 
 ENV LC_ALL C.UTF-8
 ENV LANG C.UTF-8
 
-RUN pip3 install jupyter && \
-    jupyter notebook --generate-config && \
-    echo "c.NotebookApp.ip = '0.0.0.0'" >> /root/.jupyter/jupyter_notebook_config.py
-
 COPY qualipy /src/qualipy
 COPY requirements.txt setup.py MANIFEST.in /src/
 RUN pip3 install /src
-
-WORKDIR /workspace

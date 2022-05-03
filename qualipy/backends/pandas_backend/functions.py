@@ -83,7 +83,7 @@ def percentage_missing(data, column):
     display_name="Number of Unique Elements",
     description="This is a raw count of the total number of unique elements in the column",
 )
-def number_of_unique(data, column):
+def distinct_count(data, column):
     return data[column].nunique()
 
 

@@ -1,6 +1,9 @@
 import os
 import json
 import typing as t
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 DEFAULT_PROJECT_CONFIG = {
@@ -10,7 +13,7 @@ DEFAULT_PROJECT_CONFIG = {
         "distance_from_bound": 1,
     },
     "PROFILE_ARGS": {},
-    "ANOMALY_MODEL": "prophet",
+    "ANOMALY_MODEL": "std",
     "DATE_FORMAT": "%Y-%m-%d",
     "NUM_SEVERITY_LEVEL": 1,
     "CAT_SEVERITY_LEVEL": 1,
@@ -41,53 +44,6 @@ DEFAULT_PROJECT_CONFIG = {
         },
     },
 }
-
-
-class QualipyConfig(dict):
-    def __init__(
-        self, config_dir: str, project_name: str = None, defaults: dict = None
-    ):
-        dict.__init__(self, defaults or {})
-        self.config_dir = config_dir
-        self.project_name = project_name
-        self._read_conf_from_file()
-
-    def _read_conf_from_file(self):
-        with open(os.path.join(self.config_dir, "config.json"), "r") as f:
-            config = json.load(f)
-        self.from_mapping(config)
-        return True
-
-    def from_mapping(
-        self, mapping: t.Optional[t.Mapping[str, t.Any]] = None, **kwargs: t.Any
-    ) -> bool:
-        mappings: t.Dict[str, t.Any] = {}
-        if mapping is not None:
-            mappings.update(mapping)
-        mappings.update(kwargs)
-        self.update(mappings)
-        return True
-
-    def set_default_project_config(self, project_name):
-        if project_name not in self:
-            self[self.project_name] = DEFAULT_PROJECT_CONFIG
-        with open(os.path.join(self.config_dir, "config.json"), "w") as f:
-            json.dump(self, f)
-
-    def get_projects(self):
-        try:
-            with open(os.path.join(self.config_dir, "projects.json"), "r") as f:
-                projects = json.loads(f.read())
-        except:
-            projects = {}
-        return projects
-
-    def dump(self):
-        with open(os.path.join(self.config_dir, "config.json"), "w") as f:
-            json.dump(self, f)
-
-    def validate_schema(self):
-        pass
 
 
 def _set_default_config(config_dir, overwrite_kwargs=None):
@@ -132,3 +88,88 @@ def generate_config(
             raise Exception(
                 "Error: Make sure directory follows proper Qualipy structure"
             )
+
+
+class QualipyConfig(dict):
+    def __init__(
+        self, config_dir: str, project_name: str = None, defaults: dict = None
+    ):
+        dict.__init__(self, defaults or {})
+        self.config_dir = config_dir
+        self.project_name = project_name
+        self._read_conf_from_file()
+
+    def _read_conf_from_file(self):
+        try:
+            with open(os.path.join(self.config_dir, "config.json"), "r") as f:
+                config = json.load(f)
+        except FileNotFoundError:
+            logger.info(f"Config not found. Autogeneration at {self.config_dir}")
+            generate_config(config_dir=self.config_dir)
+            with open(os.path.join(self.config_dir, "config.json"), "r") as f:
+                config = json.load(f)
+        self.from_mapping(config)
+        return True
+
+    def from_mapping(
+        self, mapping: t.Optional[t.Mapping[str, t.Any]] = None, **kwargs: t.Any
+    ) -> bool:
+        mappings: t.Dict[str, t.Any] = {}
+        if mapping is not None:
+            mappings.update(mapping)
+        mappings.update(kwargs)
+        self.update(mappings)
+        return True
+
+    def set_default_project_config(self, project_name):
+        if project_name not in self:
+            self[self.project_name] = DEFAULT_PROJECT_CONFIG
+        with open(os.path.join(self.config_dir, "config.json"), "w") as f:
+            json.dump(self, f)
+
+    def add_tracking_db(
+        self,
+        name: str,
+        drivername: str,
+        username: str,
+        password: str,
+        host: str,
+        port: int,
+        query: dict,
+    ):
+        if "TRACKING_DBS" not in self:
+            self["TRACKING_DBS"] = {}
+
+        spec = dict(
+            drivername=drivername,
+            username=username,
+            password=password,
+            host=host,
+            port=port,
+        )
+        if query is not None:
+            query_args = {}
+            if isinstance(query, list):
+                for inp in query:
+                    query_args[inp[0]] = inp[1]
+            elif isinstance(query, dict):
+                for k, v in query.items():
+                    query_args[k] = v
+            spec["query"] = query_args
+        self["TRACKING_DBS"][name] = spec
+        self.dump()
+
+    def get_projects(self):
+        try:
+            with open(os.path.join(self.config_dir, "projects.json"), "r") as f:
+                projects = json.loads(f.read())
+        except:
+            projects = {}
+        return projects
+
+    def dump(self):
+        with open(os.path.join(self.config_dir, "config.json"), "w") as f:
+            json.dump(self, f)
+
+    def validate_schema(self):
+        pass

@@ -1,9 +1,9 @@
-from imp import reload
+from lib2to3.pgen2 import driver
 import os
 import json
 from collections import defaultdict
 import logging
-from turtle import back
+import datetime
 
 import click
 from requests import delete
@@ -66,24 +66,15 @@ def add_tracking_db(
 ):
 
     config = QualipyConfig(config_dir=config_dir)
-
-    if "TRACKING_DBS" not in config:
-        config["TRACKING_DBS"] = {}
-
-    spec = dict(
+    config.add_tracking_db(
+        name=name,
         drivername=drivername,
         username=username,
         password=password,
         host=host,
         port=port,
+        query=query,
     )
-    if query is not None:
-        query_args = {}
-        for inp in query:
-            query_args[inp[0]] = inp[1]
-        spec["query"] = query_args
-    config["TRACKING_DBS"][name] = spec
-    config.dump()
 
 
 @click.command()
@@ -272,6 +263,7 @@ def _run_sql_batch(
     batch_name: str = None,
     delete_existing_batch: bool = False,
     ignore_if_existing_batch: bool = False,
+    time_of_run: datetime.datetime = None,
 ):
     if isinstance(project_name, str):
         project = load_project(
@@ -282,6 +274,9 @@ def _run_sql_batch(
         )
     else:
         project = project_name
+
+    if not isinstance(table_name, list):
+        table_name = [table_name]
     url = sa.engine.URL.create(**project.config["TRACKING_DBS"][tracking_db])
     tracking_engine = sa.create_engine(url)
     batch = None
@@ -307,6 +302,7 @@ def _run_sql_batch(
             backend=backend,
             batch_name=batch_name,
             ignore_if_batch_exists=ignore_if_existing_batch,
+            time_of_run=time_of_run,
         )
     if len(batch.total_measures) > 0:
         batch.commit(delete_existing_batch=delete_existing_batch)

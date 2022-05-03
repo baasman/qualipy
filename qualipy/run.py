@@ -362,8 +362,10 @@ class Qualipy(object):
                     )
 
                 if return_format == "custom":
+                    copy_of_result = copy.deepcopy(result)
+                    copy_of_result.update_keys(value=None)
                     for sub_value in result.value:
-                        new_result = copy.deepcopy(result)
+                        new_result = copy.deepcopy(copy_of_result)
                         new_result.update_keys(
                             value=sub_value["value"], run_name=sub_value["run_name"]
                         )
@@ -398,13 +400,20 @@ class Qualipy(object):
 
     def _get_column_specific_general_info(self, specs, measures: Measure):
         col_name = specs["name"]
-        unique, perc_missing, value_props = self.generator.generate_column_general_info(
+        (
+            unique,
+            perc_missing,
+            value_props,
+            distinct,
+        ) = self.generator.generate_column_general_info(
             specs, self.data_view, self.time_of_run, self.current_name_view
         )
         if unique is not None:
             measures.append(unique)
         if value_props is not None:
             measures.append(value_props)
+        if distinct is not None:
+            measures.append(distinct)
         measures.append(perc_missing)
 
         if perc_missing.value > 0 and specs["force_null"] and not specs["null"]:

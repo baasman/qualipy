@@ -14,7 +14,7 @@ except ImportError:
 from sqlalchemy import create_engine
 import dill
 
-from qualipy.util import HOME, copy_function_spec
+from qualipy.util import HOME, copy_function_spec, get_latest_insert_only
 from qualipy._sql import DB_ENGINES
 from qualipy.reflect.column import Column
 from qualipy.reflect.table import Table
@@ -195,8 +195,24 @@ class Project(object):
     def add_external_columns(self, columns):
         self.columns = {**self.columns, **columns}
 
-    def get_project_table(self) -> pd.DataFrame:
-        return self.sql_helper.get_project_table()
+    def get_project_table(
+        self, expand_meta=False, latest_insert_only=True
+    ) -> pd.DataFrame:
+        table = self.sql_helper.get_project_table()
+        if latest_insert_only:
+            table = get_latest_insert_only(table)
+        if expand_meta:
+            table.meta = table.meta.apply(
+                lambda x: json.loads(x) if x is not None else {}
+            )
+            table = pd.concat(
+                [
+                    table.drop("meta", axis=1).reset_index(drop=True),
+                    pd.DataFrame(table.meta.values.tolist()).reset_index(drop=True),
+                ],
+                axis=1,
+            )
+        return table
 
     def get_anomaly_table(self) -> pd.DataFrame:
         return self.sql_helper.get_anomaly_table()

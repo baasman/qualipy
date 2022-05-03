@@ -136,8 +136,8 @@ def prop_outside_of_range(data, column, low, high):
     return res / total_rows
 
 
-@function(return_format=dict)
-def value_counts(data, column):
+@function(return_format=dict, allowed_arguments=["always_run", "keep_top"])
+def value_counts(data, column, always_run=True, keep_top=25):
     schema_name = "" if data.schema is None else data.schema + "."
     if data.dialect == "oracle":
         check_unique_cases = f"""
@@ -151,7 +151,7 @@ def value_counts(data, column):
                 (select {column} from {schema_name}{data.table_name} limit 1000) as fin
         """
     count_distinct = data.engine.execute(check_unique_cases).fetchone()[0]
-    if count_distinct < 25:
+    if count_distinct < 25 or always_run:
         if data.custom_where is None:
             counts = data.engine.execute(
                 sa.select([sa.column(column), sa.func.count(sa.column(column))])
@@ -165,10 +165,36 @@ def value_counts(data, column):
                 .where(sa.text(data.custom_where))
                 .group_by(sa.column(column))
             ).fetchall()
+        if keep_top is not None:
+            counts.sort(reverse=True, key=lambda x: x[1])
+            counts = counts[:keep_top]
         counts = {i[0]: i[1] for i in counts}
     else:
         counts = np.NaN
     return counts
+
+
+@function(return_format=int)
+def distinct_count(data, column):
+    if data.custom_where is None:
+        counts = data.engine.execute(
+            sa.select(
+                [
+                    sa.func.count(sa.distinct(sa.column(column))),
+                ]
+            ).select_from(data._table)
+        ).fetchall()
+    else:
+        counts = data.engine.execute(
+            sa.select(
+                [
+                    sa.func.count(sa.distinct(sa.column(column))),
+                ]
+            )
+            .select_from(data._table)
+            .where(sa.text(data.custom_where))
+        ).fetchall()
+    return counts[0][0]
 
 
 @function(
@@ -177,18 +203,23 @@ def value_counts(data, column):
     description="This function finds the percentage of values set to Null in the column",
 )
 def percentage_missing(data, column):
-    if data.custom_where is None:
-        counts = data.engine.execute(
-            sa.select(
-                [sa.func.count(sa.text("*")), sa.func.count(sa.column(column))]
-            ).select_from(data._table)
-        ).fetchall()
-    else:
-        counts = data.engine.execute(
-            sa.select([sa.func.count(sa.text("*")), sa.func.count(sa.column(column))])
-            .select_from(data._table)
-            .where(sa.text(data.custom_where))
-        ).fetchall()
+    try:
+        if data.custom_where is None:
+            counts = data.engine.execute(
+                sa.select(
+                    [sa.func.count(sa.text("*")), sa.func.count(sa.column(column))]
+                ).select_from(data._table)
+            ).fetchall()
+        else:
+            counts = data.engine.execute(
+                sa.select(
+                    [sa.func.count(sa.text("*")), sa.func.count(sa.column(column))]
+                )
+                .select_from(data._table)
+                .where(sa.text(data.custom_where))
+            ).fetchall()
+    except:
+        return np.NaN
     total = counts[0][0]
     missing = counts[0][1]
     if total == 0:

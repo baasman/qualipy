@@ -242,6 +242,7 @@ def auto_qpy_single_batch_sql(
     project: Union[qpy.Project, str],
     batch: qpy.run.Qualipy = None,
     configuration_dir: str = None,
+    time_of_run: datetime.datetime = None,
     schema: str = None,
     stratify: str = None,
     run_anomaly: bool = True,

@@ -7,6 +7,7 @@ from qualipy.backends.sql_backend.functions import (
     value_counts,
     percentage_missing,
     is_unique,
+    distinct_count,
 )
 
 import warnings
@@ -103,8 +104,23 @@ class BackendSQL(BackendBase):
             value_props = None if str(value_props.value) == "nan" else value_props
             if value_props is not None:
                 value_props.update_keys(run_name=run_name)
+
+            distinct = self.generate_description(
+                function=distinct_count,
+                data=data,
+                column=col_name,
+                function_name="distinct_count",
+                date=time_of_run,
+                viz_type="data-characteristic",
+                kwargs={},
+                return_format=int,
+            )
+            distinct = None if str(distinct.value) == "nan" else distinct
+            if distinct is not None:
+                distinct.update_keys(run_name=run_name)
         else:
             value_props = None
+            distinct = None
         perc_missing = self.generate_description(
             function=percentage_missing,
             data=data,
@@ -115,7 +131,7 @@ class BackendSQL(BackendBase):
             kwargs={},
         )
         perc_missing.update_keys(run_name=run_name)
-        return unique, perc_missing, value_props
+        return unique, perc_missing, value_props, distinct
 
     def get_chunks(self, data, time_freq, time_column):
         raise NotImplementedError
