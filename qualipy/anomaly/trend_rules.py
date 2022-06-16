@@ -1,3 +1,13 @@
+def hard_upper_limit(data, limit):
+    data = data[data.value > limit]
+    return data
+
+
+def hard_lower_limit(data, limit):
+    data = data[data.value < limit]
+    return data
+
+
 def mono_increasing(data):
     value_diff = data.value.diff()
     data = data[value_diff < 0]
@@ -64,6 +74,16 @@ def sustained_strong_diff(data):
 
 
 trend_rules = {
+    "hard_upper_limit": {
+        "function": hard_upper_limit,
+        "display_name": "Hard Upper Limit",
+        "description": "Anytime trend exceeds this value, anomaly is generated",
+    },
+    "hard_lower_limit": {
+        "function": hard_lower_limit,
+        "display_name": "Hard Lower Limit",
+        "description": "Anytime trend goes below this value, anomaly is generated",
+    },
     "different_from_mode": {
         "function": different_from_mode,
         "display_name": "Different From Mode",

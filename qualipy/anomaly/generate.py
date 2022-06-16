@@ -251,11 +251,12 @@ class GenerateAnomalies:
             for metric_id, group in df.groupby("metric_id"):
                 trend_functions = self.specific[metric_id]
                 group = set_value_type(group)
-                for fun, items in trend_functions.items():
-                    outlier_data = trend_rules[fun]["function"](group.copy())
+                for fun in trend_functions:
+                    kwargs = fun['arguments'] if 'arguments' in fun else {}
+                    outlier_data = trend_rules[fun['function']]["function"](group.copy(), **kwargs)
                     if outlier_data.shape[0] > 0:
-                        outlier_data["severity"] = items.get("severity", np.NaN)
-                        outlier_data["trend_function_name"] = fun
+                        outlier_data["severity"] = fun.get("severity", np.NaN)
+                        outlier_data["trend_function_name"] = fun['function']
                         all_rows.append(outlier_data)
             if len(all_rows) > 0:
                 data = pd.concat(all_rows).sort_values("date", ascending=False)
