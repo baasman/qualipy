@@ -5,8 +5,8 @@ from jinja2 import (
     Environment,
     FileSystemLoader,
     select_autoescape,
-    Markup,
 )
+from jinja2.utils import markupsafe
 import altair as alt
 import numpy as np
 import pandas as pd
@@ -34,7 +34,7 @@ def convert_to_markup(
     list_of_anomalies=None,
 ):
     show = "show" if show_by_default else ""
-    markup = Markup(chart.to_json())
+    markup = markupsafe.Markup(chart.to_json())
     chart_id = chart_id.replace(" ", "_")
     if chart_id[0].isnumeric():
         chart_id = "_" + chart_id

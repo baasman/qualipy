@@ -14,6 +14,7 @@ from qualipy.anomaly._prophet import ProphetModel
 from qualipy.anomaly._std import STDCheck
 from qualipy.anomaly.base import LoadedModel
 from qualipy.anomaly.trend_rules import trend_rules
+from qualipy.config import QualipyConfig
 
 
 anomaly_columns = [
@@ -40,12 +41,14 @@ class GenerateAnomalies:
     def __init__(self, project_name, config_dir):
         self.config_dir = config_dir
 
-        with open(os.path.join(config_dir, "config.json"), "r") as conf_file:
-            config = json.load(conf_file)
+        self.config = QualipyConfig(
+            config_dir=self.config_dir, project_name=project_name
+        )
 
-        self.model_type = config[project_name].get("ANOMALY_MODEL", "std")
-        self.anom_args = config[project_name].get("ANOMALY_ARGS", {})
+        self.model_type = self.config[project_name].get("ANOMALY_MODEL", "std")
+        self.anom_args = self.config[project_name].get("ANOMALY_ARGS", {})
         self.specific = self.anom_args.pop("specific", {})
+        self.ignore = self.anom_args.get("ignore", [])
         self.project_name = project_name
         self.project = Project(project_name, config_dir=config_dir, re_init=True)
         df = self.project.get_project_table()
@@ -114,9 +117,12 @@ class GenerateAnomalies:
     def create_anom_num_table(self, retrain=False):
         df = self.df.copy()
         df = df[
-            (df["type"] == "numerical")
-            | (df["column_name"].isin(["rows", "columns"]))
-            | (df["metric"].isin(["perc_missing", "count"]))
+            (
+                (df["type"] == "numerical")
+                | (df["column_name"].isin(["rows"]))
+                | (df["metric"].isin(["perc_missing", "count"]))
+                & (~df["metric_id"].isin(self.ignore))
+            )
         ]
         df.value = df.value.astype(float)
         all_rows = []
@@ -144,7 +150,7 @@ class GenerateAnomalies:
 
     def create_anom_cat_table(self, retrain=False):
         df = self.df
-        df = df[df["type"] == "categorical"]
+        df = df[(df["type"] == "categorical") & (~df.metric_id.isin(self.ignore))]
         all_rows = []
         if self.model_type != "ignore":
             for metric_id, data in tqdm(df.groupby("metric_id")):
@@ -252,11 +258,13 @@ class GenerateAnomalies:
                 trend_functions = self.specific[metric_id]
                 group = set_value_type(group)
                 for fun in trend_functions:
-                    kwargs = fun['arguments'] if 'arguments' in fun else {}
-                    outlier_data = trend_rules[fun['function']]["function"](group.copy(), **kwargs)
+                    kwargs = fun["arguments"] if "arguments" in fun else {}
+                    outlier_data = trend_rules[fun["function"]]["function"](
+                        group.copy(), **kwargs
+                    )
                     if outlier_data.shape[0] > 0:
                         outlier_data["severity"] = fun.get("severity", np.NaN)
-                        outlier_data["trend_function_name"] = fun['function']
+                        outlier_data["trend_function_name"] = fun["function"]
                         all_rows.append(outlier_data)
             if len(all_rows) > 0:
                 data = pd.concat(all_rows).sort_values("date", ascending=False)
