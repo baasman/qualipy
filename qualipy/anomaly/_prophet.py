@@ -8,10 +8,8 @@ from qualipy.anomaly.base import AnomalyModelImplementation
 
 
 class ProphetModel(AnomalyModelImplementation):
-    def __init__(self, config_dir, metric_name, project_name=None, arguments=None):
-        super(ProphetModel, self).__init__(
-            config_dir, metric_name, project_name, arguments
-        )
+    def __init__(self, config, metric_name, project_name=None, arguments=None):
+        super(ProphetModel, self).__init__(config, metric_name, project_name, arguments)
         self.check_for_std = self.arguments.pop("check_for_std", False)
         self.importance_level = self.arguments.pop("importance_level", 0)
         self.distance_from_bound = self.arguments.pop("distance_from_bound", 0)
@@ -46,8 +44,12 @@ class ProphetModel(AnomalyModelImplementation):
         predicted["y"] = test_data["y"]
 
         predicted["outlier"] = 1
-        predicted["outlier"] = np.where(predicted.y < predicted.yhat_lower - .0001, -1, 1)
-        predicted["outlier"] = np.where(predicted.y > predicted.yhat_upper + .0001, -1, 1)
+        predicted["outlier"] = np.where(
+            predicted.y < predicted.yhat_lower - 0.0001, -1, 1
+        )
+        predicted["outlier"] = np.where(
+            predicted.y > predicted.yhat_upper + 0.0001, -1, 1
+        )
 
         predicted["importance"] = np.NaN
         predicted.loc[predicted.outlier == 1, "importance"] = (

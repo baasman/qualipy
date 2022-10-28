@@ -20,17 +20,14 @@ class AnomalyModelImplementation(abc.ABC):
     """
 
     def __init__(
-        self, config_dir, metric_name, project_name=None, arguments=None,
+        self, config, metric_name, project_name=None, arguments=None,
     ):
-        with open(os.path.join(config_dir, "config.json"), "r") as conf_file:
-            config = json.load(conf_file)
-
         self.metric_name = metric_name
         if arguments is None:
             arguments = config[project_name].get("ANOMALY_ARGS", {})
         self.specific = arguments.pop("specific", {})
         self.arguments = arguments
-        self.model_dir = os.path.join(config_dir, "models")
+        self.model_dir = os.path.join(config.config_dir, "models")
         if not os.path.isdir(self.model_dir):
             os.mkdir(self.model_dir)
 

@@ -6,9 +6,9 @@ from qualipy.anomaly.base import AnomalyModelImplementation
 
 
 class IsolationForestModel(AnomalyModelImplementation):
-    def __init__(self, config_dir, metric_name, project_name=None, arguments=None):
+    def __init__(self, config, metric_name, project_name=None, arguments=None):
         super(IsolationForestModel, self).__init__(
-            config_dir, metric_name, project_name, arguments
+            config, metric_name, project_name, arguments
         )
         self.multivariate = self.arguments.pop("multivariate", False)
         self.check_for_std = self.arguments.pop("check_for_std", False)

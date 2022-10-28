@@ -14,3 +14,5 @@ banpei
 matplotlib
 dill
 rich
+jinja2>=3.1.2
+alembic

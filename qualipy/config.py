@@ -3,6 +3,8 @@ import json
 import typing as t
 import logging
 
+from qualipy.store.util import _initialize_tables, create_sqlalchemy_engine
+
 logger = logging.getLogger(__name__)
 
 
@@ -88,6 +90,8 @@ def generate_config(
             raise Exception(
                 "Error: Make sure directory follows proper Qualipy structure"
             )
+    conf = QualipyConfig(config_dir=config_dir)
+    return conf
 
 
 class QualipyConfig(dict):
@@ -98,6 +102,7 @@ class QualipyConfig(dict):
         self.config_dir = config_dir
         self.project_name = project_name
         self._read_conf_from_file()
+        _initialize_tables(self)
 
     def _read_conf_from_file(self):
         try:
@@ -123,7 +128,7 @@ class QualipyConfig(dict):
 
     def set_default_project_config(self, project_name):
         if project_name not in self:
-            self[self.project_name] = DEFAULT_PROJECT_CONFIG
+            self[project_name] = DEFAULT_PROJECT_CONFIG
         with open(os.path.join(self.config_dir, "config.json"), "w") as f:
             json.dump(self, f)
 

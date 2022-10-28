@@ -3,8 +3,7 @@ from sqlalchemy import delete, engine
 import sqlalchemy as sa
 
 from typing import Callable, List, Union
-import pickle
-import datetime
+import typing as t
 
 from sqlalchemy.sql.expression import null
 

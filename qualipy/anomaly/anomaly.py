@@ -5,10 +5,11 @@ import pandas as pd
 
 from sqlalchemy import create_engine
 from qualipy.anomaly.generate import GenerateAnomalies
+import qualipy as qpy
 
 
-def anomaly_data_project(project_name, config_dir, retrain):
-    generator = GenerateAnomalies(project_name, config_dir)
+def anomaly_data_project(project, config, retrain):
+    generator = GenerateAnomalies(project, config)
     rule_anomalies = generator.create_trend_rule_table()
     boolean_checks = generator.create_error_check_table()
     cat_anomalies = generator.create_anom_cat_table(retrain)
@@ -16,7 +17,7 @@ def anomaly_data_project(project_name, config_dir, retrain):
     anomalies = pd.concat(
         [num_anomalies, cat_anomalies, boolean_checks, rule_anomalies]
     ).sort_values("date", ascending=False)
-    anomalies["project"] = project_name
+    anomalies["project"] = project.project_name
     anomalies = anomalies[
         ["project"] + [col for col in anomalies.columns if col != "project"]
     ]
@@ -57,3 +58,13 @@ def _run_anomaly(project_name, config_dir, retrain):
     db_schema = loaded_config.get("SCHEMA")
     with engine.connect() as conn:
         write_anomaly(conn, anom_data, project_name, clear=retrain, schema=db_schema)
+
+
+def run_anomaly(project: qpy.Project, config: qpy.QualipyConfig, retrain: bool = False):
+    anom_data = anomaly_data_project(
+        project=project,
+        config=config,
+        retrain=retrain,
+    )
+    # TODO: create project method to write anomalies
+    project.write_anomalies(anomaly_data=anom_data, clear=retrain)

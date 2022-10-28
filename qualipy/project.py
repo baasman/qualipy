@@ -5,6 +5,7 @@ import codecs
 import datetime
 import pandas as pd
 from typing import List, Union, Dict
+import typing as t
 
 try:
     from collections.abc import Callable
@@ -12,6 +13,8 @@ except ImportError:
     from collections import Callable
 
 from sqlalchemy import create_engine
+from sqlalchemy.orm import Session
+import sqlalchemy as sa
 import dill
 
 from qualipy.util import HOME, copy_function_spec, get_latest_insert_only
@@ -21,6 +24,8 @@ from qualipy.reflect.table import Table
 from qualipy._schema import config_schema
 from qualipy.backends.data_types import PANDAS_TYPES
 from qualipy.config import QualipyConfig
+from qualipy.store.util import create_sqlalchemy_engine
+from qualipy.store.initial_models import Project as ProjectTable, Value, Anomaly
 
 
 DATA_TYPES = {"pandas": PANDAS_TYPES, "sql": {}}
@@ -60,49 +65,55 @@ class Project(object):
     def _initialize(
         self,
         project_name: str,
-        config_dir: str,
+        config_dir: t.Union[str, QualipyConfig],
         re_init: bool = False,
     ):
-        # need to come up with way that project does not need to redefined and re-imported
-        # "QUALIPY_DB": "sqlite:////data/baasman/.omop-prod2/qualipy.db",
         self.project_name = project_name
-        self.value_table = "{}_values".format(self.project_name)
-        self.value_custom_table = "{}_values_custom".format(self.project_name)
-        self.anomaly_table = "{}_anomaly".format(self.project_name)
         if not re_init:
             self.columns = {}
-        config_dir = os.path.expanduser(config_dir)
-        self.config_dir = config_dir
-        if not os.path.isdir(config_dir):
-            raise Exception(
-                f"""Directory {config_dir} does not exist. 
-                \nRun 'qualipy generate-config' before instantiating a project."""
+        if isinstance(config_dir, str):
+            config_dir = os.path.expanduser(config_dir)
+            self.config_dir = config_dir
+            if not os.path.isdir(config_dir):
+                raise Exception(
+                    f"""Directory {config_dir} does not exist. 
+                    \nRun 'qualipy generate-config' before instantiating a project."""
+                )
+            self.config = QualipyConfig(
+                config_dir=self.config_dir, project_name=project_name
             )
+        else:
+            self.config = config_dir
+            self.config_dir = self.config.config_dir
 
-        self.config = QualipyConfig(
-            config_dir=self.config_dir, project_name=project_name
-        )
         self.config.set_default_project_config(project_name)
         self.projects = self.config.get_projects()
 
-        engine = self.config["QUALIPY_DB"]
-        self.engine = create_engine(engine)
+        self.engine = create_sqlalchemy_engine(self.config)
         self.db_schema = self.config.get("SCHEMA")
-        self.sql_helper = DB_ENGINES[inspect_db_connection(str(self.engine.url))](
-            self.engine, self.db_schema
-        )
+        self.metadata = sa.schema.MetaData(bind=self.engine, schema=self.db_schema)
+        self.session = Session(self.engine)
+        # self.sql_helper = DB_ENGINES[inspect_db_connection(str(self.engine.url))](
+        #     self.engine, self.db_schema
+        # )
 
         if re_init:
-            exists = self.sql_helper.does_table_exist(self.project_name)
+            exists = (
+                sa.select([ProjectTable])
+                .where(ProjectTable.project_name == self.project_name)
+                .first()
+            )
             if exists is None:
                 raise Exception(f"Project {project_name} does not exist.")
-
-        if not re_init:
-            self.sql_helper.create_schema_if_not_exists()
-            self.sql_helper.create_table(self.project_name)
-            self.sql_helper.create_anomaly_table(self.anomaly_table)
-
-        self.sql_helper.reflect_tables(self.project_name, self.anomaly_table)
+            self.project_table = exists
+        else:
+            entry = ProjectTable.return_if_exists(self.session, self.project_name)
+            if entry is None:
+                new_project = ProjectTable(project_name=self.project_name)
+                # self.session.add(new_project)
+                self.project_table = new_project
+            else:
+                self.project_table = entry
 
         if not re_init:
             self._functions_used_in_project = {}
@@ -198,7 +209,10 @@ class Project(object):
     def get_project_table(
         self, expand_meta=False, latest_insert_only=True
     ) -> pd.DataFrame:
-        table = self.sql_helper.get_project_table()
+        table_query = self.session.query(Value).filter(
+            Value.project_id == self.project_table.project_id
+        )
+        table = pd.read_sql(table_query.statement, table_query.session.bind)
         if latest_insert_only:
             table = get_latest_insert_only(table)
         if expand_meta:
@@ -215,17 +229,46 @@ class Project(object):
         return table
 
     def get_anomaly_table(self) -> pd.DataFrame:
-        return self.sql_helper.get_anomaly_table()
-
-    def delete_data(self, recreate=True):
-        self.sql_helper.delete_data(
-            name=self.project_name,
-            anomaly_name=self.anomaly_table,
-            recreate=recreate,
+        table_query = self.session.query(Anomaly).filter(
+            Anomaly.project_id == self.project_table.project_id
         )
+        table = pd.read_sql(table_query.statement, table_query.session.bind)
+        return table
 
-    def delete_existing_batch(self, trans, batch_name):
-        self.sql_helper.delete_existing_batch(trans, batch_name)
+    def write_anomalies(self, anomaly_data: pd.DataFrame, clear: bool = False):
+        if clear:
+            self.session.query(Anomaly).filter(
+                Anomaly.project_id == self.project_table.project_id
+            ).delete()
+        most_recent_one = (
+            self.session.query(Anomaly)
+            .join(Value, Anomaly.project_id == Value.project_id)
+            .filter(Value.project_id == self.project_table.project_id)
+            .order_by(sa.desc(Value.date))
+            .first()
+        )
+        # most_recent_one = conn.execute(
+        #     f"select date from {schema_str}{anomaly_table_name} order by date desc limit 1"
+        # ).fetchone()
+        if most_recent_one is not None and data.shape[0] > 0:
+            most_recent_one = most_recent_one[0]
+            data = data[pd.to_datetime(data.date) > pd.to_datetime(most_recent_one)]
+        if data.shape[0] > 0:
+            data.to_sql(
+                anomaly_table_name, conn, if_exists="append", index=False, schema=schema
+            )
+
+    def delete_data(self):
+        self.session.query(Value).delete()
+        self.session.query(Anomaly).delete()
+        self.session.commit()
+
+    def delete_existing_batch(self, batch_name):
+        self.session.query(Value).filter(
+            Value.batch_name == batch_name,
+            Value.project_id == self.project_table.project_id,
+        ).delete()
+        self.session.commit()
 
     def delete_from_project_config(self):
         self.projects.pop(self.project_name, None)

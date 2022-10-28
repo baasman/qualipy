@@ -38,20 +38,14 @@ MODS = {
 
 
 class GenerateAnomalies:
-    def __init__(self, project_name, config_dir):
-        self.config_dir = config_dir
-
-        self.config = QualipyConfig(
-            config_dir=self.config_dir, project_name=project_name
-        )
-
-        self.model_type = self.config[project_name].get("ANOMALY_MODEL", "std")
-        self.anom_args = self.config[project_name].get("ANOMALY_ARGS", {})
+    def __init__(self, project, config):
+        self.config = config
+        self.model_type = self.config[project.project_name].get("ANOMALY_MODEL", "std")
+        self.anom_args = self.config[project.project_name].get("ANOMALY_ARGS", {})
         self.specific = self.anom_args.pop("specific", {})
         self.ignore = self.anom_args.get("ignore", [])
-        self.project_name = project_name
-        self.project = Project(project_name, config_dir=config_dir, re_init=True)
-        df = self.project.get_project_table()
+        self.project_name = project.project_name
+        df = project.get_project_table()
         df["floored_datetime"] = df.date.dt.floor("T")
         df = (
             df.groupby("floored_datetime", as_index=False)
@@ -75,7 +69,7 @@ class GenerateAnomalies:
         try:
             metric_id = data.metric_id.iloc[0]
             mod = MODS[self.model_type](
-                config_dir=self.config_dir,
+                config=self.config,
                 metric_name=metric_id,
                 project_name=self.project_name,
             )
@@ -99,7 +93,7 @@ class GenerateAnomalies:
         return all_rows
 
     def _num_from_loaded_model(self, data, all_rows):
-        mod = LoadedModel(config_dir=self.config_dir)
+        mod = LoadedModel(config_dir=self.config.config_dir)
         mod.load(data.metric_id.iloc[0])
         preds = mod.predict(data)
         if isinstance(preds, tuple):

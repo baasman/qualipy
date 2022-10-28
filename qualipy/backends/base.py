@@ -9,6 +9,7 @@ from numpy import NaN
 import sqlalchemy as sa
 
 from qualipy.exceptions import InvalidReturnValue
+from qualipy.store.initial_models import Value
 
 
 def convert_value_to_varchar(value):
@@ -111,8 +112,12 @@ class MetricResult:
             meta = json.dumps(self.meta)
         else:
             meta = self.meta
+        if isinstance(self.value, dict):
+            value = json.dumps(self.value)
+        else:
+            value = self.value
         return {
-            "value": self.value,
+            "value": value,
             "metric": self.metric,
             "date": self.date,
             "column_name": self.column_name,
@@ -182,16 +187,22 @@ class BackendBase(abc.ABC):
         return
 
     def write(self, conn, measures, project, batch_name, schema=None):
-        data = pd.DataFrame([i.to_dict() for i in measures])
-        data["insert_time"] = datetime.datetime.now().replace(tzinfo=None)
-        data["batch_name"] = batch_name
+        insert_time = datetime.datetime.now().replace(tzinfo=None)
+        # project_id = project.project_table.project_id
+        data = []
+        for measure in measures:
+            value = Value(
+                **{
+                    **measure.to_dict(),
+                    **{
+                        "insert_time": insert_time,
+                        "batch_name": batch_name,
+                        "project": project.project_table,
+                    },
+                }
+            )
+            data.append(value)
+            project.project_table.values_.append(value)
 
-        data.value = data.value.apply(convert_value_to_varchar)
-
-        data.to_sql(
-            project.project_name,
-            con=conn,
-            if_exists="append",
-            index=False,
-            schema=schema,
-        )
+        conn.add_all(data)
+        conn.add(project.project_table)

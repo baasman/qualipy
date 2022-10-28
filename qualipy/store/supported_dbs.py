@@ -1,0 +1,4 @@
+POSTGRES = "postgresql"
+SQLITE = "sqlite"
+
+DATABASE_ENGINES = [POSTGRES, SQLITE]

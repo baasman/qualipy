@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+import sqlalchemy as sa
 
 import os
 import datetime
@@ -7,6 +8,7 @@ from typing import Any, Dict, Optional, Union, Dict, List, Callable
 import warnings
 import logging
 import copy
+import project
 
 from qualipy.backends.pandas_backend.generator import BackendPandas
 from qualipy.backends.sql_backend.generator import BackendSQL
@@ -14,6 +16,7 @@ from qualipy.exceptions import FailException, NullableError
 from qualipy.project import Project
 from qualipy.util import setup_logging
 from qualipy.backends.base import MetricResult
+from qualipy.store.initial_models import Value
 
 try:
     from qualipy.backends.spark_backend.generator import BackendSpark
@@ -86,7 +89,11 @@ class Qualipy(object):
         self.time_of_run = (
             datetime.datetime.now() if time_of_run is None else time_of_run
         )
-        self.batch_name = batch_name if batch_name is not None else self.time_of_run
+        self.batch_name = (
+            batch_name
+            if batch_name is not None
+            else pd.to_datetime(str(self.time_of_run)).to_pydatetime()
+        )
 
         self.current_data = None
         self.total_measures = []
@@ -273,12 +280,13 @@ class Qualipy(object):
         return ret_columns
 
     def commit(self, delete_existing_batch=False):
-        with self.project.engine.begin() as conn:
-            if delete_existing_batch:
-                self._delete_existing_batch(conn)
-            self._write(conn=conn, measures=self.total_measures)
+        if delete_existing_batch:
+            self._delete_existing_batch(self.project.session)
+        self._write(conn=self.project.session, measures=self.total_measures)
+        # NOTE: the following should be in the DB as well
         self.project.write_functions_to_config()
         self.project.update_config_and_project_files()
+        self.project.session.commit()
 
     def _set_default_view(self):
         self.data_view = self.generator.return_data_copy(self.current_data)
@@ -381,7 +389,6 @@ class Qualipy(object):
                     measures.append(result)
 
         measures = self._get_general_info(measures)
-        # measures = [{**m, **{"run_name": self.current_name_view}} for m in measures]
         self._add_to_total_measures(measures)
         if profile_batch:
             self.generator.profile_batch(
@@ -489,4 +496,10 @@ class Qualipy(object):
             batch_name = "from_chunked"
         else:
             batch_name = self.batch_name
-        self.project.delete_existing_batch(conn, batch_name=batch_name)
+        delete_statement = sa.delete(Value).where(
+            sa.and_(
+                Value.batch_name == batch_name,
+                Value.project_id == self.project.project_name,
+            )
+        )
+        conn.execute(delete_statement)
