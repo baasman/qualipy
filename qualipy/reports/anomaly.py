@@ -2,6 +2,7 @@ import os
 import json
 
 import jinja2
+from jinja2.utils import markupsafe
 import numpy as np
 import pandas as pd
 
@@ -43,8 +44,8 @@ def list_anomalies(data, metric_id):
 class AnomalyReport(BaseJinjaView):
     def __init__(
         self,
-        config_dir,
-        project_name,
+        config,
+        project,
         run_name=None,
         run_anomaly=False,
         retrain_anomaly=False,
@@ -55,21 +56,13 @@ class AnomalyReport(BaseJinjaView):
         custom_styles_directory=None,
     ):
         super(AnomalyReport, self).__init__(custom_styles_directory)
-        config_dir = os.path.expanduser(config_dir)
-        self.config_dir = config_dir
-        with open(os.path.join(config_dir, "config.json"), "rb") as cf:
-            config = json.load(cf)
         self.config = config
-        self.project_name = project_name
-        self.project = Project(
-            config_dir=config_dir, project_name=project_name, re_init=True
-        )
+        self.project = project
 
         if run_anomaly:
-            # TODO: should be subset by run name in case of chunking
             self._run_anomaly_detection(
-                project_name=self.project_name,
-                config_dir=self.config_dir,
+                project=project,
+                config=config,
                 retrain_anomaly=retrain_anomaly,
             )
 
@@ -85,26 +78,25 @@ class AnomalyReport(BaseJinjaView):
         #         self.project_data.run_name.str.contains(run_name)
         #     ]
         self.anomaly_data = get_anomaly_data(self.project, timezone=time_zone)
-        # limitation - type not part of anomaly table - same
         if self.anomaly_data.shape[0] > 0:
-            # TODO: run_name is wrong on anomaly table - merging from project table for now
-            self.anomaly_data = self.anomaly_data.drop("run_name", axis=1)
+            # TODO: Do I still need this????
+            self.anomaly_data = self.anomaly_data.drop(["run_name"], axis=1)
             self.anomaly_data = self.anomaly_data.merge(
                 self.project_data[
-                    ["metric_id", "type", "original_column_name", "run_name"]
+                    ["value_id", "original_column_name"]
                 ].drop_duplicates(),
-                on="metric_id",
+                on="value_id",
                 how="left",
             )
         if self.project_data.shape[0] == 0:
-            raise Exception(f"No data found for project {project_name}")
+            raise Exception(f"No data found for project {project.project_name}")
 
-        if self.project_name not in config:
+        if project.project_name not in config:
             raise Exception(
-                f"""Must specify {project_name} in your configuration file ({self.config_dir})
+                f"""Must specify {project.project_name} in your configuration file ({self.config_dir})
                 in order to generate an anomaly report"""
             )
-        self.project_specific_config = config[self.project_name]
+        self.project_specific_config = config[project.project_name]
         self._set_viz_config()
         self._set_project_config()
 
@@ -287,7 +279,7 @@ class AnomalyReport(BaseJinjaView):
             columns={"run_name": "domain", "trend_function_name": "error function"}
         )
 
-        table = jinja2.Markup(
+        table = markupsafe.Markup(
             anom_data.to_html(
                 index=False,
                 columns=columns,

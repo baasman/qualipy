@@ -7,7 +7,6 @@ import numpy as np
 import pandas as pd
 from tqdm import tqdm
 
-from qualipy.project import Project
 from qualipy.util import set_value_type, set_metric_id
 from qualipy.anomaly._isolation_forest import IsolationForestModel
 from qualipy.anomaly._prophet import ProphetModel
@@ -17,18 +16,7 @@ from qualipy.anomaly.trend_rules import trend_rules
 from qualipy.config import QualipyConfig
 
 
-anomaly_columns = [
-    "column_name",
-    "date",
-    "metric",
-    "arguments",
-    "return_format",
-    "value",
-    "severity",
-    "batch_name",
-    "insert_time",
-    "trend_function_name",
-]
+anomaly_columns = ["value_id", "project_id", "severity", "trend_function_name"]
 
 MODS = {
     "IsolationForest": IsolationForestModel,
@@ -137,7 +125,6 @@ class GenerateAnomalies:
             data = pd.concat(all_rows).sort_values("date", ascending=False)
             data["trend_function_name"] = np.NaN
             data = data[anomaly_columns]
-            data.value = data.value.astype(str)
         except:
             data = pd.DataFrame([], columns=anomaly_columns)
         return data
@@ -223,7 +210,6 @@ class GenerateAnomalies:
             data = pd.concat(all_rows).sort_values("date", ascending=False)
             data["trend_function_name"] = np.NaN
             data = data[anomaly_columns]
-            data.value = data.value.astype(str)
         except:
             data = pd.DataFrame([], columns=anomaly_columns)
         return data
@@ -263,7 +249,6 @@ class GenerateAnomalies:
             if len(all_rows) > 0:
                 data = pd.concat(all_rows).sort_values("date", ascending=False)
                 data = data[anomaly_columns]
-                data.value = data.value.astype(str)
             else:
                 data = pd.DataFrame([], columns=anomaly_columns)
         else:

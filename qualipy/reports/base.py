@@ -11,7 +11,7 @@ import altair as alt
 import numpy as np
 import pandas as pd
 
-from qualipy.anomaly.anomaly import _run_anomaly
+from qualipy.anomaly.anomaly import run_anomaly
 
 
 DEFAULT_FUNCTION_DESCRIPTIONS = {
@@ -148,10 +148,10 @@ class BaseJinjaView:
             project_data = project_data[project_data.run_name.isin(only_include_runs)]
         return project_data, anomaly_data
 
-    def _run_anomaly_detection(self, project_name, config_dir, retrain_anomaly):
-        _run_anomaly(
-            project_name=project_name,
-            config_dir=config_dir,
+    def _run_anomaly_detection(self, project, config, retrain_anomaly):
+        run_anomaly(
+            project_name=project,
+            config_dir=config,
             retrain=retrain_anomaly,
         )
 

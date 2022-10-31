@@ -229,34 +229,54 @@ class Project(object):
         return table
 
     def get_anomaly_table(self) -> pd.DataFrame:
-        table_query = self.session.query(Anomaly).filter(
-            Anomaly.project_id == self.project_table.project_id
+        table_query = (
+            self.session.query(
+                Anomaly.anomaly_id, Anomaly.severity, Anomaly.trend_function_name, Value
+            )
+            .join(Value, Anomaly.value_id == Value.value_id)
+            .filter(Anomaly.project_id == self.project_table.project_id)
         )
         table = pd.read_sql(table_query.statement, table_query.session.bind)
         return table
 
     def write_anomalies(self, anomaly_data: pd.DataFrame, clear: bool = False):
-        if clear:
-            self.session.query(Anomaly).filter(
-                Anomaly.project_id == self.project_table.project_id
-            ).delete()
-        most_recent_one = (
-            self.session.query(Anomaly)
-            .join(Value, Anomaly.project_id == Value.project_id)
-            .filter(Value.project_id == self.project_table.project_id)
-            .order_by(sa.desc(Value.date))
-            .first()
+        current_anoms = self.session.query(Anomaly).filter(
+            Anomaly.project_id == self.project_table.project_id
         )
-        # most_recent_one = conn.execute(
-        #     f"select date from {schema_str}{anomaly_table_name} order by date desc limit 1"
-        # ).fetchone()
-        if most_recent_one is not None and data.shape[0] > 0:
-            most_recent_one = most_recent_one[0]
-            data = data[pd.to_datetime(data.date) > pd.to_datetime(most_recent_one)]
-        if data.shape[0] > 0:
-            data.to_sql(
-                anomaly_table_name, conn, if_exists="append", index=False, schema=schema
-            )
+        if clear:
+            current_anoms.delete()
+        current_anoms_data = pd.read_sql(
+            current_anoms.statement, current_anoms.session.bind
+        )
+        # most_recent_one = (
+        #     self.session.query(Anomaly)
+        #     .join(Value, Anomaly.project_id == Value.project_id)
+        #     .filter(Value.project_id == self.project_table.project_id)
+        #     .order_by(sa.desc(Value.date))
+        #     .first()
+        # )
+        # # TODO: what about new retrospective ones!
+        # if most_recent_one is not None and anomaly_data.shape[0] > 0:
+        #     most_recent_date = most_recent_one.value.date
+        #     anomaly_data = anomaly_data[
+        #         pd.to_datetime(anomaly_data.date) > pd.to_datetime(most_recent_date)
+        #     ]
+        if anomaly_data.shape[0] > 0:
+
+            anomaly_rows = anomaly_data.to_dict(orient="records")
+            data = []
+            for anomaly_ in anomaly_rows:
+                anomaly = Anomaly(**anomaly_)
+                if anomaly.value_id in current_anoms_data.value_id.values:
+                    self.session.query(Anomaly).filter(
+                        Anomaly.value_id == anomaly.value_id
+                    ).delete()
+                data.append(anomaly)
+                self.project_table.anomalies_.append(anomaly)
+
+            self.session.add_all(data)
+            self.session.add(self.project_table)
+            self.session.commit()
 
     def delete_data(self):
         self.session.query(Value).delete()

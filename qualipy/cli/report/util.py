@@ -35,8 +35,8 @@ def produce_batch_report_cli(
 
 
 def produce_anomaly_report_cli(
-    config_dir,
-    project_name,
+    config,
+    project,
     run_anomaly=False,
     clear_anomaly=False,
     only_show_anomaly=False,
@@ -45,10 +45,9 @@ def produce_anomaly_report_cli(
     out_file=None,
     run_name=None,
 ):
-    config_dir = os.path.expanduser(config_dir)
     view = AnomalyReport(
-        config_dir=config_dir,
-        project_name=project_name,
+        config=config,
+        project=project,
         run_anomaly=run_anomaly,
         retrain_anomaly=clear_anomaly,
         only_show_anomaly=only_show_anomaly,
@@ -57,11 +56,16 @@ def produce_anomaly_report_cli(
         run_name=run_name,
     )
     rendered_page = view.render(
-        template=f"anomaly.j2", title="Anomaly Report", project_name=project_name
+        template=f"anomaly.j2",
+        title="Anomaly Report",
+        project_name=project.project_name,
     )
     if out_file is None:
         time_of_run = datetime.datetime.now().strftime("%Y-%d-%mT%H")
         out_file = os.path.join(
-            config_dir, "reports", "anomaly", f"{project_name}-{time_of_run}.html"
+            config.config_dir,
+            "reports",
+            "anomaly",
+            f"{project.project_name}-{time_of_run}.html",
         )
     rendered_page.dump(out_file)

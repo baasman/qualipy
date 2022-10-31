@@ -163,7 +163,7 @@ def auto_qpy_chunked(
 def auto_qpy_single_batch_pandas(
     data: pd.DataFrame,
     project: Union[qpy.Project, str],
-    batch: qpy.run.Qualipy = None,
+    batch: qpy.Qualipy = None,
     batch_name: str = None,
     configuration_dir: str = None,
     stratify: str = None,

@@ -8,7 +8,6 @@ from typing import Any, Dict, Optional, Union, Dict, List, Callable
 import warnings
 import logging
 import copy
-import project
 
 from qualipy.backends.pandas_backend.generator import BackendPandas
 from qualipy.backends.sql_backend.generator import BackendSQL

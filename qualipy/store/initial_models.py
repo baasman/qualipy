@@ -84,8 +84,10 @@ class Anomaly(Base):
     __tablename__ = "anomaly"
 
     anomaly_id = Column(Integer, autoincrement=True)
-    metric_id = Column(Integer, ForeignKey("value.value_id"))
-    project_id = Column(Integer, ForeignKey("project.project_id"))
+    value_id = Column(Integer, ForeignKey("value.value_id"), nullable=False)
+    project_id = Column(Integer, ForeignKey("project.project_id"), nullable=False)
+    severity = Column(Float, nullable=True)
+    trend_function_name = Column(String, nullable=True)
     value = relationship("Value", backref=backref("anomaly", uselist=False))
 
     __table_args__ = (PrimaryKeyConstraint("anomaly_id", name="anomaly_pk"),)
