@@ -3,8 +3,8 @@ from qualipy.anomaly.generate import GenerateAnomalies
 import qualipy as qpy
 
 
-def anomaly_data_project(project, config, retrain):
-    generator = GenerateAnomalies(project, config)
+def anomaly_data_project(project, retrain):
+    generator = GenerateAnomalies(project)
     rule_anomalies = generator.create_trend_rule_table()
     boolean_checks = generator.create_error_check_table()
     cat_anomalies = generator.create_anom_cat_table(retrain)
@@ -17,13 +17,12 @@ def anomaly_data_project(project, config, retrain):
 
 def run_anomaly(
     project: qpy.Project,
-    config: qpy.QualipyConfig,
     retrain: bool = False,
     clear_existing: bool = False,
-):
+) -> pd.DataFrame:
     anom_data = anomaly_data_project(
         project=project,
-        config=config,
         retrain=retrain,
     )
     project.write_anomalies(anomaly_data=anom_data, clear=clear_existing)
+    return anom_data

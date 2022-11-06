@@ -129,7 +129,7 @@ def _setup_sql_project(
     project = _setup_sql_table_project(
         conf=config, config_dir=config_dir, project_name=project_name, spec=project_spec
     )
-    project.serialize_project()
+    project.save()
     return project
 
 
@@ -313,6 +313,7 @@ def _run_sql_batch(
             run_anomaly=run_anomaly,
             run_name=run_name,
         )
+    return batch.get_total_measures_as_df()
 
 
 @click.command()
@@ -451,6 +452,7 @@ def run_pandas_batch(
             run_anomaly=run_anomaly,
             run_name=run_name,
         )
+    return batch.get_total_measures_as_df()
 
 
 @click.command()

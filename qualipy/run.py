@@ -141,6 +141,17 @@ class Qualipy(object):
                     self.time_of_run = chunk["batch_name"]
                     self._run_with_optional_stratify(autocommit)
 
+    @property
+    def total_measures(self):
+        return self._total_measures
+
+    @total_measures.setter
+    def total_measures(self, value):
+        self._total_measures = value
+
+    def get_total_measures_as_df(self) -> pd.DataFrame:
+        return pd.DataFrame([row.to_dict() for row in self.total_measures])
+
     def _run_with_optional_stratify(self, autocommit, profile_batch=False):
         if self.stratify:
             self.original_data = self.current_data.copy()

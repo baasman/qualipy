@@ -26,8 +26,8 @@ MODS = {
 
 
 class GenerateAnomalies:
-    def __init__(self, project, config):
-        self.config = config
+    def __init__(self, project):
+        self.config = project.config
         self.model_type = self.config[project.project_name].get("ANOMALY_MODEL", "std")
         self.anom_args = self.config[project.project_name].get("ANOMALY_ARGS", {})
         self.specific = self.anom_args.pop("specific", {})
@@ -233,8 +233,8 @@ class GenerateAnomalies:
         df = self.df
         if len(self.specific) > 0:
             all_rows = []
-            df = df[df.metric_id.isin(self.specific)]
-            for metric_id, group in df.groupby("metric_id"):
+            df = df[df.metric_name.isin(self.specific)]
+            for metric_id, group in df.groupby("metric_name"):
                 trend_functions = self.specific[metric_id]
                 group = set_value_type(group)
                 for fun in trend_functions:

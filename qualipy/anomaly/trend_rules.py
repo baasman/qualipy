@@ -1,10 +1,10 @@
 def hard_upper_limit(data, limit):
-    data = data[data.value > limit]
+    data = data[data.value >= limit]
     return data
 
 
 def hard_lower_limit(data, limit):
-    data = data[data.value < limit]
+    data = data[data.value <= limit]
     return data
 
 

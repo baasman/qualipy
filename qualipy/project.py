@@ -112,6 +112,7 @@ class Project(object):
                 new_project = ProjectTable(project_name=self.project_name)
                 # self.session.add(new_project)
                 self.project_table = new_project
+                self.session.add(self.project_table)
             else:
                 self.project_table = entry
 
@@ -300,7 +301,7 @@ class Project(object):
             "DEFAULT"
         ] = self._functions_used_in_project
 
-    def serialize_project(self, use_dill: bool = True) -> None:
+    def save(self, use_dill: bool = True) -> None:
         to_dict_cols = copy.deepcopy(self.columns)
         serialized_dict = {}
         for col_name, schema in to_dict_cols.items():
@@ -320,6 +321,8 @@ class Project(object):
         self.projects[self.project_name] = serialized_dict
         with open(os.path.join(self.config_dir, "projects.json"), "w") as f:
             json.dump(self.projects, f)
+        self.session.commit()
+        self.config.dump()
 
     def _load_from_dict(self, column_dict: dict):
         self.columns = column_dict

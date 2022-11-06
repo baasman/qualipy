@@ -2,6 +2,7 @@ import os
 import json
 import typing as t
 import logging
+from functools import wraps
 
 from qualipy.store.util import _initialize_tables, create_sqlalchemy_engine
 
@@ -13,6 +14,8 @@ DEFAULT_PROJECT_CONFIG = {
         "check_for_std": False,
         "importance_level": 1,
         "distance_from_bound": 1,
+        "ignore": [],
+        "specific": {},
     },
     "PROFILE_ARGS": {},
     "ANOMALY_MODEL": "std",
@@ -142,6 +145,7 @@ class QualipyConfig(dict):
         port: int,
         query: dict,
     ):
+        self._read_conf_from_file()
         if "TRACKING_DBS" not in self:
             self["TRACKING_DBS"] = {}
 
@@ -162,6 +166,45 @@ class QualipyConfig(dict):
                     query_args[k] = v
             spec["query"] = query_args
         self["TRACKING_DBS"][name] = spec
+        self.dump()
+
+    def add_trend_rule(
+        self,
+        project_name: str,
+        metric_id: str,
+        trend_name: str,
+        severity: int,
+        arguments: t.Dict[str, t.Any],
+    ):
+        self._read_conf_from_file()
+        if project_name not in self:
+            raise Exception("Save project before adding trend rules")
+        if "ANOMALY_ARGS" not in self[project_name]:
+            self[project_name]["ANOMALY_ARGS"] = {
+                "check_for_std": False,
+                "importance_level": 1,
+                "distance_from_bound": 1,
+                "ignore": [],
+                "specific": {},
+            }
+        trend_function = {
+            "function": trend_name,
+            "arguments": arguments,
+            "severity": severity,
+        }
+        if metric_id in self[project_name]["ANOMALY_ARGS"]["specific"]:
+            fun_hashes = [
+                hash(str(i))
+                for i in self[project_name]["ANOMALY_ARGS"]["specific"][metric_id]
+            ]
+            if hash(str(trend_function)) in fun_hashes:
+                logger.info("Trend function already addedd")
+            else:
+                self[project_name]["ANOMALY_ARGS"]["specific"][metric_id].append(
+                    trend_function
+                )
+        else:
+            self[project_name]["ANOMALY_ARGS"]["specific"][metric_id] = [trend_function]
         self.dump()
 
     def get_projects(self):
