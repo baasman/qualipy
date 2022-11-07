@@ -44,7 +44,6 @@ def list_anomalies(data, metric_id):
 class AnomalyReport(BaseJinjaView):
     def __init__(
         self,
-        config,
         project,
         run_name=None,
         run_anomaly=False,
@@ -56,13 +55,12 @@ class AnomalyReport(BaseJinjaView):
         custom_styles_directory=None,
     ):
         super(AnomalyReport, self).__init__(custom_styles_directory)
-        self.config = config
         self.project = project
+        self.config = project.config
 
         if run_anomaly:
             self._run_anomaly_detection(
                 project=project,
-                config=config,
                 retrain_anomaly=retrain_anomaly,
             )
 
@@ -91,12 +89,12 @@ class AnomalyReport(BaseJinjaView):
         if self.project_data.shape[0] == 0:
             raise Exception(f"No data found for project {project.project_name}")
 
-        if project.project_name not in config:
+        if self.project.project_name not in self.config:
             raise Exception(
-                f"""Must specify {project.project_name} in your configuration file ({self.config_dir})
+                f"""Must specify {self.project.project_name} in your configuration file ({self.config.config_dir})
                 in order to generate an anomaly report"""
             )
-        self.project_specific_config = config[project.project_name]
+        self.project_specific_config = self.config[project.project_name]
         self._set_viz_config()
         self._set_project_config()
 
@@ -127,7 +125,7 @@ class AnomalyReport(BaseJinjaView):
         js_config = self._get_js_config()
 
         kwargs = {
-            "project_name": self.project_name,
+            "project_name": self.project.project_name,
             "title": "Qualipy - Project Report",
             "anomaly_table": anomaly_table,
             "trend_plots": trend_plots,
@@ -204,7 +202,7 @@ class AnomalyReport(BaseJinjaView):
     def _show_anomaly_table(self):
         columns = [
             "column_name",
-            "domain",
+            # "domain",
             "metric",
             "error function",
             "arguments",
@@ -283,7 +281,7 @@ class AnomalyReport(BaseJinjaView):
             anom_data.to_html(
                 index=False,
                 columns=columns,
-                table_id=self.project_name,
+                table_id=self.project.project_name,
                 classes=["table table-striped"],
                 escape=False,
                 render_links=True,
@@ -429,8 +427,8 @@ class AnomalyReport(BaseJinjaView):
                         chart = trend_line_altair(
                             trend_data,
                             var,
-                            self.config_dir,
-                            self.project_name,
+                            self.config.config_dir,
+                            self.project.project_name,
                             anom_trend,
                             point=self.trend.get("point", True),
                             sst=self.trend.get("sst", None),

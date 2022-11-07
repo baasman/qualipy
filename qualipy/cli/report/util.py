@@ -35,7 +35,6 @@ def produce_batch_report_cli(
 
 
 def produce_anomaly_report_cli(
-    config,
     project,
     run_anomaly=False,
     clear_anomaly=False,
@@ -46,7 +45,6 @@ def produce_anomaly_report_cli(
     run_name=None,
 ):
     view = AnomalyReport(
-        config=config,
         project=project,
         run_anomaly=run_anomaly,
         retrain_anomaly=clear_anomaly,
@@ -63,7 +61,7 @@ def produce_anomaly_report_cli(
     if out_file is None:
         time_of_run = datetime.datetime.now().strftime("%Y-%d-%mT%H")
         out_file = os.path.join(
-            config.config_dir,
+            project.config.config_dir,
             "reports",
             "anomaly",
             f"{project.project_name}-{time_of_run}.html",

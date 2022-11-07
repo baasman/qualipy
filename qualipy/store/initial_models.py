@@ -62,12 +62,21 @@ class Value(Base):
     insert_time = Column(DateTime, nullable=False)
     meta = Column(String, nullable=True)
 
+    anomalies = relationship("Anomaly", cascade="all, delete-orphan")
+
     # project = relationship(Project, primaryjoin=project_id == Project.project_id)
 
     __table_args__ = (PrimaryKeyConstraint("value_id", name="value_pk"),)
 
-    def delete_existing_batch(self, project_name):
-        pass
+    @staticmethod
+    def delete_existing_batch(session, batch_name: str, project_id) -> None:
+        delete_statement = sa.delete(Value).where(
+            sa.and_(
+                Value.batch_name == str(batch_name),
+                Value.project_id == project_id,
+            )
+        )
+        session.execute(delete_statement)
 
 
 def validate_date_columns(target, value, oldvalue, initiator):
@@ -88,6 +97,8 @@ class Anomaly(Base):
     project_id = Column(Integer, ForeignKey("project.project_id"), nullable=False)
     severity = Column(Float, nullable=True)
     trend_function_name = Column(String, nullable=True)
-    value = relationship("Value", backref=backref("anomaly", uselist=False))
+    value = relationship(
+        "Value", backref=backref("anomaly", uselist=False, cascade="all, delete-orphan")
+    )
 
     __table_args__ = (PrimaryKeyConstraint("anomaly_id", name="anomaly_pk"),)

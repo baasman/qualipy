@@ -148,10 +148,9 @@ class BaseJinjaView:
             project_data = project_data[project_data.run_name.isin(only_include_runs)]
         return project_data, anomaly_data
 
-    def _run_anomaly_detection(self, project, config, retrain_anomaly):
+    def _run_anomaly_detection(self, project, retrain_anomaly):
         run_anomaly(
             project_name=project,
-            config_dir=config,
             retrain=retrain_anomaly,
         )
 

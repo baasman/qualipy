@@ -506,10 +506,8 @@ class Qualipy(object):
             batch_name = "from_chunked"
         else:
             batch_name = self.batch_name
-        delete_statement = sa.delete(Value).where(
-            sa.and_(
-                Value.batch_name == batch_name,
-                Value.project_id == self.project.project_name,
-            )
+        Value.delete_existing_batch(
+            session=conn,
+            batch_name=batch_name,
+            project_id=self.project.project_table.project_id,
         )
-        conn.execute(delete_statement)
