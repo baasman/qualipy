@@ -6,6 +6,7 @@ import datetime
 import pandas as pd
 from typing import List, Union, Dict
 import typing as t
+import logging
 
 try:
     from collections.abc import Callable
@@ -27,6 +28,7 @@ from qualipy.config import QualipyConfig
 from qualipy.store.util import create_sqlalchemy_engine
 from qualipy.store.initial_models import Project as ProjectTable, Value, Anomaly
 
+logger = logging.getLogger(__name__)
 
 DATA_TYPES = {"pandas": PANDAS_TYPES, "sql": {}}
 
