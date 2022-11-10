@@ -344,6 +344,8 @@ def load_project(
         config = QualipyConfig(config_dir=config_dir, project_name=project_name)
     elif isinstance(config_dir, QualipyConfig):
         config = config_dir
+    else:
+        raise Exception(f"Could not instantiate config from {config_dir}")
     projects = config.get_projects()
     if project_name not in projects:
         raise Exception(f"{project_name} has not yet been created or serialized")
