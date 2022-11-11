@@ -245,7 +245,7 @@ class AnomalyReport(BaseJinjaView):
                 + '">'
                 + r["display_name"]
                 + "</a>"
-                if r["trend_function_name"] is not None
+                if r["trend_function_name"] != "NaN"
                 else "",
                 axis=1,
             )
