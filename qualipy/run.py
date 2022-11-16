@@ -20,6 +20,7 @@ from qualipy.store.initial_models import Value
 try:
     from qualipy.backends.spark_backend.generator import BackendSpark
 except Exception as e:
+    warnings.warn("Unable to import pyspark")
     BackendSpark = None
 
 # supress numpy future warning for now
@@ -384,12 +385,14 @@ class Qualipy(object):
                     copy_of_result.update_keys(value=None)
                     for sub_value in result.value:
                         new_result = copy.deepcopy(copy_of_result)
-                        new_result.update_keys(
-                            value=sub_value["value"], run_name=sub_value["run_name"]
-                        )
+                        new_result.update_keys(value=sub_value["value"])
                         new_result.update_keys(
                             return_format=function.custom_value_return_format
                         )
+                        if "run_name" in sub_value:
+                            new_result.update_keys(run_name=sub_value["run_name"])
+                        else:
+                            new_result.update_keys(run_name=self.current_name_view)
                         if "metric_name" in sub_value:
                             new_result.update_keys(metric=sub_value["metric_name"])
                         if "meta" in sub_value:
