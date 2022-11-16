@@ -7,6 +7,7 @@ import sqlalchemy as sa
 
 import qualipy as qpy
 from qualipy.util import does_batch_exist
+from qualipy.util import set_spark_con
 
 
 logger = logging.getLogger(__name__)
@@ -221,12 +222,16 @@ def _set_spark_sql_data(
     engine,
     table_name,
     schema,
-    spark_settings,
+    spark,
+    spark_config,
+    partition_info,
     custom_select_sql=None,
     backend="spark-sql",
 ):
     qpy_data = qpy.backends.sql_backend.dataset.SparkSQLData(
-        spark_config=spark_settings,
+        spark=spark,
+        spark_config=spark_config,
+        partition_info=partition_info,
         engine=engine,
         table_name=table_name,
         schema=schema,
@@ -253,6 +258,7 @@ def auto_qpy_single_batch_sql(
     produce_report: bool = True,
     overwrite_arguments: dict = None,
     use_spark: bool = False,
+    partition_info: dict = None,
     custom_select_sql: str = None,
     backend: str = "sql",
     ignore_if_batch_exists: bool = False,
@@ -280,11 +286,14 @@ def auto_qpy_single_batch_sql(
         run_name = "auto-qpy"
 
     if use_spark:
+        spark = set_spark_con(project.config.get("SPARK_CONN", {}))
         qpy_data = _set_spark_sql_data(
             engine=engine,
             table_name=table_name,
             schema=schema,
-            spark_settings=project.config["SPARK_CONN"],
+            spark=spark,
+            spark_config=project.config.get("SPARK_CONN", {}),
+            partition_info=partition_info,
             custom_select_sql=custom_select_sql,
             backend=backend,
         )

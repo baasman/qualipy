@@ -143,7 +143,9 @@ class SparkSQLData(BaseData):
 
     def __init__(
         self,
-        spark_config: dict = None,
+        spark,
+        spark_config,
+        partition_info: dict = None,
         engine: sa.engine.base.Engine = None,
         table_name: str = None,
         schema: str = None,
@@ -151,16 +153,7 @@ class SparkSQLData(BaseData):
         custom_select_sql: str = None,
         backend="spark-sql",
     ):
-        # spark_config = []
-        conf = pyspark.SparkConf()
-        conf.setAll(pairs=[("spark.ui.port", 8081)])
-
-        self.spark = (
-            pyspark.sql.SparkSession.builder.appName("qualipy")
-            .master("local[32]")
-            .config(conf=conf)
-            .getOrCreate()
-        )
+        self.spark = spark
         if engine is not None:
             self.engine = engine
         else:
@@ -187,15 +180,18 @@ class SparkSQLData(BaseData):
         # temp
         query_string = query_string.replace("\\", "")
 
-        table_df = (
-            self.spark.read.format("jdbc")
-            .option("url", spark_config["jdbc_url"])
-            .option("user", spark_config["username"])
-            .option("password", spark_config["password"])
-            .option("driver", "oracle.jdbc.driver.OracleDriver")
-            .option("dbtable", f"({query_string}) t")
+        table_df = self.spark.read.jdbc(
+            properties=dict(
+                user=spark_config["username"],
+                password=spark_config["password"],
+                driver=spark_config["driver"],
+            ),
+            url=spark_config["jdbc_url"],
+            table=f"({query_string}) t",
+            **partition_info,
         )
-        self.table_df = table_df.load()
+        self.table_df = table_df
+        self.table_df.persist(pyspark.StorageLevel.MEMORY_AND_DISK)
 
     def get_data(self):
         if self.backend == "pandas":

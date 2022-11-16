@@ -192,3 +192,19 @@ def setup_logging():
 
 def does_batch_exist(run):
     return run.project.sql_helper.does_batch_exist(run.batch_name)
+
+
+def set_spark_con(config):
+    import pyspark
+
+    conf = pyspark.SparkConf()
+    conf.setAll(pairs=config.get("pairs", []))
+
+    spark = (
+        pyspark.sql.SparkSession.builder.appName("qualipy")
+        .master(config.get("master", "local[*]"))
+        .config(conf=conf)
+        .getOrCreate()
+    )
+    spark.sparkContext.setLogLevel("INFO")
+    return spark

@@ -34,13 +34,13 @@ class BackendSpark(BackendBase):
 
     @staticmethod
     def get_shape(data: DataFrame) -> Tuple[int, int]:
-        rows = data.count()
-        columns = len(data.columns)
+        rows = data.table_df.count()
+        columns = len(data.table_df.columns)
         return rows, columns
 
     @staticmethod
     def get_dtype(data: DataFrame, column: str) -> str:
-        return data.schema[column].dataType.simpleString()
+        return data.table_df.schema[column.upper()].dataType.simpleString()
 
     @staticmethod
     def set_schema(
@@ -84,52 +84,68 @@ class BackendSpark(BackendBase):
         data = data.withColumn(col, data[col].cast(type.str_name))
         return data
 
-    @staticmethod
-    def generate_column_general_info(specs, data, time_of_run):
+    def generate_column_general_info(self, specs, data, time_of_run, run_name):
         col_name = specs["name"]
         if specs["unique"]:
-            unique = BackendSpark.generate_description(
+            unique = self.generate_description(
                 function=is_unique,
                 data=data,
                 column=col_name,
-                standard_viz=NaN,
                 function_name="is_unique",
                 date=time_of_run,
-                is_static=True,
                 viz_type="data-characteristic",
                 kwargs={},
             )
+            unique.update_keys(run_name=run_name)
         else:
             unique = None
         if specs["is_category"]:
-            value_props = BackendSpark.generate_description(
+            value_props = self.generate_description(
                 function=value_counts,
                 data=data,
                 column=col_name,
                 function_name="value_counts",
-                standard_viz=True,
                 date=time_of_run,
-                is_static=True,
                 viz_type="categorical",
                 kwargs={},
-                return_format="dict",
+                return_format=dict,
             )
+            value_props = None if str(value_props.value) == "nan" else value_props
+            if value_props is not None:
+                value_props.update_keys(run_name=run_name)
+
+            distinct = self.generate_description(
+                function=distinct_count,
+                data=data,
+                column=col_name,
+                function_name="distinct_count",
+                date=time_of_run,
+                viz_type="data-characteristic",
+                kwargs={},
+                return_format=int,
+            )
+            distinct = None if str(distinct.value) == "nan" else distinct
+            if distinct is not None:
+                distinct.update_keys(run_name=run_name)
         else:
             value_props = None
-        perc_missing = BackendSpark.generate_description(
+            distinct = None
+        perc_missing = self.generate_description(
             function=percentage_missing,
             data=data,
             column=col_name,
-            standard_viz=NaN,
             function_name="perc_missing",
             date=time_of_run,
-            is_static=True,
             viz_type="data-characteristic",
             kwargs={},
         )
-        return unique, perc_missing, value_props
+        perc_missing.update_keys(run_name=run_name)
+        return unique, perc_missing, value_props, distinct
 
     @staticmethod
     def generate_data(data, config):
         data = SparkData(data, config)
         return data.get_data()
+
+    def return_data_copy(self, data):
+        return data
