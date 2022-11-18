@@ -39,6 +39,9 @@ class BaseData(object):
     def set_fallback_data(self):
         pass
 
+    def unpersist(self):
+        pass
+
 
 class MetricResult:
 

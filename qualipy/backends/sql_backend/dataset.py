@@ -152,6 +152,7 @@ class SparkSQLData(BaseData):
         conn_string: str = None,
         custom_select_sql: str = None,
         backend="spark-sql",
+        custom_schema: str = None,
     ):
         self.spark = spark
         if engine is not None:
@@ -180,12 +181,16 @@ class SparkSQLData(BaseData):
         # temp
         query_string = query_string.replace("\\", "")
 
+        properties = dict(
+            user=spark_config["username"],
+            password=spark_config["password"],
+            driver=spark_config["driver"],
+        )
+        if custom_schema is not None:
+            properties["customSchema"] = custom_schema
+
         table_df = self.spark.read.jdbc(
-            properties=dict(
-                user=spark_config["username"],
-                password=spark_config["password"],
-                driver=spark_config["driver"],
-            ),
+            properties=properties,
             url=spark_config["jdbc_url"],
             table=f"({query_string}) t",
             **partition_info,
@@ -216,3 +221,6 @@ class SparkSQLData(BaseData):
         except:
             return False
         return True
+
+    def unpersist(self):
+        self.table_df.unpersist()
