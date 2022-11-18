@@ -227,6 +227,7 @@ def _set_spark_sql_data(
     partition_info,
     custom_select_sql=None,
     backend="spark-sql",
+    custom_schema=None,
 ):
     qpy_data = qpy.backends.sql_backend.dataset.SparkSQLData(
         spark=spark,
@@ -237,6 +238,7 @@ def _set_spark_sql_data(
         schema=schema,
         custom_select_sql=custom_select_sql,
         backend=backend,
+        custom_schema=custom_schema,
     )
     return qpy_data
 
@@ -259,6 +261,7 @@ def auto_qpy_single_batch_sql(
     overwrite_arguments: dict = None,
     use_spark: bool = False,
     partition_info: dict = None,
+    custom_schema: str = None,
     custom_select_sql: str = None,
     backend: str = "sql",
     ignore_if_batch_exists: bool = False,
@@ -295,6 +298,7 @@ def auto_qpy_single_batch_sql(
             spark_config=project.config.get("SPARK_CONN", {}),
             partition_info=partition_info,
             custom_select_sql=custom_select_sql,
+            custom_schema=custom_schema,
             backend=backend,
         )
     else:
@@ -317,4 +321,5 @@ def auto_qpy_single_batch_sql(
             run_anomaly=run_anomaly,
             run_name=run_name,
         )
+    qpy_data.unpersist()
     return batch
