@@ -354,10 +354,8 @@ class Qualipy(object):
                 should_fail = function.fail
                 arguments = function.arguments
                 return_format = function.return_format
-                # return_format_repr = types[return_format]
                 viz_type = self._set_viz_type(function, function_name)
 
-                # generate result row
                 result = self.generator.generate_description(
                     function=function,
                     data=self.data_view,
@@ -371,7 +369,6 @@ class Qualipy(object):
                     overwrite_kwargs=self.overwrite_arguments,
                 )
 
-                # set value type
                 result.set_return_value_type()
 
                 if should_fail and not result["value"]:
@@ -383,7 +380,7 @@ class Qualipy(object):
                 if return_format == "custom":
                     copy_of_result = copy.deepcopy(result)
                     copy_of_result.update_keys(value=None)
-                    for sub_value in result.value:
+                    for sub_value in result.value.to_list():
                         new_result = copy.deepcopy(copy_of_result)
                         new_result.update_keys(value=sub_value["value"])
                         new_result.update_keys(

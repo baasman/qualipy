@@ -28,6 +28,8 @@ class Project(Base):
 
     project_id = Column(Integer, autoincrement=True)
     project_name = Column(String(256), unique=True, nullable=False)
+    date_created = Column(DateTime, nullable=True)
+    config_repr = Column(String, nullable=True)
     values_ = relationship("Value", backref="project", lazy="dynamic")
     anomalies_ = relationship("Anomaly", backref="project", lazy="dynamic")
 
@@ -60,8 +62,12 @@ class Value(Base):
     run_name = Column(String, nullable=False)
     value = Column(String, nullable=True)
     insert_time = Column(DateTime, nullable=False)
+    anomaly_model_id = Column(
+        Integer, ForeignKey("anomaly_model.anomaly_model_id"), nullable=True
+    )
     meta = Column(String, nullable=True)
 
+    # model = relationship("Model", back_populates="values")
     anomalies = relationship("Anomaly", cascade="all, delete-orphan", backref="value")
 
     # project = relationship(Project, primaryjoin=project_id == Project.project_id)
@@ -104,3 +110,17 @@ class Anomaly(Base):
     trend_function_name = Column(String, nullable=True)
 
     __table_args__ = (PrimaryKeyConstraint("anomaly_id", name="anomaly_pk"),)
+
+
+class AnomalyModel(Base):
+
+    __tablename__ = "anomaly_model"
+
+    anomaly_model_id = Column(Integer, autoincrement=True)
+    model_blob = Column(sa.types.LargeBinary)
+    model_type = Column(String)
+    values = relationship("Value", backref="anomaly_model", lazy="dynamic")
+
+    __table_args__ = (
+        PrimaryKeyConstraint("anomaly_model_id", name="anomaly_model_pk"),
+    )

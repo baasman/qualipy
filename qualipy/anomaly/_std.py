@@ -8,12 +8,15 @@ from qualipy.anomaly.base import AnomalyModelImplementation
 class STDCheck(AnomalyModelImplementation):
     def __init__(
         self,
-        config,
+        project,
         metric_name,
+        value_ids,
         project_name=None,
         arguments=None,
     ):
-        super(STDCheck, self).__init__(config, metric_name, project_name, arguments)
+        super(STDCheck, self).__init__(
+            project, metric_name, value_ids, project_name, arguments
+        )
         self.multivariate = self.arguments.pop("multivariate", False)
         self.std = self.arguments.pop("std", 4)
 

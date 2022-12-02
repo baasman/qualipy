@@ -10,6 +10,7 @@ import sqlalchemy as sa
 
 from qualipy.exceptions import InvalidReturnValue
 from qualipy.store.initial_models import Value
+from qualipy.custom_return import CustomReturn
 
 
 def convert_value_to_varchar(value):
@@ -94,8 +95,10 @@ class MetricResult:
                     " '{}'".format(e, str(self.return_format))
                 )
         elif self.return_format == "custom":
-            if not isinstance(self.value, list):
-                raise InvalidReturnValue("Improperly formatted custom return type")
+            if not isinstance(self.value, CustomReturn):
+                raise InvalidReturnValue(
+                    "Improperly formatted custom return type. Use CustomReturn"
+                )
             else:
                 return
         else:

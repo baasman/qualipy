@@ -1,9 +1,10 @@
 import abc
-import json
 import os
 
 import joblib
-import jinja2
+import sqlalchemy as sa
+
+from qualipy.store.initial_models import AnomalyModel, Value
 
 
 def create_file_name(model_dir, metric_id):
@@ -20,14 +21,22 @@ class AnomalyModelImplementation(abc.ABC):
     """
 
     def __init__(
-        self, config, metric_name, project_name=None, arguments=None,
+        self,
+        project,
+        metric_name,
+        value_ids,
+        project_name=None,
+        arguments=None,
     ):
+        self.project = project
+        self.config = project.config
+        self.value_ids = value_ids
         self.metric_name = metric_name
         if arguments is None:
-            arguments = config[project_name].get("ANOMALY_ARGS", {})
+            arguments = self.config[project_name].get("ANOMALY_ARGS", {})
         self.specific = arguments.pop("specific", {})
         self.arguments = arguments
-        self.model_dir = os.path.join(config.config_dir, "models")
+        self.model_dir = os.path.join(self.config.config_dir, "models")
         if not os.path.isdir(self.model_dir):
             os.mkdir(self.model_dir)
 
@@ -40,8 +49,13 @@ class AnomalyModelImplementation(abc.ABC):
         return
 
     def save(self):
+        values = (
+            self.project.session.query(Value)
+            .filter(Value.value_id.in_(self.value_ids))
+            .all()
+        )
         file_name = create_file_name(self.model_dir, self.metric_name)
-        joblib.dump(self, file_name)
+        model_dump = joblib.dumps(self, file_name)
 
 
 class LoadedModel:

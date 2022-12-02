@@ -34,7 +34,7 @@ def _get_alembic_config(engine, alembic_dir: str = None):
     config = Config(os.path.join(final_alembic_dir, "alembic.ini"))
     config.set_main_option("script_location", final_alembic_dir)
     config.set_main_option("sqlalchemy.url", db_url)
-    config.attributes['configure_logger'] = False
+    config.attributes["configure_logger"] = False
     return config
 
 
@@ -49,10 +49,24 @@ def _upgrade_db(engine):
         command.upgrade(config, "heads")
 
 
+def _stamp_db(engine):
+    from alembic import command
+
+    logger.info("Updating database tables...")
+    config = _get_alembic_config(engine=engine)
+    with engine.begin() as connection:
+        config.attributes["connection"] = connection  # pylint: disable=E1137
+        # command.init(config, directory=os.path.dirname(config.config_file_name))
+        command.stamp(config, "heads")
+
+
 def _initialize_tables(qconf):
     logger.info("Creating Qualipy tables...")
     engine = create_sqlalchemy_engine(qconf)
-    Base.metadata.create_all(engine)
+    # only create all if it doesnt exist yet, then stamp if created
+    if not engine.dialect.has_table(engine, "project"):
+        Base.metadata.create_all(engine)
+        _stamp_db(engine)
     _upgrade_db(engine)
 
 
@@ -97,5 +111,4 @@ if __name__ == "__main__":
     from qualipy.config import QualipyConfig
 
     conf = QualipyConfig(config_dir="/home/baasman/projects/qualipy/examples/qpy_home")
-    engine = create_sqlalchemy_engine(conf)
-    _initialize_tables(engine)
+    _initialize_tables(conf)

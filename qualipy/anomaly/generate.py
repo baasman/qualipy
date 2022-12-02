@@ -27,6 +27,7 @@ MODS = {
 
 class GenerateAnomalies:
     def __init__(self, project):
+        self.project = project
         self.config = project.config
         self.model_type = self.config[project.project_name].get("ANOMALY_MODEL", "std")
         self.anom_args = self.config[project.project_name].get("ANOMALY_ARGS", {})
@@ -57,8 +58,9 @@ class GenerateAnomalies:
         try:
             metric_id = data.metric_id.iloc[0]
             mod = MODS[self.model_type](
-                config=self.config,
+                project=self.project,
                 metric_name=metric_id,
+                value_ids=data.value_id.tolist(),
                 project_name=self.project_name,
             )
             mod.fit(data)
