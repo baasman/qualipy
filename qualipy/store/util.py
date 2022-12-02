@@ -64,7 +64,7 @@ def _initialize_tables(qconf):
     logger.info("Creating Qualipy tables...")
     engine = create_sqlalchemy_engine(qconf)
     # only create all if it doesnt exist yet, then stamp if created
-    if not engine.dialect.has_table(engine, "project"):
+    if not sa.inspect(engine).has_table("project"):
         Base.metadata.create_all(engine)
         _stamp_db(engine)
     _upgrade_db(engine)

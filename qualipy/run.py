@@ -386,7 +386,10 @@ class Qualipy(object):
                         new_result.update_keys(
                             return_format=function.custom_value_return_format
                         )
-                        if "run_name" in sub_value:
+                        if (
+                            "run_name" in sub_value
+                            and sub_value["run_name"] is not None
+                        ):
                             new_result.update_keys(run_name=sub_value["run_name"])
                         else:
                             new_result.update_keys(run_name=self.current_name_view)
