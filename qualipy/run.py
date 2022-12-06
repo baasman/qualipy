@@ -436,11 +436,12 @@ class Qualipy(object):
             measures.append(distinct)
         measures.append(perc_missing)
 
-        if perc_missing.value > 0 and specs["force_null"] and not specs["null"]:
-            raise NullableError(
-                "Column {} has {} percent missing even"
-                " though it is not nullable".format(col_name, perc_missing["value"])
-            )
+        if perc_missing.value is not None:
+            if perc_missing.value > 0 and specs["force_null"] and not specs["null"]:
+                raise NullableError(
+                    "Column {} has {} percent missing even"
+                    " though it is not nullable".format(col_name, perc_missing["value"])
+                )
         measures.append(
             _create_value(
                 str(self.generator.get_dtype(self.data_view, col_name)),
