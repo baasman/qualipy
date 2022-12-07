@@ -256,6 +256,7 @@ def _run_sql_batch(
     produce_report=False,
     run_name=None,
     use_spark=False,
+    spark_conn=None,
     overwrite_kwarg=None,
     custom_select_sql=None,
     backend="sql",
@@ -279,6 +280,8 @@ def _run_sql_batch(
 
     if not isinstance(table_name, list):
         table_name = [table_name]
+    if tracking_db not in project.config["TRACKING_DBS"]:
+        raise Exception(f"DB connection {tracking_db} not specified in config")
     url = sa.engine.URL.create(**project.config["TRACKING_DBS"][tracking_db])
     tracking_engine = sa.create_engine(url)
     batch = None
@@ -300,6 +303,7 @@ def _run_sql_batch(
             overwrite_arguments=overwrite_kwarg,
             commit=False,
             use_spark=use_spark,
+            spark_conn=spark_conn,
             partition_info=partition_info,
             custom_schema=custom_schema,
             custom_select_sql=custom_select_sql,

@@ -223,4 +223,4 @@ class SparkSQLData(BaseData):
         return True
 
     def unpersist(self):
-        self.table_df.unpersist()
+        self.table_df.unpersist(blocking=True)

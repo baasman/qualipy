@@ -168,6 +168,31 @@ class QualipyConfig(dict):
         self["TRACKING_DBS"][name] = spec
         self.dump()
 
+    def add_spark_sql_conn(
+        self,
+        name: str,
+        master: str,
+        jdbc_url: str,
+        username: str,
+        password: str,
+        drivername: int,
+        pairs: t.List[t.Tuple],
+    ):
+        self._read_conf_from_file()
+        if "SPARK_CONN" not in self:
+            self["SPARK_CONN"] = {}
+
+        spec = dict(
+            driver=drivername,
+            username=username,
+            password=password,
+            jdbc_url=jdbc_url,
+            master=master,
+            pairs=pairs,
+        )
+        self["SPARK_CONN"][name] = spec
+        self.dump()
+
     def add_trend_rule(
         self,
         project_name: str,

@@ -13,12 +13,8 @@ import pandas as pd
 from numpy import NaN
 
 from typing import Tuple, Dict, Union, Callable, List, Optional, Any
-import datetime
 import json
 import os
-import uuid
-import pickle
-import warnings
 
 
 DataFrame = pyspark.sql.dataframe.DataFrame
@@ -27,10 +23,7 @@ Column = Dict[str, Union[str, bool, Dict[str, Callable]]]
 
 class BackendSpark(BackendBase):
     def __init__(self, config):
-        with open(os.path.join(config, "config.json"), "rb") as f:
-            loaded_config = json.load(f)
-        app_name = loaded_config.get("APP_NAME", "qualipy")
-        self.spark = pyspark.sql.SparkSession.builder.appName(app_name).getOrCreate()
+        self.spark = pyspark.sql.SparkSession.builder.getOrCreate()
 
     @staticmethod
     def get_shape(data: DataFrame) -> Tuple[int, int]:

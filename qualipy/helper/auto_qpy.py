@@ -260,6 +260,7 @@ def auto_qpy_single_batch_sql(
     produce_report: bool = True,
     overwrite_arguments: dict = None,
     use_spark: bool = False,
+    spark_conn: str = None,
     partition_info: dict = None,
     custom_schema: str = None,
     custom_select_sql: str = None,
@@ -271,6 +272,35 @@ def auto_qpy_single_batch_sql(
             raise Exception("Must specify configuration_dir if project is a str")
         project = qpy.Project(
             project_name=project, config_dir=configuration_dir, re_init=True
+        )
+
+    if use_spark:
+        if "SPARK_CONN" not in project.config or spark_conn is None:
+            raise Exception(
+                "Note: must set spark conf under SPARK_CONN and pass spark_conn in function"
+            )
+        if spark_conn not in project.config["SPARK_CONN"]:
+            raise Exception(f"Spark SQL connection {spark_conn} not found in config")
+        spark_config = project.config["SPARK_CONN"][spark_conn]
+        spark = set_spark_con(spark_config)
+        qpy_data = _set_spark_sql_data(
+            engine=engine,
+            table_name=table_name,
+            schema=schema,
+            spark=spark,
+            spark_config=spark_config,
+            partition_info=partition_info,
+            custom_select_sql=custom_select_sql,
+            custom_schema=custom_schema,
+            backend=backend,
+        )
+    else:
+        qpy_data = _set_sql_data(
+            engine=engine,
+            table_name=table_name,
+            schema=schema,
+            custom_select_sql=custom_select_sql,
+            backend=backend,
         )
     if batch is None:
         batch = qpy.Qualipy(
@@ -287,28 +317,6 @@ def auto_qpy_single_batch_sql(
 
     if run_name is None:
         run_name = "auto-qpy"
-
-    if use_spark:
-        spark = set_spark_con(project.config.get("SPARK_CONN", {}))
-        qpy_data = _set_spark_sql_data(
-            engine=engine,
-            table_name=table_name,
-            schema=schema,
-            spark=spark,
-            spark_config=project.config.get("SPARK_CONN", {}),
-            partition_info=partition_info,
-            custom_select_sql=custom_select_sql,
-            custom_schema=custom_schema,
-            backend=backend,
-        )
-    else:
-        qpy_data = _set_sql_data(
-            engine=engine,
-            table_name=table_name,
-            schema=schema,
-            custom_select_sql=custom_select_sql,
-            backend=backend,
-        )
 
     batch.set_dataset(qpy_data, run_name=run_name, columns=column_collection_name)
 
