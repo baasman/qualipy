@@ -1,8 +1,12 @@
+import copy
+
 import numpy as np
 import pandas as pd
 from scipy.stats import zscore
+import pickle
 
 from qualipy.anomaly.base import AnomalyModelImplementation
+from qualipy.store.initial_models import Value, AnomalyModel
 
 
 class STDCheck(AnomalyModelImplementation):
@@ -22,6 +26,20 @@ class STDCheck(AnomalyModelImplementation):
 
     def fit(self, train_data):
         self.model = None
+
+    def save(self):
+        saveble_object = copy.copy(self)
+        saveble_object.project = None
+        model = AnomalyModel(model_blob=pickle.dumps(saveble_object), model_type="std")
+        values = (
+            self.project.session.query(Value)
+            .filter(Value.value_id.in_(self.value_ids))
+            .all()
+        )
+        for value in values:
+            model.values.append(value)
+        self.project.session.add(model)
+        self.project.session.commit()
 
     def predict(self, test_data):
         if self.multivariate:

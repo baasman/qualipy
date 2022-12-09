@@ -14,6 +14,7 @@ from qualipy.anomaly._std import STDCheck
 from qualipy.anomaly.base import LoadedModel
 from qualipy.anomaly.trend_rules import trend_rules
 from qualipy.config import QualipyConfig
+from qualipy.exceptions import ModelNotFound
 
 
 anomaly_columns = ["value_id", "project_id", "severity", "trend_function_name"]
@@ -42,6 +43,7 @@ class GenerateAnomalies:
             .reset_index(drop=True)
         )
         df = df.drop("floored_datetime", axis=1)
+        df["original_column_name"] = df.column_name
         df.column_name = df.column_name + "_" + df.run_name
         df["metric_name"] = (
             df.column_name
@@ -83,8 +85,8 @@ class GenerateAnomalies:
         return all_rows
 
     def _num_from_loaded_model(self, data, all_rows):
-        mod = LoadedModel(config_dir=self.config.config_dir)
-        mod.load(data.metric_id.iloc[0])
+        mod = LoadedModel(project=self.project)
+        mod.load(data.iloc[0])
         preds = mod.predict(data)
         if isinstance(preds, tuple):
             severity = preds[1]
@@ -118,7 +120,7 @@ class GenerateAnomalies:
                         all_rows = self._num_from_loaded_model(data, all_rows)
                     except ValueError:
                         warnings.warn(f"Unable to load anomaly model for {metric_name}")
-                    except FileNotFoundError:
+                    except ModelNotFound:
                         all_rows = self._num_train_and_save(data, all_rows, metric_name)
                 else:
                     all_rows = self._num_train_and_save(data, all_rows, metric_name)

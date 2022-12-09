@@ -30,6 +30,7 @@ class Project(Base):
     project_name = Column(String(256), unique=True, nullable=False)
     date_created = Column(DateTime, nullable=True)
     config_repr = Column(String, nullable=True)
+    project_repr = Column(String, nullable=True)
     values_ = relationship("Value", backref="project", lazy="dynamic")
     anomalies_ = relationship("Anomaly", backref="project", lazy="dynamic")
 
@@ -67,10 +68,9 @@ class Value(Base):
     )
     meta = Column(String, nullable=True)
 
-    # model = relationship("Model", back_populates="values")
+    model = relationship("AnomalyModel", backref="value")
     anomalies = relationship("Anomaly", cascade="all, delete-orphan", backref="value")
 
-    # project = relationship(Project, primaryjoin=project_id == Project.project_id)
 
     __table_args__ = (PrimaryKeyConstraint("value_id", name="value_pk"),)
 

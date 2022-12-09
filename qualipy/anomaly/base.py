@@ -1,15 +1,11 @@
 import abc
 import os
+import pickle
 
-import joblib
 import sqlalchemy as sa
 
 from qualipy.store.initial_models import AnomalyModel, Value
-
-
-def create_file_name(model_dir, metric_id):
-    file_name = os.path.join(model_dir, f"{metric_id}.mod")
-    return file_name
+from qualipy.exceptions import ModelNotFound
 
 
 class AnomalyModelImplementation(abc.ABC):
@@ -49,23 +45,32 @@ class AnomalyModelImplementation(abc.ABC):
         return
 
     def save(self):
-        values = (
-            self.project.session.query(Value)
-            .filter(Value.value_id.in_(self.value_ids))
-            .all()
-        )
-        file_name = create_file_name(self.model_dir, self.metric_name)
-        model_dump = joblib.dumps(self, file_name)
+        return
 
 
 class LoadedModel:
-    def __init__(self, config_dir):
-        self.model_dir = os.path.join(config_dir, "models")
+    def __init__(self, project):
+        self.project = project
         self.anom_model = None
 
-    def load(self, metric_id):
-        file_name = create_file_name(self.model_dir, metric_id)
-        self.anom_model = joblib.load(file_name)
+    def load(self, data_row):
+        existing_metric_value = (
+            self.project.session.query(Value)
+            .filter(
+                sa.and_(
+                    Value.project_id == str(data_row["project_id"]),
+                    Value.metric == data_row["metric"],
+                    Value.column_name == data_row["original_column_name"],
+                    Value.anomaly_model_id != None,
+                )
+            )
+            .first()
+        )
+        if existing_metric_value is None:
+            raise ModelNotFound("Unable to find model")
+        if existing_metric_value.anomaly_model is None:
+            raise ModelNotFound("Unable to find model")
+        self.anom_model = pickle.loads(existing_metric_value.anomaly_model.model_blob)
 
     def predict(self, test_data):
         return self.anom_model.predict(test_data)
