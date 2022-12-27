@@ -155,6 +155,7 @@ class BackendBase(abc.ABC):
         run_name: str = None,
         kwargs: Dict[str, Any] = None,
         overwrite_kwargs: Dict[str, Any] = None,
+        external_data: Dict[str, Any] = None,
     ) -> MetricResult:
         kwargs = {} if kwargs is None else kwargs
         original_kwargs = copy.copy(kwargs)
@@ -162,6 +163,8 @@ class BackendBase(abc.ABC):
             for arg in function.allowed_arguments:
                 if arg in overwrite_kwargs:
                     kwargs[arg] = overwrite_kwargs[arg]
+        if function.external_data is not None:
+            kwargs[function.external_data] = external_data[function.external_data]
         value = function(data, column, **kwargs)
         argument_str = MetricResult.create_arg_string(original_kwargs)
         metric_res = MetricResult(

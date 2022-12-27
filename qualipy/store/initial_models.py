@@ -68,9 +68,8 @@ class Value(Base):
     )
     meta = Column(String, nullable=True)
 
-    model = relationship("AnomalyModel", backref="value")
+    # model = relationship("AnomalyModel", backref="value")
     anomalies = relationship("Anomaly", cascade="all, delete-orphan", backref="value")
-
 
     __table_args__ = (PrimaryKeyConstraint("value_id", name="value_pk"),)
 

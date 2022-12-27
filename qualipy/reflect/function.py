@@ -23,6 +23,7 @@ def function(
     description: str = None,
     input_format: type = float,
     custom_value_return_format: type = None,
+    external_data: str = None,
 ) -> Callable:
     """Define a function that can be applied to a qualipy dataset
 
@@ -67,6 +68,7 @@ def function(
         method.valid_max_range = None
         method.display_name = method.__name__ if display_name is None else display_name
         method.description = "" if description is None else description
+        method.external_data = external_data
 
         if return_format == "custom" and custom_value_return_format is None:
             raise ValueError(

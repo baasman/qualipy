@@ -221,10 +221,10 @@ def _set_sql_data(engine, table_name, schema, custom_select_sql=None, backend="s
 def _set_spark_sql_data(
     engine,
     table_name,
-    schema,
     spark,
     spark_config,
     partition_info,
+    schema=None,
     custom_select_sql=None,
     backend="spark-sql",
     custom_schema=None,

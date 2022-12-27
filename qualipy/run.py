@@ -106,6 +106,7 @@ class Qualipy(object):
         self.stratify = False
         self.backend = backend
         self.overwrite_arguments = overwrite_arguments
+        self.external_data = {}
 
         self._setup_logger()
         self.logger = logging.getLogger(__name__)
@@ -196,8 +197,6 @@ class Qualipy(object):
         Returns:
             None
         """
-        # NOTE: if sqldata but pandas backend, should pull data and work on that!
-        # also give option of query or taking last x rows
         self._set_data(
             df,
             allowed_dataclasses=["SQLData", "PandasData", "SparkData", "SparkSQLData"],
@@ -206,6 +205,9 @@ class Qualipy(object):
         self._set_stratification(df)
         self.columns = self._set_columns(columns)
         self._set_schema(self.current_data)
+
+    def set_external_data(self, df, name):
+        self.external_data[name] = df
 
     def set_chunked_dataset(
         self,
@@ -367,6 +369,7 @@ class Qualipy(object):
                     run_name=self.current_name_view,
                     kwargs=arguments,
                     overwrite_kwargs=self.overwrite_arguments,
+                    external_data=self.external_data
                 )
 
                 result.set_return_value_type()
