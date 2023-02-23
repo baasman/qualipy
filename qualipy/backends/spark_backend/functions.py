@@ -20,10 +20,16 @@ def value_counts(data, column):
 
 @function(return_format=float)
 def percentage_missing(data, column):
+    time_columns = [
+        i[0].lower()
+        for i in data.table_df.dtypes
+        if i[1] in ["timestamp", "date", "datetime", "time"]
+    ]
     missing = data.table_df.select(
         (
             F.count(F.when(F.isnan(column) | F.col(column).isNull(), column))
-            / F.count(F.lit(1))
+            if column.lower() not in time_columns
+            else F.count(F.col(column).isNull()) / F.count(F.lit(1))
         ).alias(column)
     )
     total_count = data.table_df.count()

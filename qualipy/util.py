@@ -206,5 +206,5 @@ def set_spark_con(config):
         .config(conf=conf)
         .getOrCreate()
     )
-    spark.sparkContext.setLogLevel("INFO")
+    spark.sparkContext.setLogLevel("WARN")
     return spark
